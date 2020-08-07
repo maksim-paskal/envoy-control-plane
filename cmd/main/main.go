@@ -34,10 +34,14 @@ import (
 var snapshotCache cache.SnapshotCache = cache.NewSnapshotCache(false, cache.IDHash{}, &Logger{})
 var configStore map[string]*ConfigStore = make(map[string]*ConfigStore)
 
-var namespaced = flag.Bool("namespaced", true, "namespaces watch")
-
 func loadConfigDirectory() {
-	err := filepath.Walk("config", func(path string, info os.FileInfo, err error) error {
+	_, err := os.Stat(*appConfig.Config)
+
+	if err != nil {
+		log.Panic(err)
+	}
+
+	err = filepath.Walk(*appConfig.Config, func(path string, info os.FileInfo, err error) error {
 
 		if info.IsDir() {
 			return nil
@@ -55,25 +59,33 @@ func loadConfigDirectory() {
 		log.Panic(err)
 	}
 }
-func main() {
-	log.SetLevel(log.DebugLevel)
 
+func main() {
 	flag.Parse()
-	//log.SetReportCaller(true)
+
+	logLevel, err := log.ParseLevel(*appConfig.LogLevel)
+	if err != nil {
+		log.Panic(err)
+	}
+	log.SetLevel(logLevel)
+
+	log.Debug(appConfig.String())
 
 	loadConfigDirectory()
 
-	kubeconfig, err := clientcmd.BuildConfigFromFlags("", "kubeconfig")
-	if err != nil {
-		panic(err.Error())
-	}
-	clientset, err := kubernetes.NewForConfig(kubeconfig)
-	if err != nil {
-		panic(err.Error())
-	}
+	if *appConfig.WithKubernetesWatch {
+		kubeconfig, err := clientcmd.BuildConfigFromFlags("", "kubeconfig")
+		if err != nil {
+			log.Panic(err)
+		}
+		clientset, err := kubernetes.NewForConfig(kubeconfig)
+		if err != nil {
+			log.Panic(err)
+		}
 
-	epStore := newEndpointsStore(clientset, nil)
-	defer epStore.Stop()
+		epStore := newEndpointsStore(clientset, nil)
+		defer epStore.Stop()
+	}
 
 	ctx := context.Background()
 

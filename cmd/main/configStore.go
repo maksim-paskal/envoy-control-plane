@@ -111,13 +111,15 @@ func (cs *ConfigStore) Push() {
 	}
 }
 func (cs *ConfigStore) LoadFile(fileName string) {
+	log.Debugf("Loading file %s", fileName)
+
 	t := template.New("")
 	templates := template.Must(t.Funcs(goTemplateFunc(t)).ParseFiles(fileName))
 
 	var tpl bytes.Buffer
 	err := templates.ExecuteTemplate(&tpl, path.Base(fileName), nil)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	err = yaml.Unmarshal(tpl.Bytes(), &cs.config)

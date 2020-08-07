@@ -38,7 +38,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset, config *map[string]Confi
 
 		namespace := os.Getenv("MY_POD_NAMESPACE")
 
-		if *namespaced {
+		if *appConfig.Namespaced {
 			if len(namespace) == 0 {
 				log.Panic("no namespace")
 			}
