@@ -67,6 +67,7 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
+	log.SetFormatter(&log.JSONFormatter{})
 	log.SetLevel(logLevel)
 
 	log.Debug(appConfig.String())

@@ -1,6 +1,11 @@
 version: '3'
 
 services:
+  envoy-control-plane:
+    build:
+      context: .
+    volumes:
+    - ./config:/app/config
   envoy-test1:
     build:
       context: ./envoy

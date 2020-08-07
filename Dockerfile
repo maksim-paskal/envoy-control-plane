@@ -17,4 +17,5 @@ FROM alpine:latest
 
 COPY --from=build /usr/src/envoy-control-plane/envoy-control-plane /app/envoy-control-plane
 
+WORKDIR /app
 CMD /app/envoy-control-plane
