@@ -21,4 +21,4 @@ export MY_POD_NAMESPACE=default
 set -ex
 
 go build -v ./cmd/main
-./main -logLevel=DEBUG $*
+./main -log.level=DEBUG $*

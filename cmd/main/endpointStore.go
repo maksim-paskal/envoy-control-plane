@@ -14,9 +14,8 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"os"
 
+	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -35,16 +34,13 @@ func newEndpointsStore(clientset *kubernetes.Clientset, config *map[string]Confi
 
 	go func() {
 		var factory informers.SharedInformerFactory
-
-		namespace := os.Getenv("MY_POD_NAMESPACE")
-
-		if *appConfig.Namespaced {
-			if len(namespace) == 0 {
+		if *appConfig.WatchNamespaced {
+			if len(*appConfig.Namespace) == 0 {
 				log.Panic("no namespace")
 			}
 			factory = informers.NewSharedInformerFactoryWithOptions(
 				es.clientset, 0,
-				informers.WithNamespace(namespace),
+				informers.WithNamespace(*appConfig.Namespace),
 			)
 		} else {
 			factory = informers.NewSharedInformerFactoryWithOptions(

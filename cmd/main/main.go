@@ -15,12 +15,16 @@ package main
 import (
 	"context"
 	"flag"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"google.golang.org/grpc"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -29,19 +33,20 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	xds "github.com/envoyproxy/go-control-plane/pkg/server/v2"
 	log "github.com/sirupsen/logrus"
+	k8scache "k8s.io/client-go/tools/cache"
 )
 
 var snapshotCache cache.SnapshotCache = cache.NewSnapshotCache(false, cache.IDHash{}, &Logger{})
 var configStore map[string]*ConfigStore = make(map[string]*ConfigStore)
 
 func loadConfigDirectory() {
-	_, err := os.Stat(*appConfig.Config)
+	_, err := os.Stat(*appConfig.ConfigDirectory)
 
 	if err != nil {
 		log.Panic(err)
 	}
 
-	err = filepath.Walk(*appConfig.Config, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(*appConfig.ConfigDirectory, func(path string, info os.FileInfo, errWalk error) error {
 
 		if info.IsDir() {
 			return nil
@@ -49,7 +54,12 @@ func loadConfigDirectory() {
 
 		test := ConfigStore{}
 
-		test.LoadFile(path)
+		content, err := ioutil.ReadFile(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		test.LoadText(path, string(content))
 
 		configStore[test.config.Id] = &test
 
@@ -60,6 +70,50 @@ func loadConfigDirectory() {
 	}
 }
 
+func loadConfigMaps(clientset *kubernetes.Clientset) {
+	configNamespace := *appConfig.ConfigMapNamespace
+	if len(configNamespace) == 0 {
+		configNamespace = *appConfig.Namespace
+	}
+	log.Debugf("configNamespace=%s", configNamespace)
+
+	infFactory := informers.NewSharedInformerFactoryWithOptions(clientset, 0,
+		informers.WithNamespace(configNamespace),
+	)
+
+	informer := infFactory.Core().V1().ConfigMaps().Informer()
+
+	informer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			cm := obj.(*v1.ConfigMap)
+
+			label := strings.Split(*appConfig.ConfigMapLabels, "=")
+			if cm.Labels[label[0]] != label[1] {
+				return
+			}
+			for fileName, text := range cm.Data {
+				test := ConfigStore{}
+				test.LoadText(fileName, text)
+				configStore[test.config.Id] = &test
+			}
+		},
+		UpdateFunc: func(old, cur interface{}) {
+			log.Info("update")
+			cm := cur.(*v1.ConfigMap)
+
+			label := strings.Split(*appConfig.ConfigMapLabels, "=")
+			if cm.Labels[label[0]] != label[1] {
+				return
+			}
+			for fileName, text := range cm.Data {
+				test := ConfigStore{}
+				test.LoadText(fileName, text)
+				configStore[test.config.Id] = &test
+			}
+		},
+	})
+	informer.Run(nil)
+}
 func main() {
 	flag.Parse()
 
@@ -67,26 +121,33 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
-	log.SetFormatter(&log.JSONFormatter{})
+	if *appConfig.LogInJSON {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
 	log.SetLevel(logLevel)
 
-	log.Debug(appConfig.String())
+	log.Debugf("loaded application config = \n%s", appConfig.String())
 
-	loadConfigDirectory()
-
-	if *appConfig.WithKubernetesWatch {
-		kubeconfig, err := clientcmd.BuildConfigFromFlags("", "kubeconfig")
-		if err != nil {
-			log.Panic(err)
-		}
-		clientset, err := kubernetes.NewForConfig(kubeconfig)
-		if err != nil {
-			log.Panic(err)
-		}
-
-		epStore := newEndpointsStore(clientset, nil)
-		defer epStore.Stop()
+	if *appConfig.ReadConfigDir {
+		loadConfigDirectory()
 	}
+
+	kubeconfig, err := clientcmd.BuildConfigFromFlags("", *appConfig.KubeconfigFile)
+	if err != nil {
+		log.Panic(err)
+	}
+	clientset, err := kubernetes.NewForConfig(kubeconfig)
+	if err != nil {
+		log.Panic(err)
+	}
+	if *appConfig.ReadConfigMap {
+		go func() {
+			loadConfigMaps(clientset)
+		}()
+	}
+
+	epStore := newEndpointsStore(clientset, nil)
+	defer epStore.Stop()
 
 	ctx := context.Background()
 
@@ -105,7 +166,6 @@ func main() {
 	als := &AccessLogService{}
 
 	accesslog.RegisterAccessLogServiceServer(grpcServer, als)
-	//discovery.RegisterAggregatedDiscoveryServiceServer(grpcServer, server)
 	api.RegisterEndpointDiscoveryServiceServer(grpcServer, server)
 	api.RegisterClusterDiscoveryServiceServer(grpcServer, server)
 	api.RegisterRouteDiscoveryServiceServer(grpcServer, server)

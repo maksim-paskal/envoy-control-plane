@@ -15,17 +15,24 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"os"
 )
 
 type AppConfig struct {
-	LogLevel            *string
-	Config              *string
-	WithKubernetesWatch *bool
-	Namespaced          *bool
+	LogLevel           *string
+	ReadConfigDir      *bool
+	ReadConfigMap      *bool
+	LogInJSON          *bool
+	ConfigDirectory    *string
+	ConfigMapLabels    *string
+	ConfigMapNamespace *string
+	KubeconfigFile     *string
+	WatchNamespaced    *bool
+	Namespace          *string
 }
 
 func (ac *AppConfig) String() string {
-	b, err := json.Marshal(ac)
+	b, err := json.MarshalIndent(ac, "", " ")
 
 	if err != nil {
 		return err.Error()
@@ -34,8 +41,18 @@ func (ac *AppConfig) String() string {
 }
 
 var appConfig = &AppConfig{
-	LogLevel:            flag.String("logLevel", "INFO", "log level"),
-	Config:              flag.String("config", "config", "config directory"),
-	WithKubernetesWatch: flag.Bool("withKubernetesWatch", false, "watch kubernetes"),
-	Namespaced:          flag.Bool("namespaced", true, "namespaces watch"),
+	LogLevel:  flag.String("log.level", "INFO", "log level"),
+	LogInJSON: flag.Bool("log.json", false, "log in json format"),
+	// files
+	ReadConfigDir:   flag.Bool("dir.enabled", false, "reads config yaml from file directory"),
+	ConfigDirectory: flag.String("dir.path", "config", "config directory"),
+	// kubernetes
+	ReadConfigMap:      flag.Bool("configmap.enabled", true, "reads config yaml from configmap"),
+	ConfigMapLabels:    flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
+	ConfigMapNamespace: flag.String("configmap.namespace", "", "configmap namespace"),
+
+	KubeconfigFile: flag.String("kubeconfig.path", "kubeconfig", "kubeconfig path"),
+
+	WatchNamespaced: flag.Bool("namespaced", true, "watch pod in one namespace"),
+	Namespace:       flag.String("namespace", os.Getenv("MY_POD_NAMESPACE"), "watch namespace"),
 }
