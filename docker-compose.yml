@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+  envoy-test1:
+    build:
+      context: ./envoy
+    ports:
+    - 8000:8000
+    - 8001:8001
+    volumes:
+    - ./envoy.yaml:/etc/envoy/envoy.yaml
+    command:
+    - /usr/local/bin/envoy
+    - -c
+    - /etc/envoy/envoy.yaml
+    - --log-level
+    - warn
+    - --service-cluster
+    - test
+    - --service-node
+    - test1-id
+  nginxdemo:
+    image: nginxdemos/hello:plain-text
+  jaeger:
+    image: jaegertracing/all-in-one
+    environment:
+    - COLLECTOR_ZIPKIN_HTTP_PORT=9411
+    ports:
+    - "16686:16686"
