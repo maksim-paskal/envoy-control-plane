@@ -6,4 +6,4 @@ run:
 	go build -v ./cmd/main
 	MY_POD_NAMESPACE=default ./main -namespaced
 build:
-	docker build .
+	docker build . -t paskalmaksim/envoy-control-plane:dev
