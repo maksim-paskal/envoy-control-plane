@@ -110,9 +110,11 @@ func (cs *ConfigStore) Push() {
 		log.Fatal(err)
 	}
 }
-func (cs *ConfigStore) LoadText(fileName string, text string) {
-	t := template.New(path.Base(fileName))
-	templates := template.Must(t.Funcs(goTemplateFunc(t)).Parse(text))
+func (cs *ConfigStore) LoadFile(fileName string) {
+	log.Debugf("Loading file %s", fileName)
+
+	t := template.New("")
+	templates := template.Must(t.Funcs(goTemplateFunc(t)).ParseFiles(fileName))
 
 	var tpl bytes.Buffer
 	err := templates.ExecuteTemplate(&tpl, path.Base(fileName), nil)

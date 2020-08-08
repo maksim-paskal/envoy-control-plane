@@ -5,7 +5,7 @@ metadata:
   namespace: default
   labels:
     app: envoy-control-plane
-    force-update: v1
+    force-update: v2
 data:
   test1-id.yaml: |-
     listeners:

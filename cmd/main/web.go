@@ -31,12 +31,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch action[0] {
-	case "new":
-		loadConfigDirectory()
-		_, err := w.Write([]byte("ok"))
-		if err != nil {
-			log.Error(err)
-		}
 	case "status":
 		type StatusResponce struct {
 			Status     []string

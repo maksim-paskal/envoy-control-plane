@@ -15,16 +15,12 @@ package main
 import (
 	"context"
 	"flag"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"google.golang.org/grpc"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -33,20 +29,19 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	xds "github.com/envoyproxy/go-control-plane/pkg/server/v2"
 	log "github.com/sirupsen/logrus"
-	k8scache "k8s.io/client-go/tools/cache"
 )
 
 var snapshotCache cache.SnapshotCache = cache.NewSnapshotCache(false, cache.IDHash{}, &Logger{})
 var configStore map[string]*ConfigStore = make(map[string]*ConfigStore)
 
-func loadConfigDirectory() {
-	_, err := os.Stat(*appConfig.ConfigDirectory)
+func loadConfigDirectory(filePath string) {
+	_, err := os.Stat(filePath)
 
 	if err != nil {
 		log.Panic(err)
 	}
 
-	err = filepath.Walk(*appConfig.ConfigDirectory, func(path string, info os.FileInfo, errWalk error) error {
+	err = filepath.Walk(filePath, func(path string, info os.FileInfo, errWalk error) error {
 
 		if info.IsDir() {
 			return nil
@@ -54,12 +49,7 @@ func loadConfigDirectory() {
 
 		test := ConfigStore{}
 
-		content, err := ioutil.ReadFile(path)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		test.LoadText(path, string(content))
+		test.LoadFile(path)
 
 		configStore[test.config.Id] = &test
 
@@ -68,51 +58,6 @@ func loadConfigDirectory() {
 	if err != nil {
 		log.Panic(err)
 	}
-}
-
-func loadConfigMaps(clientset *kubernetes.Clientset) {
-	configNamespace := *appConfig.ConfigMapNamespace
-	if len(configNamespace) == 0 {
-		configNamespace = *appConfig.Namespace
-	}
-	log.Debugf("configNamespace=%s", configNamespace)
-
-	infFactory := informers.NewSharedInformerFactoryWithOptions(clientset, 0,
-		informers.WithNamespace(configNamespace),
-	)
-
-	informer := infFactory.Core().V1().ConfigMaps().Informer()
-
-	informer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			cm := obj.(*v1.ConfigMap)
-
-			label := strings.Split(*appConfig.ConfigMapLabels, "=")
-			if cm.Labels[label[0]] != label[1] {
-				return
-			}
-			for fileName, text := range cm.Data {
-				test := ConfigStore{}
-				test.LoadText(fileName, text)
-				configStore[test.config.Id] = &test
-			}
-		},
-		UpdateFunc: func(old, cur interface{}) {
-			log.Info("update")
-			cm := cur.(*v1.ConfigMap)
-
-			label := strings.Split(*appConfig.ConfigMapLabels, "=")
-			if cm.Labels[label[0]] != label[1] {
-				return
-			}
-			for fileName, text := range cm.Data {
-				test := ConfigStore{}
-				test.LoadText(fileName, text)
-				configStore[test.config.Id] = &test
-			}
-		},
-	})
-	informer.Run(nil)
 }
 func main() {
 	flag.Parse()
@@ -129,7 +74,7 @@ func main() {
 	log.Debugf("loaded application config = \n%s", appConfig.String())
 
 	if *appConfig.ReadConfigDir {
-		loadConfigDirectory()
+		loadConfigDirectory(*appConfig.ConfigDirectory)
 	}
 
 	kubeconfig, err := clientcmd.BuildConfigFromFlags("", *appConfig.KubeconfigFile)
@@ -141,9 +86,8 @@ func main() {
 		log.Panic(err)
 	}
 	if *appConfig.ReadConfigMap {
-		go func() {
-			loadConfigMaps(clientset)
-		}()
+		cmStore := newConfigMapStore(clientset)
+		defer cmStore.Stop()
 	}
 
 	epStore := newEndpointsStore(clientset, nil)

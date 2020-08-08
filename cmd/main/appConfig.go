@@ -29,6 +29,7 @@ type AppConfig struct {
 	KubeconfigFile     *string
 	WatchNamespaced    *bool
 	Namespace          *string
+	RuntimeDir         *string
 }
 
 func (ac *AppConfig) String() string {
@@ -51,6 +52,7 @@ var appConfig = &AppConfig{
 	ConfigMapLabels:    flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
 	ConfigMapNamespace: flag.String("configmap.namespace", "", "configmap namespace"),
 
+	RuntimeDir:     flag.String("runtime.directory", "/tmp", "directory for saving runtime files"),
 	KubeconfigFile: flag.String("kubeconfig.path", "kubeconfig", "kubeconfig path"),
 
 	WatchNamespaced: flag.Bool("namespaced", true, "watch pod in one namespace"),

@@ -20,5 +20,8 @@ export MY_POD_NAMESPACE=default
 
 set -ex
 
+rm -rf ./tmp
+mkdir ./tmp
+
 go build -v ./cmd/main
-./main -log.level=DEBUG $*
+./main -log.level=DEBUG -runtime.directory=tmp $*
