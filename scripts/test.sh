@@ -24,4 +24,4 @@ rm -rf ./tmp
 mkdir ./tmp
 
 go build -v ./cmd/main
-./main -log.level=DEBUG $*
+./main -log.level=DEBUG -kubeconfig.path=kubeconfig $*

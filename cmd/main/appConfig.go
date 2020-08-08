@@ -53,7 +53,7 @@ var appConfig = &AppConfig{
 	ConfigMapNamespace: flag.String("configmap.namespace", "", "configmap namespace"),
 
 	RuntimeDir:     flag.String("runtime.directory", "tmp", "directory for saving runtime files"),
-	KubeconfigFile: flag.String("kubeconfig.path", "kubeconfig", "kubeconfig path"),
+	KubeconfigFile: flag.String("kubeconfig.path", "", "kubeconfig path"),
 
 	WatchNamespaced: flag.Bool("namespaced", true, "watch pod in one namespace"),
 	Namespace:       flag.String("namespace", os.Getenv("MY_POD_NAMESPACE"), "watch namespace"),

@@ -125,8 +125,6 @@ func (cs *ConfigStore) LoadFile(fileName string) error {
 		return err
 	}
 
-	log.Debug(tpl.String())
-
 	err = yaml.Unmarshal(tpl.Bytes(), &cs.config)
 	if err != nil {
 		return err

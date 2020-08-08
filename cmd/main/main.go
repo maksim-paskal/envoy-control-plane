@@ -20,9 +20,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 
 	"google.golang.org/grpc"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
@@ -49,15 +52,28 @@ func loadConfigDirectory(filePath string) {
 		return
 	}
 	for _, f := range files {
-		if !f.IsDir() {
+		loadFile := !f.IsDir()
+		name := f.Name()
 
-			test := ConfigStore{}
+		if strings.HasPrefix(name, "_") || strings.EqualFold(name, "values.yaml") {
+			loadFile = false
+		}
 
-			err := test.LoadFile(filepath.Join(filePath, f.Name()))
+		if loadFile {
+			new := ConfigStore{}
+
+			err := new.LoadFile(filepath.Join(filePath, f.Name()))
 			if err != nil {
 				log.Error(err)
 			} else {
-				configStore[test.config.Id] = &test
+				obj := configStore[new.config.Id]
+				if obj == nil {
+					configStore[new.config.Id] = &new
+				} else {
+					if !reflect.DeepEqual(obj.config, new.config) {
+						configStore[new.config.Id] = &new
+					}
+				}
 			}
 		}
 	}
@@ -80,10 +96,20 @@ func main() {
 		loadConfigDirectory(*appConfig.ConfigDirectory)
 	}
 
-	kubeconfig, err := clientcmd.BuildConfigFromFlags("", *appConfig.KubeconfigFile)
-	if err != nil {
-		log.Panic(err)
+	var kubeconfig *rest.Config
+
+	if len(*appConfig.KubeconfigFile) > 0 {
+		kubeconfig, err = clientcmd.BuildConfigFromFlags("", *appConfig.KubeconfigFile)
+		if err != nil {
+			log.Panic(err)
+		}
+	} else {
+		kubeconfig, err = rest.InClusterConfig()
+		if err != nil {
+			log.Panic(err)
+		}
 	}
+
 	clientset, err := kubernetes.NewForConfig(kubeconfig)
 	if err != nil {
 		log.Panic(err)
