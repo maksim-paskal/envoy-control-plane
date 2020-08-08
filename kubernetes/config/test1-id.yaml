@@ -7,6 +7,27 @@ metadata:
     app: envoy-control-plane
     force-update: v2
 data:
+  _helpers.yaml: |-
+    {{ define "access_log" }}
+    - name: envoy.access_loggers.http_grpc
+      typed_config:
+        "@type": type.googleapis.com/envoy.config.accesslog.v2.HttpGrpcAccessLogConfig
+        common_config:
+          log_name: "test"
+          grpc_service:
+            envoy_grpc:
+              cluster_name: xds_cluster
+    - name: envoy.access_loggers.file
+      typed_config:
+        "@type": type.googleapis.com/envoy.config.accesslog.v2.FileAccessLog
+        path: /dev/stdout
+        json_format:
+          protocol: "%PROTOCOL%"
+          duration: "%DURATION%"
+          response_code: "%RESPONSE_CODE%"
+          response_flags: "%RESPONSE_FLAGS%"
+          x_request_id: "%REQ(X-REQUEST-ID)%"
+    {{ end }}
   test1-id.yaml: |-
     listeners:
     - name: listener_0
@@ -42,24 +63,7 @@ data:
                       denyBaggageOnInitializationFailure: false
                       hostPort: ""
             access_log:
-            - name: envoy.access_loggers.http_grpc
-              typed_config:
-                "@type": type.googleapis.com/envoy.config.accesslog.v2.HttpGrpcAccessLogConfig
-                common_config:
-                  log_name: "test"
-                  grpc_service:
-                    envoy_grpc:
-                      cluster_name: xds_cluster
-            - name: envoy.access_loggers.file
-              typed_config:
-                "@type": type.googleapis.com/envoy.config.accesslog.v2.FileAccessLog
-                path: /dev/stdout
-                json_format:
-                  protocol: "%PROTOCOL%"
-                  duration: "%DURATION%"
-                  response_code: "%RESPONSE_CODE%"
-                  response_flags: "%RESPONSE_FLAGS%"
-                  x_request_id: "%REQ(X-REQUEST-ID)%"
+    {{ include "access_log" . | indent 10 }}
             rds:
               route_config_name: test
               config_source:

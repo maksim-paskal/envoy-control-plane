@@ -15,6 +15,7 @@ package main
 import (
 	"context"
 	"flag"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -38,25 +39,27 @@ func loadConfigDirectory(filePath string) {
 	_, err := os.Stat(filePath)
 
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
+		return
 	}
 
-	err = filepath.Walk(filePath, func(path string, info os.FileInfo, errWalk error) error {
-
-		if info.IsDir() {
-			return nil
-		}
-
-		test := ConfigStore{}
-
-		test.LoadFile(path)
-
-		configStore[test.config.Id] = &test
-
-		return nil
-	})
+	files, err := ioutil.ReadDir(filePath)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
+		return
+	}
+	for _, f := range files {
+		if !f.IsDir() {
+
+			test := ConfigStore{}
+
+			err := test.LoadFile(filepath.Join(filePath, f.Name()))
+			if err != nil {
+				log.Error(err)
+			} else {
+				configStore[test.config.Id] = &test
+			}
+		}
 	}
 }
 func main() {

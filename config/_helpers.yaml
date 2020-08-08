@@ -1,0 +1,41 @@
+{{ define "tracing" }}
+provider:
+  name: envoy.tracers.dynamic_ot
+  typed_config:
+    "@type": type.googleapis.com/envoy.config.trace.v2.DynamicOtConfig
+    library: /usr/local/lib/libjaegertracing_plugin.so
+    config:
+      service_name: {{ env "JAEGER_SERVICE_NAME" | default "unknown"}}
+      sampler:
+        type: const
+        param: 1
+      reporter:
+        localAgentHostPort: jaeger:6831
+      headers:
+        jaegerDebugHeader: jaeger-debug-id
+        jaegerBaggageHeader: jaeger-baggage
+        traceBaggageHeaderPrefix: uberctx-
+      baggage_restrictions:
+        denyBaggageOnInitializationFailure: false
+        hostPort: ""
+{{ end }}
+{{ define "access_log" }}
+- name: envoy.access_loggers.http_grpc
+  typed_config:
+    "@type": type.googleapis.com/envoy.config.accesslog.v2.HttpGrpcAccessLogConfig
+    common_config:
+      log_name: "test"
+      grpc_service:
+        envoy_grpc:
+          cluster_name: xds_cluster
+- name: envoy.access_loggers.file
+  typed_config:
+    "@type": type.googleapis.com/envoy.config.accesslog.v2.FileAccessLog
+    path: /dev/stdout
+    json_format:
+      protocol: "%PROTOCOL%"
+      duration: "%DURATION%"
+      response_code: "%RESPONSE_CODE%"
+      response_flags: "%RESPONSE_FLAGS%"
+      x_request_id: "%REQ(X-REQUEST-ID)%"
+{{ end }}

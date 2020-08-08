@@ -16,6 +16,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"text/template"
@@ -110,21 +111,25 @@ func (cs *ConfigStore) Push() {
 		log.Fatal(err)
 	}
 }
-func (cs *ConfigStore) LoadFile(fileName string) {
+func (cs *ConfigStore) LoadFile(fileName string) error {
 	log.Debugf("Loading file %s", fileName)
 
+	pattern := filepath.Join(path.Dir(fileName), "*")
+
 	t := template.New("")
-	templates := template.Must(t.Funcs(goTemplateFunc(t)).ParseFiles(fileName))
+	templates := template.Must(t.Funcs(goTemplateFunc(t)).ParseGlob(pattern))
 
 	var tpl bytes.Buffer
 	err := templates.ExecuteTemplate(&tpl, path.Base(fileName), nil)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
+
+	log.Debug(tpl.String())
 
 	err = yaml.Unmarshal(tpl.Bytes(), &cs.config)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if len(cs.config.Id) == 0 {
@@ -138,6 +143,8 @@ func (cs *ConfigStore) LoadFile(fileName string) {
 	cs.listeners = cs.yamlToResources(cs.config.Listeners, api.Listener{})
 
 	cs.Push()
+
+	return nil
 }
 
 func (cs *ConfigStore) yamlToResources(yamlObj []interface{}, outType interface{}) []types.Resource {
