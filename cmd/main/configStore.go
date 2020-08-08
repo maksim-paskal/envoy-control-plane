@@ -28,6 +28,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/google/uuid"
+	utils "github.com/maksim-paskal/utils-go"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
 	"gopkg.in/yaml.v2"
@@ -117,7 +118,7 @@ func (cs *ConfigStore) LoadFile(fileName string) error {
 	pattern := filepath.Join(path.Dir(fileName), "*")
 
 	t := template.New("")
-	templates := template.Must(t.Funcs(goTemplateFunc(t)).ParseGlob(pattern))
+	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).ParseGlob(pattern))
 
 	var tpl bytes.Buffer
 	err := templates.ExecuteTemplate(&tpl, path.Base(fileName), nil)
@@ -150,7 +151,7 @@ func (cs *ConfigStore) yamlToResources(yamlObj []interface{}, outType interface{
 		return nil
 	}
 
-	var yamlObjJson interface{} = convertYAMLtoJSON(yamlObj)
+	var yamlObjJson interface{} = utils.ConvertYAMLtoJSON(yamlObj)
 
 	jsonObj, err := json.Marshal(yamlObjJson)
 	if err != nil {
@@ -166,7 +167,7 @@ func (cs *ConfigStore) yamlToResources(yamlObj []interface{}, outType interface{
 	results := make([]types.Resource, len(resources))
 
 	for k, v := range resources {
-		resourcesJSON, err := getJSONfromYAML(v)
+		resourcesJSON, err := utils.GetJSONfromYAML(v)
 
 		if err != nil {
 			log.Fatal(err)
