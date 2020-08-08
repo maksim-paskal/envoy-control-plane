@@ -8,3 +8,6 @@ k8sConfig:
 	kubectl apply -f config.k8s/test1-id.yaml
 runEnvoy:
 	docker-compose down --remove-orphans && docker-compose up
+installDev:
+	kubectl -n envoy-control-plane delete -f install/deployment.yaml || true
+	kubectl -n envoy-control-plane apply -f install/deployment.yaml

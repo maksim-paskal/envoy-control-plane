@@ -18,4 +18,12 @@ FROM alpine:latest
 COPY --from=build /usr/src/envoy-control-plane/envoy-control-plane /app/envoy-control-plane
 
 WORKDIR /app
+
+RUN addgroup -g 82 -S app \
+&& adduser -u 82 -D -S -G app app \
+&& mkdir -p /app/tmp \
+&& chown app:app /app/tmp
+
+USER 82
+
 CMD /app/envoy-control-plane
