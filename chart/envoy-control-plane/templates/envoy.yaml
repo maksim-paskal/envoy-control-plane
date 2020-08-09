@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-config
+  labels:
+    app: envoy
+data:
+  envoy.yaml: |-
+    dynamic_resources:
+      lds_config:
+        api_config_source:
+          api_type: GRPC
+          grpc_services:
+          - envoy_grpc:
+              cluster_name: xds_cluster
+      cds_config:
+        api_config_source:
+          api_type: GRPC
+          grpc_services:
+          - envoy_grpc:
+              cluster_name: xds_cluster
+    static_resources:
+      clusters:
+      - name: xds_cluster
+        connect_timeout: 1s
+        type: STRICT_DNS
+        http2_protocol_options: {}
+        load_assignment:
+          cluster_name: xds_cluster
+          endpoints:
+          - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: envoy-control-plane
+                    port_value: 18080
+    admin:
+      access_log_path: "/dev/null"
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy
+  labels:
+    app: envoy
+spec:
+  selector:
+    matchLabels:
+      app: envoy
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: envoy
+    spec:
+      volumes:
+      - name: envoy-config
+        configMap:
+          name: envoy-config
+      containers:
+      - name: envoy
+        image: paskalmaksim/envoy-docker-image:v0.0.1
+        imagePullPolicy: IfNotPresent
+        command:
+        - /usr/local/bin/envoy
+        - --config-path
+        - /etc/envoy/envoy.yaml
+        - --log-level
+        - error
+        - --service-cluster
+        - test
+        - --service-node
+        - test1-id
+        env:
+        - name: JAEGER_AGENT_HOST
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        volumeMounts:
+        - name: envoy-config
+          mountPath: /etc/envoy/
+        ports:
+        - containerPort: 8000
+        - containerPort: 8001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy
+  labels:
+    app: envoy
+spec:
+  type: ClusterIP
+  ports:
+  - name: admin
+    port: 8000
+    protocol: TCP
+  - name: http
+    port: 8001
+    protocol: TCP
+  selector:
+    app: envoy

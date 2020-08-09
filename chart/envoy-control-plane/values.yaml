@@ -1,0 +1,3 @@
+registry:
+  image: paskalmaksim/envoy-control-plane:dev
+  imagePullPolicy: Always

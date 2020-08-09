@@ -15,6 +15,7 @@ package main
 import (
 	"io/ioutil"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -48,35 +49,18 @@ func newConfigMapStore(clientset *kubernetes.Clientset) *ConfigMapStore {
 			AddFunc: func(obj interface{}) {
 				cm := obj.(*v1.ConfigMap)
 
-				if !cms.CheckConfigMapLabels(cm) {
-					return
-				}
-
-				for fileName, text := range cm.Data {
-					err := ioutil.WriteFile(filepath.Join(*appConfig.RuntimeDir, fileName), []byte(text), 0644)
-					if err != nil {
-						log.Error(err)
-						return
-					}
-					loadConfigDirectory(*appConfig.RuntimeDir)
-				}
+				cms.SaveData(cm)
 			},
 			UpdateFunc: func(old, cur interface{}) {
 				log.Info("update")
-				cm := cur.(*v1.ConfigMap)
+				curConfig := cur.(*v1.ConfigMap)
+				oldConfig := old.(*v1.ConfigMap)
 
-				if !cms.CheckConfigMapLabels(cm) {
+				if reflect.DeepEqual(curConfig.Data, oldConfig.Data) {
 					return
 				}
 
-				for fileName, text := range cm.Data {
-					err := ioutil.WriteFile(filepath.Join(*appConfig.RuntimeDir, fileName), []byte(text), 0644)
-					if err != nil {
-						log.Error(err)
-						return
-					}
-					loadConfigDirectory(*appConfig.RuntimeDir)
-				}
+				cms.SaveData(curConfig)
 			},
 		})
 		cms.stopCh = make(chan struct{})
@@ -89,6 +73,25 @@ func (cms *ConfigMapStore) CheckConfigMapLabels(cm *v1.ConfigMap) bool {
 	label := strings.Split(*appConfig.ConfigMapLabels, "=")
 
 	return (cm.Labels[label[0]] == label[1])
+}
+
+func (cms *ConfigMapStore) SaveData(cm *v1.ConfigMap) {
+
+	if !cms.CheckConfigMapLabels(cm) {
+		return
+	}
+
+	for fileName, text := range cm.Data {
+		path := filepath.Join(*appConfig.RuntimeDir, fileName)
+		log.Debugf("write file from configmap %s", path)
+
+		err := ioutil.WriteFile(path, []byte(text), 0644)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		loadConfigDirectory(*appConfig.RuntimeDir)
+	}
 }
 
 func (cms *ConfigMapStore) Stop() {

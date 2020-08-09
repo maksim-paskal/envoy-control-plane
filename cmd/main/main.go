@@ -62,9 +62,9 @@ func loadConfigDirectory(filePath string) {
 		if loadFile {
 			new := ConfigStore{}
 
-			err := new.LoadFile(filepath.Join(filePath, f.Name()))
+			yamlText, err := new.LoadFile(filepath.Join(filePath, f.Name()))
 			if err != nil {
-				log.Error(err)
+				log.Errorf("%s \n %s", err.Error(), yamlText)
 			} else {
 				obj := configStore[new.config.Id]
 				if obj == nil {
@@ -88,6 +88,11 @@ func main() {
 	if *appConfig.LogInJSON {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
+
+	if logLevel == log.DebugLevel {
+		log.SetReportCaller(true)
+	}
+
 	log.SetLevel(logLevel)
 
 	log.Debugf("loaded application config = \n%s", appConfig.String())

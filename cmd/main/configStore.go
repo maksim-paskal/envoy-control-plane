@@ -112,7 +112,7 @@ func (cs *ConfigStore) Push() {
 		log.Fatal(err)
 	}
 }
-func (cs *ConfigStore) LoadFile(fileName string) error {
+func (cs *ConfigStore) LoadFile(fileName string) (string, error) {
 	log.Debugf("Loading file %s", fileName)
 
 	pattern := filepath.Join(path.Dir(fileName), "*")
@@ -123,12 +123,12 @@ func (cs *ConfigStore) LoadFile(fileName string) error {
 	var tpl bytes.Buffer
 	err := templates.ExecuteTemplate(&tpl, path.Base(fileName), nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = yaml.Unmarshal(tpl.Bytes(), &cs.config)
 	if err != nil {
-		return err
+		return AddLineNumberToString(tpl.String()), err
 	}
 
 	if len(cs.config.Id) == 0 {
@@ -143,7 +143,7 @@ func (cs *ConfigStore) LoadFile(fileName string) error {
 
 	cs.Push()
 
-	return nil
+	return "", nil
 }
 
 func (cs *ConfigStore) yamlToResources(yamlObj []interface{}, outType interface{}) []types.Resource {

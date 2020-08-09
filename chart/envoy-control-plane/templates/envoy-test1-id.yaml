@@ -1,33 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: test-envoy
-  namespace: default
+  name: envoy-test1-id
   labels:
     app: envoy-control-plane
-    force-update: v2
 data:
-  _helpers.yaml: |-
-    {{ define "access_log" }}
-    - name: envoy.access_loggers.http_grpc
-      typed_config:
-        "@type": type.googleapis.com/envoy.config.accesslog.v2.HttpGrpcAccessLogConfig
-        common_config:
-          log_name: "test"
-          grpc_service:
-            envoy_grpc:
-              cluster_name: xds_cluster
-    - name: envoy.access_loggers.file
-      typed_config:
-        "@type": type.googleapis.com/envoy.config.accesslog.v2.FileAccessLog
-        path: /dev/stdout
-        json_format:
-          protocol: "%PROTOCOL%"
-          duration: "%DURATION%"
-          response_code: "%RESPONSE_CODE%"
-          response_flags: "%RESPONSE_FLAGS%"
-          x_request_id: "%REQ(X-REQUEST-ID)%"
-    {{ end }}
   test1-id.yaml: |-
     listeners:
     - name: listener_0
@@ -49,12 +26,12 @@ data:
                   "@type": type.googleapis.com/envoy.config.trace.v2.DynamicOtConfig
                   library: /usr/local/lib/libjaegertracing_plugin.so
                   config:
-                    service_name: front-proxy
+                    service_name: test-proxy
                     sampler:
                       type: const
                       param: 1
                     reporter:
-                      localAgentHostPort: jaeger:6831
+                      localAgentHostPort: kubernetes-node:6831
                     headers:
                       jaegerDebugHeader: jaeger-debug-id
                       jaegerBaggageHeader: jaeger-baggage
@@ -63,7 +40,16 @@ data:
                       denyBaggageOnInitializationFailure: false
                       hostPort: ""
             access_log:
-    {{ include "access_log" . | indent 10 }}
+            - name: envoy.access_loggers.file
+              typed_config:
+                "@type": type.googleapis.com/envoy.config.accesslog.v2.FileAccessLog
+                path: /dev/stdout
+                json_format:
+                  protocol: "%PROTOCOL%"
+                  duration: "%DURATION%"
+                  response_code: "%RESPONSE_CODE%"
+                  response_flags: "%RESPONSE_FLAGS%"
+                  x_request_id: "%REQ(X-REQUEST-ID)%"
             rds:
               route_config_name: test
               config_source:
@@ -74,20 +60,6 @@ data:
                       cluster_name: xds_cluster
             http_filters:
             - name: envoy.filters.http.router
-    endpoints:
-    - cluster_name: local_service1
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: 127.0.0.1
-                port_value: 8000
-        - endpoint:
-            address:
-              socket_address:
-                address: 127.0.0.2
-                port_value: 8000
     routes:
     - name: test
       virtual_hosts:
@@ -95,14 +67,6 @@ data:
         domains:
         - "*"
         routes:
-        - match:
-            prefix: "/4"
-          route:
-            cluster: local_service4
-        - match:
-            prefix: "/1"
-          route:
-            cluster: local_service1
         - match:
             prefix: "/"
           route:
@@ -116,14 +80,16 @@ data:
     - name: local_service1
       connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN
-      type: EDS
-      eds_cluster_config:
-        eds_config:
-          api_config_source:
-            api_type: GRPC
-            grpc_services:
-            - envoy_grpc:
-                cluster_name: xds_cluster
+      type: STATIC
+      load_assignment:
+        cluster_name: local_service1
+        endpoints:
+        - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: 127.0.0.1
+                  port_value: 8000
     - name: local_service2
       connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN
@@ -135,31 +101,5 @@ data:
           - endpoint:
               address:
                 socket_address:
-                  address: nginxdemo
-                  port_value: 80
-    - name: local_service3
-      connect_timeout: 0.25s
-      lb_policy: ROUND_ROBIN
-      type: STRICT_DNS
-      load_assignment:
-        cluster_name: local_service3
-        endpoints:
-        - lb_endpoints:
-          - endpoint:
-              address:
-                socket_address:
-                  address: nginxdemo
-                  port_value: 80
-    - name: local_service4
-      connect_timeout: 0.25s
-      lb_policy: ROUND_ROBIN
-      type: STRICT_DNS
-      load_assignment:
-        cluster_name: local_service4
-        endpoints:
-        - lb_endpoints:
-          - endpoint:
-              address:
-                socket_address:
-                  address: nginxdemo
-                  port_value: 80
+                  address: envoy-control-plane
+                  port_value: 18081
