@@ -21,9 +21,12 @@ import (
 	"sync"
 	"text/template"
 
+	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
+	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	endpointv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
+	endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
@@ -62,7 +65,7 @@ type ConfigStore struct {
 
 func (cs *ConfigStore) Push() {
 
-	lbEndpoints := make(map[string][]*endpointv2.LocalityLbEndpoints)
+	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
 
 	for _, ep := range cs.endpoints {
 		fixed := ep.(*api.ClusterLoadAssignment)
@@ -73,10 +76,10 @@ func (cs *ConfigStore) Push() {
 	cs.epStore.Range(func(key interface{}, value interface{}) bool {
 		podInfo := value.(checkPodResult)
 
-		lbEndpoints[podInfo.clusterName] = append(lbEndpoints[podInfo.clusterName], &endpointv2.LocalityLbEndpoints{
-			LbEndpoints: []*endpointv2.LbEndpoint{{
-				HostIdentifier: &endpointv2.LbEndpoint_Endpoint{
-					Endpoint: &endpointv2.Endpoint{
+		lbEndpoints[podInfo.clusterName] = append(lbEndpoints[podInfo.clusterName], &endpoint.LocalityLbEndpoints{
+			LbEndpoints: []*endpoint.LbEndpoint{{
+				HostIdentifier: &endpoint.LbEndpoint_Endpoint{
+					Endpoint: &endpoint.Endpoint{
 						Address: &core.Address{
 							Address: &core.Address_SocketAddress{
 								SocketAddress: &core.SocketAddress{
