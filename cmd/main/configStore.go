@@ -21,9 +21,6 @@ import (
 	"sync"
 	"text/template"
 
-	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
-	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"

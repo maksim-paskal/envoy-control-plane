@@ -23,5 +23,6 @@ set -ex
 rm -rf ./tmp
 mkdir ./tmp
 
+make k8sConfig
 go build -v ./cmd/main
 ./main -log.level=DEBUG -kubeconfig.path=kubeconfig $*
