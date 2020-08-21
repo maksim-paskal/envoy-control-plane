@@ -7,15 +7,14 @@ import (
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-	"github.com/google/uuid"
 	"github.com/maksim-paskal/utils-go"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func getConfigSnapshot(config ConfigType, endpoints []types.Resource) cache.Snapshot {
+func getConfigSnapshot(version string, config ConfigType, endpoints []types.Resource) cache.Snapshot {
 	return cache.NewSnapshot(
-		uuid.New().String(),
+		version,
 		endpoints,
 		yamlToResources(config.Clusters, api.Cluster{}),
 		yamlToResources(config.Routes, api.RouteConfiguration{}),

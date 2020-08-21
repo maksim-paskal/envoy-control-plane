@@ -8,6 +8,7 @@ import (
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,10 +43,14 @@ func (cs *ConfigStore) newPod(pod *v1.Pod) {
 }
 
 func (cs *ConfigStore) Push() {
-	err := snapshotCache.SetSnapshot(cs.config.Id, getConfigSnapshot(cs.config, cs.lastEndpoints))
+	version := uuid.New().String()
+	snap := getConfigSnapshot(version, cs.config, cs.lastEndpoints)
+
+	err := snapshotCache.SetSnapshot(cs.config.Id, snap)
 	if err != nil {
 		log.Error(err)
 	}
+	log.Infof("pushed node=%s,version=%s", cs.config.Id, version)
 }
 func (cs *ConfigStore) LoadEndpoint(pod *v1.Pod) {
 	podInfo := cs.podInfo(pod)

@@ -8,7 +8,7 @@ services:
     - 8000:8000
     - 8001:8001
     volumes:
-    - ./envoy.yaml:/etc/envoy/envoy.yaml
+    - ./envoy.yaml:/envoy/envoy.yaml
     command:
     - /usr/local/bin/envoy
     - -c
@@ -17,6 +17,8 @@ services:
     - warn
     - --service-cluster
     - test
+    - --service-zone
+    - aa
     - --service-node
     - test1-id
   nginxdemo:
