@@ -20,7 +20,7 @@ func newConfigMapStore(clientset *kubernetes.Clientset) *ConfigMapStore {
 
 	go func() {
 		infFactory := informers.NewSharedInformerFactoryWithOptions(clientset, 0,
-			informers.WithNamespace("default"),
+			informers.WithNamespace(*appConfig.Namespace),
 		)
 
 		informer := infFactory.Core().V1().ConfigMaps().Informer()
