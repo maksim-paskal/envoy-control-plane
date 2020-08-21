@@ -83,8 +83,15 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				}
 			}
 
+			var priority uint32 = 0
+
+			if info.priority > 0 {
+				priority = info.priority
+			}
+
 			lbEndpoints[info.clusterName] = append(lbEndpoints[info.clusterName], &endpoint.LocalityLbEndpoints{
 				Locality: nodeLocality,
+				Priority: priority,
 				LbEndpoints: []*endpoint.LbEndpoint{{
 					HostIdentifier: &endpoint.LbEndpoint_Endpoint{
 						Endpoint: &endpoint.Endpoint{
@@ -130,6 +137,7 @@ type checkPodResult struct {
 	ready       bool
 	nodeRegion  string
 	nodeZone    string
+	priority    uint32
 }
 
 func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
@@ -158,6 +166,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					podIP:       pod.Status.PodIP,
 					ready:       ready,
 					port:        config.Port,
+					priority:    config.Priority,
 				}
 				if *appConfig.ZoneLabels {
 					nodeInfo := cs.getNode(pod.Spec.NodeName)
