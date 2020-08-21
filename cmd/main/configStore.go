@@ -1,210 +1,151 @@
-/*
-Copyright paskal.maksim@gmail.com
-Licensed under the Apache License, Version 2.0 (the "License")
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"path"
-	"path/filepath"
-	"strings"
+	"reflect"
 	"sync"
-	"text/template"
 
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
-	_ "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-	"github.com/google/uuid"
-	utils "github.com/maksim-paskal/utils-go"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/protobuf/encoding/protojson"
-	"gopkg.in/yaml.v2"
+	v1 "k8s.io/api/core/v1"
 )
 
-type KubernetesType struct {
-	ClusterName string            `yaml:"cluster_name"`
-	Namespace   string            `yaml:"namespace"`
-	Port        uint32            `yaml:"port"`
-	Selector    map[string]string `yaml:"selector"`
-}
-type ConfigFile struct {
-	Id         string           `yaml:"id"`
-	Kubernetes []KubernetesType `yaml:"kubernetes"`
-	Endpoints  []interface{}    `yaml:"endpoints"`
-	Routes     []interface{}    `yaml:"routes"`
-	Clusters   []interface{}    `yaml:"clusters"`
-	Listeners  []interface{}    `yaml:"listeners"`
+type ConfigStore struct {
+	config              ConfigType
+	ep                  *EndpointsStore
+	kubernetesEndpoints sync.Map
+	lastEndpoints       []types.Resource
 }
 
-type ConfigStore struct {
-	config    ConfigFile
-	epStore   sync.Map
-	version   string
-	clusters  []types.Resource
-	endpoints []types.Resource
-	routes    []types.Resource
-	listeners []types.Resource
-	runtimes  []types.Resource
+func newConfigStore(config ConfigType, ep *EndpointsStore) *ConfigStore {
+	cs := ConfigStore{
+		config: config,
+		ep:     ep,
+	}
+
+	for _, v := range ep.informer.GetStore().List() {
+		pod := v.(*v1.Pod)
+		cs.LoadEndpoint(pod)
+	}
+	cs.saveLastEndpoints()
+
+	cs.Push()
+	return &cs
+}
+
+func (cs *ConfigStore) newPod(pod *v1.Pod) {
+	cs.LoadEndpoint(pod)
+	cs.saveLastEndpoints()
 }
 
 func (cs *ConfigStore) Push() {
+	err := snapshotCache.SetSnapshot(cs.config.Id, getConfigSnapshot(cs.config, cs.lastEndpoints))
+	if err != nil {
+		log.Error(err)
+	}
+}
+func (cs *ConfigStore) LoadEndpoint(pod *v1.Pod) {
+	podInfo := cs.podInfo(pod)
+
+	if podInfo.check {
+		cs.kubernetesEndpoints.Store(pod.Name, podInfo)
+	}
+}
+
+func (cs *ConfigStore) saveLastEndpoints() {
+	endpoints := yamlToResources(cs.config.Endpoints, api.ClusterLoadAssignment{})
 
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
 
-	for _, ep := range cs.endpoints {
+	for _, ep := range endpoints {
 		fixed := ep.(*api.ClusterLoadAssignment)
 
 		lbEndpoints[fixed.GetClusterName()] = append(lbEndpoints[fixed.GetClusterName()], fixed.GetEndpoints()...)
 	}
 
-	cs.epStore.Range(func(key interface{}, value interface{}) bool {
-		podInfo := value.(checkPodResult)
-
-		lbEndpoints[podInfo.clusterName] = append(lbEndpoints[podInfo.clusterName], &endpoint.LocalityLbEndpoints{
-			LbEndpoints: []*endpoint.LbEndpoint{{
-				HostIdentifier: &endpoint.LbEndpoint_Endpoint{
-					Endpoint: &endpoint.Endpoint{
-						Address: &core.Address{
-							Address: &core.Address_SocketAddress{
-								SocketAddress: &core.SocketAddress{
-									Protocol: core.SocketAddress_TCP,
-									Address:  podInfo.podIP,
-									PortSpecifier: &core.SocketAddress_PortValue{
-										PortValue: podInfo.port,
+	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
+		info := value.(checkPodResult)
+		if info.ready {
+			lbEndpoints[info.clusterName] = append(lbEndpoints[info.clusterName], &endpoint.LocalityLbEndpoints{
+				LbEndpoints: []*endpoint.LbEndpoint{{
+					HostIdentifier: &endpoint.LbEndpoint_Endpoint{
+						Endpoint: &endpoint.Endpoint{
+							Address: &core.Address{
+								Address: &core.Address_SocketAddress{
+									SocketAddress: &core.SocketAddress{
+										Protocol: core.SocketAddress_TCP,
+										Address:  info.podIP,
+										PortSpecifier: &core.SocketAddress_PortValue{
+											PortValue: info.port,
+										},
 									},
 								},
 							},
 						},
 					},
-				},
-			}},
-		})
+				}},
+			})
+		}
 		return true
 	})
 
 	var publishEp []types.Resource
-
 	for clusterName, ep := range lbEndpoints {
 		publishEp = append(publishEp, &api.ClusterLoadAssignment{
 			ClusterName: clusterName,
 			Endpoints:   ep,
 		})
 	}
-	cs.version = uuid.New().String()
 
-	snapshot := cache.NewSnapshot(cs.version, publishEp, cs.clusters, cs.routes, cs.listeners, cs.runtimes)
-
-	err := snapshotCache.SetSnapshot(cs.config.Id, snapshot)
-	if err != nil {
-		log.Fatal(err)
+	if !reflect.DeepEqual(cs.lastEndpoints, endpoints) {
+		cs.lastEndpoints = publishEp
+		// endpoints changes
+		cs.Push()
 	}
 }
-func (cs *ConfigStore) LoadFile(fileName string) (string, error) {
-	log.Debugf("Loading file %s", fileName)
 
-	pattern := filepath.Join(path.Dir(fileName), "*")
-
-	t := template.New("")
-	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).ParseGlob(pattern))
-
-	var tpl bytes.Buffer
-	err := templates.ExecuteTemplate(&tpl, path.Base(fileName), nil)
-	if err != nil {
-		return "", err
-	}
-
-	err = yaml.Unmarshal(tpl.Bytes(), &cs.config)
-	if err != nil {
-		return AddLineNumberToString(tpl.String()), err
-	}
-
-	if len(cs.config.Id) == 0 {
-		fileId := strings.Split(path.Base(fileName), ".")[0]
-		cs.config.Id = fileId
-	}
-
-	cs.clusters = cs.yamlToResources(cs.config.Clusters, api.Cluster{})
-	cs.routes = cs.yamlToResources(cs.config.Routes, api.RouteConfiguration{})
-	cs.endpoints = cs.yamlToResources(cs.config.Endpoints, api.ClusterLoadAssignment{})
-	cs.listeners = cs.yamlToResources(cs.config.Listeners, api.Listener{})
-
-	cs.Push()
-
-	return "", nil
+type checkPodResult struct {
+	check       bool
+	clusterName string
+	podIP       string
+	port        uint32
+	ready       bool
 }
 
-func (cs *ConfigStore) yamlToResources(yamlObj []interface{}, outType interface{}) []types.Resource {
-	if len(yamlObj) == 0 {
-		return nil
-	}
-
-	var yamlObjJson interface{} = utils.ConvertYAMLtoJSON(yamlObj)
-
-	jsonObj, err := json.Marshal(yamlObjJson)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var resources []interface{}
-	err = json.Unmarshal(jsonObj, &resources)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	results := make([]types.Resource, len(resources))
-
-	for k, v := range resources {
-		resourcesJSON, err := utils.GetJSONfromYAML(v)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		switch outType.(type) {
-		case api.Cluster:
-			resource := api.Cluster{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
-			if err != nil {
-				log.Fatal(err, ",json=", string(resourcesJSON))
+func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
+	for _, config := range cs.config.Kubernetes {
+		if config.Namespace == pod.Namespace || len(config.Namespace) == 0 {
+			labelsFound := 0
+			for k2, v2 := range pod.Labels {
+				if config.Selector[k2] == v2 {
+					labelsFound = labelsFound + 1
+				}
 			}
-			results[k] = &resource
-		case api.RouteConfiguration:
-			resource := api.RouteConfiguration{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
-			if err != nil {
-				log.Fatal(err, ",json=", string(resourcesJSON))
+			if labelsFound == len(config.Selector) {
+				ready := false
+
+				if pod.Status.Phase == v1.PodRunning {
+					for _, v := range pod.Status.Conditions {
+						if v.Type == v1.PodReady && v.Status == "True" {
+							ready = true
+						}
+					}
+				}
+				return checkPodResult{
+					check:       true,
+					clusterName: config.ClusterName,
+					podIP:       pod.Status.PodIP,
+					ready:       ready,
+					port:        config.Port,
+				}
 			}
-			results[k] = &resource
-		case api.ClusterLoadAssignment:
-			resource := api.ClusterLoadAssignment{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
-			if err != nil {
-				log.Fatal(err, ",json=", string(resourcesJSON))
-			}
-			results[k] = &resource
-		case api.Listener:
-			resource := api.Listener{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
-			if err != nil {
-				log.Fatal(err, ",json=", string(resourcesJSON))
-			}
-			results[k] = &resource
-		default:
-			log.Fatal("unknown class")
 		}
 	}
-	return results
+	return checkPodResult{check: false}
+}
+
+func (cs *ConfigStore) Stop() {
+	log.Info("stop")
 }

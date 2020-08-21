@@ -8,7 +8,7 @@ testChart:
 build:
 	docker build . -t paskalmaksim/envoy-control-plane:dev
 k8sConfig:
-	kubectl apply -f config.k8s/test1-id.yaml
+	kubectl apply -f ./config/
 runEnvoy:
 	docker-compose down --remove-orphans && docker-compose up
 installDev:
@@ -20,5 +20,5 @@ installDevConfig:
 clean:
 	helm delete --purge envoy-control-plane || true
 	kubectl delete ns envoy-control-plane || true
-	kubectl delete -f config.k8s/test1-id.yaml || true
+	kubectl delete -f ./config/ || true
 	docker-compose down --remove-orphans

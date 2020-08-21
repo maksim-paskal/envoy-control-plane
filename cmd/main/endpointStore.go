@@ -1,20 +1,6 @@
-/*
-Copyright paskal.maksim@gmail.com
-Licensed under the Apache License, Version 2.0 (the "License")
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 package main
 
 import (
-	"fmt"
-
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
@@ -24,14 +10,15 @@ import (
 
 type EndpointsStore struct {
 	clientset *kubernetes.Clientset
+	informer  cache.SharedIndexInformer
 	stopCh    chan struct{}
+	onNewPod  func(pod *v1.Pod)
 }
 
-func newEndpointsStore(clientset *kubernetes.Clientset, config *map[string]ConfigFile) *EndpointsStore {
+func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 	es := EndpointsStore{
 		clientset: clientset,
 	}
-
 	go func() {
 		var factory informers.SharedInformerFactory
 		if *appConfig.WatchNamespaced {
@@ -48,26 +35,28 @@ func newEndpointsStore(clientset *kubernetes.Clientset, config *map[string]Confi
 			)
 		}
 
-		informer := factory.Core().V1().Pods().Informer()
+		es.informer = factory.Core().V1().Pods().Informer()
 		es.stopCh = make(chan struct{})
 
-		informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		es.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				es.envoyConfig(pod)
+				log.Info("AddFunc " + pod.Name)
+				es.newMessage(pod)
 			},
 			UpdateFunc: func(oldObj interface{}, newObj interface{}) {
 				pod := newObj.(*v1.Pod)
-				es.envoyConfig(pod)
+				log.Info("UpdateFunc " + pod.Name)
+				es.newMessage(pod)
 			},
 			DeleteFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				es.envoyConfig(pod)
+				log.Info("UpdateFunc " + pod.Name)
+				es.newMessage(pod)
 			},
 		})
-		informer.Run(es.stopCh)
+		es.informer.Run(es.stopCh)
 	}()
-
 	return &es
 }
 
@@ -75,127 +64,6 @@ func (es *EndpointsStore) Stop() {
 	close(es.stopCh)
 }
 
-func (es *EndpointsStore) envoyConfig(pod *v1.Pod) {
-	ready := false
-
-	if pod.Status.Phase == v1.PodRunning {
-		for _, v := range pod.Status.Conditions {
-			if v.Type == v1.PodReady && v.Status == "True" {
-				ready = true
-			}
-		}
-	}
-
-	for _, v := range es.searchPod(pod) {
-		idx := fmt.Sprintf("%s-%s", v.clusterName, v.podIP)
-
-		if ready {
-			configStore[v.nodeId].epStore.Store(idx, v)
-		} else {
-			configStore[v.nodeId].epStore.Delete(idx)
-		}
-		configStore[v.nodeId].Push()
-	}
-}
-
-type checkPodResult struct {
-	nodeId      string
-	clusterName string
-	podIP       string
-	port        uint32
-}
-
-func (es *EndpointsStore) searchPod(pod *v1.Pod) []checkPodResult {
-
-	var result []checkPodResult
-
-	config := configStore
-
-	for _, v := range config {
-		for _, v1 := range v.config.Kubernetes {
-			if v1.Namespace == pod.Namespace || len(v1.Namespace) == 0 {
-				labelsFound := 0
-				for k2, v2 := range pod.Labels {
-					if v1.Selector[k2] == v2 {
-						labelsFound = labelsFound + 1
-					}
-				}
-				if labelsFound == len(v1.Selector) {
-					result = append(result, checkPodResult{
-						nodeId:      v.config.Id,
-						clusterName: v1.ClusterName,
-						podIP:       pod.Status.PodIP,
-						port:        v1.Port,
-					})
-				}
-			}
-		}
-	}
-
-	return result
-	/*
-
-		if pod.Namespace == config.Namespace {
-			labelsFound := 0
-			for k, v := range pod.Labels {
-				if config.Selector[k] == v {
-					labelsFound = labelsFound + 1
-				}
-			}
-			if labelsFound != len(config.Selector) {
-				return
-			}
-			ready := false
-
-			if pod.Status.Phase == v1.PodRunning {
-				for _, v := range pod.Status.Conditions {
-					if v.Type == v1.PodReady && v.Status == "True" {
-						ready = true
-					}
-				}
-			}
-
-			if ready {
-				es.podStore.Store(pod.Name, pod.Status.PodIP)
-			} else {
-				es.podStore.Delete(pod.Name)
-			}
-
-			var newIps []string
-			es.podStore.Range(func(key interface{}, value interface{}) bool {
-				newIps = append(newIps, value.(string))
-				return true
-			})
-			if !reflect.DeepEqual(es.ips, newIps) {
-				es.ips = newIps
-
-				endpoints := make([]types.Resource, len(newIps))
-
-				for k, v := range newIps {
-					endpoints[k] = &endpoint.ClusterLoadAssignment{
-						ClusterName: config.ClusterName,
-						Endpoints: []*endpointv2.LocalityLbEndpoints{{
-							LbEndpoints: []*endpointv2.LbEndpoint{{
-								HostIdentifier: &endpointv2.LbEndpoint_Endpoint{
-									Endpoint: &endpointv2.Endpoint{
-										Address: &core.Address{
-											Address: &core.Address_SocketAddress{
-												SocketAddress: &core.SocketAddress{
-													Protocol: core.SocketAddress_TCP,
-													Address:  v,
-													PortSpecifier: &core.SocketAddress_PortValue{
-														PortValue: config.Port,
-													},
-												},
-											},
-										},
-									},
-								},
-							}},
-						}},
-					}
-				}
-			}
-		}
-	*/
+func (es *EndpointsStore) newMessage(pod *v1.Pod) {
+	es.onNewPod(pod)
 }

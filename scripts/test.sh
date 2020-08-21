@@ -24,5 +24,6 @@ rm -rf ./tmp
 mkdir ./tmp
 
 make k8sConfig
-go build -v ./cmd/main
+rm -rf main
+go build -o main -v ./cmd/main
 ./main -log.level=DEBUG -kubeconfig.path=kubeconfig $*

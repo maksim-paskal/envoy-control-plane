@@ -37,12 +37,23 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			StatusInfo cache.Snapshot
 		}
 
-		sn, _ := snapshotCache.GetSnapshot("test-id")
+		var results []StatusResponce
 
-		b, _ := json.Marshal(StatusResponce{
-			Status:     snapshotCache.GetStatusKeys(),
-			StatusInfo: sn,
-		})
+		for _, v := range snapshotCache.GetStatusKeys() {
+			sn, _ := snapshotCache.GetSnapshot(v)
+
+			results = append(results, StatusResponce{
+				Status:     snapshotCache.GetStatusKeys(),
+				StatusInfo: sn,
+			})
+		}
+
+		if len(results) == 0 {
+			http.Error(w, "no results", http.StatusInternalServerError)
+			return
+		}
+
+		b, _ := json.MarshalIndent(results, "", " ")
 		_, err := w.Write(b)
 		if err != nil {
 			log.Error(err)

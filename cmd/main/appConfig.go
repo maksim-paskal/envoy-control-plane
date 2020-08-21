@@ -30,6 +30,8 @@ type AppConfig struct {
 	WatchNamespaced    *bool
 	Namespace          *string
 	RuntimeDir         *string
+	GrpcAddress        *string
+	WebAddress         *string
 }
 
 func (ac *AppConfig) String() string {
@@ -57,4 +59,6 @@ var appConfig = &AppConfig{
 
 	WatchNamespaced: flag.Bool("namespaced", true, "watch pod in one namespace"),
 	Namespace:       flag.String("namespace", os.Getenv("MY_POD_NAMESPACE"), "watch namespace"),
+	GrpcAddress:     flag.String("grpcAddress", ":18080", "grpc address"),
+	WebAddress:      flag.String("webAddress", ":18081", "web address"),
 }
