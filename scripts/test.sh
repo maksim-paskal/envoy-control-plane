@@ -20,9 +20,6 @@ export MY_POD_NAMESPACE=default
 
 set -ex
 
-rm -rf ./tmp
-mkdir ./tmp
-
 make k8sConfig
 rm -rf main
 go build -o main -v ./cmd/main
