@@ -10,6 +10,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type ConfigStore struct {
@@ -68,7 +69,17 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
 		info := value.(checkPodResult)
 		if info.ready {
+			nodeLocality := &core.Locality{}
+
+			if *appConfig.ZoneLabels {
+				nodeLocality = &core.Locality{
+					Region: info.nodeRegion,
+					Zone:   info.nodeZone,
+				}
+			}
+
 			lbEndpoints[info.clusterName] = append(lbEndpoints[info.clusterName], &endpoint.LocalityLbEndpoints{
+				Locality: nodeLocality,
 				LbEndpoints: []*endpoint.LbEndpoint{{
 					HostIdentifier: &endpoint.LbEndpoint_Endpoint{
 						Endpoint: &endpoint.Endpoint{
@@ -112,6 +123,8 @@ type checkPodResult struct {
 	podIP       string
 	port        uint32
 	ready       bool
+	nodeRegion  string
+	nodeZone    string
 }
 
 func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
@@ -133,13 +146,21 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 						}
 					}
 				}
-				return checkPodResult{
+
+				result := checkPodResult{
 					check:       true,
 					clusterName: config.ClusterName,
 					podIP:       pod.Status.PodIP,
 					ready:       ready,
 					port:        config.Port,
 				}
+				if *appConfig.ZoneLabels {
+					nodeInfo := cs.getNode(pod.Spec.NodeName)
+
+					result.nodeRegion = nodeInfo.Labels[*appConfig.NodeRegionLabel]
+					result.nodeZone = nodeInfo.Labels[*appConfig.NodeZoneLabel]
+				}
+				return result
 			}
 		}
 	}
@@ -148,4 +169,12 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 
 func (cs *ConfigStore) Stop() {
 	log.Info("stop")
+}
+
+func (cs *ConfigStore) getNode(nodeName string) *v1.Node {
+	nodeInfo, err := cs.ep.clientset.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+	if err != nil {
+		log.Error(err)
+	}
+	return nodeInfo
 }

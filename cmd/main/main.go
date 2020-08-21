@@ -44,6 +44,22 @@ func getKubernetesClient() *kubernetes.Clientset {
 func main() {
 	flag.Parse()
 
+	logLevel, err := log.ParseLevel(*appConfig.LogLevel)
+	if err != nil {
+		log.Panic(err)
+	}
+	if *appConfig.LogInJSON {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
+	if logLevel == log.DebugLevel {
+		log.SetReportCaller(true)
+	}
+
+	log.SetLevel(logLevel)
+
+	log.Debugf("loaded application config = \n%s", appConfig.String())
+
 	var configStore map[string]*ConfigStore = make(map[string]*ConfigStore)
 
 	clientset := getKubernetesClient()

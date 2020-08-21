@@ -41,17 +41,14 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 		es.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				log.Info("AddFunc " + pod.Name)
 				es.newMessage(pod)
 			},
 			UpdateFunc: func(oldObj interface{}, newObj interface{}) {
 				pod := newObj.(*v1.Pod)
-				log.Info("UpdateFunc " + pod.Name)
 				es.newMessage(pod)
 			},
 			DeleteFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				log.Info("UpdateFunc " + pod.Name)
 				es.newMessage(pod)
 			},
 		})
