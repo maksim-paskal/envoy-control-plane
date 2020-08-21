@@ -17,8 +17,6 @@ services:
     - warn
     - --service-cluster
     - test
-    - --service-zone
-    - aa
     - --service-node
     - test1-id
   nginxdemo:
