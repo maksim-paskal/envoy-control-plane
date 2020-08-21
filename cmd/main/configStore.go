@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net"
 	"reflect"
 	"sync"
 
@@ -114,14 +115,25 @@ func (cs *ConfigStore) saveLastEndpoints() {
 		return true
 	})
 
+	var isInvalidIP bool = false
 	var publishEp []types.Resource
 	for clusterName, ep := range lbEndpoints {
+		for _, value1 := range ep {
+			for _, value2 := range value1.LbEndpoints {
+				address := value2.GetEndpoint().GetAddress().GetSocketAddress().Address
+				if net.ParseIP(address) == nil {
+					log.Errorf("clusterName=%s,ip=%s is invalid", clusterName, address)
+				}
+			}
+		}
 		publishEp = append(publishEp, &api.ClusterLoadAssignment{
 			ClusterName: clusterName,
 			Endpoints:   ep,
 		})
 	}
-
+	if isInvalidIP {
+		return
+	}
 	if !reflect.DeepEqual(cs.lastEndpoints, endpoints) {
 		cs.lastEndpoints = publishEp
 		// endpoints changes
