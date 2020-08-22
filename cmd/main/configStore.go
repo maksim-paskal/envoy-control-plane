@@ -180,7 +180,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					port:        config.Port,
 					priority:    config.Priority,
 				}
-				if *appConfig.ZoneLabels {
+				if ready && *appConfig.ZoneLabels {
 					nodeInfo := cs.getNode(pod.Spec.NodeName)
 
 					result.nodeRegion = nodeInfo.Labels[*appConfig.NodeRegionLabel]
