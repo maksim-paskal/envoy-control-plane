@@ -18,9 +18,31 @@ import (
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
-func handler(w http.ResponseWriter, r *http.Request) {
+type WebServer struct {
+	clientset *kubernetes.Clientset
+}
+
+func newWebServer(clientset *kubernetes.Clientset) *WebServer {
+	ws := WebServer{
+		clientset: clientset,
+	}
+
+	go func() {
+		http.HandleFunc("/", ws.handler)
+		http.HandleFunc("/api/zone", ws.handlerZone)
+		log.Info("http.port=", *appConfig.WebAddress)
+		if err := http.ListenAndServe(*appConfig.WebAddress, nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	return &ws
+}
+func (ws *WebServer) handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	action := r.URL.Query()["action"]
@@ -61,5 +83,32 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	default:
 		http.Error(w, "no action defined", http.StatusInternalServerError)
+	}
+}
+
+func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	namespace := r.Form.Get("namespace")
+	pod := r.Form.Get("pod")
+
+	podInfo, err := ws.clientset.CoreV1().Pods(namespace).Get(pod, metav1.GetOptions{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	nodeInfo, err := ws.clientset.CoreV1().Nodes().Get(podInfo.Spec.NodeName, metav1.GetOptions{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = w.Write([]byte(nodeInfo.Labels[*appConfig.NodeZoneLabel]))
+	if err != nil {
+		log.Error(err)
 	}
 }

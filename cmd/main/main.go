@@ -16,7 +16,6 @@ import (
 	"context"
 	"flag"
 	"net"
-	"net/http"
 
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v2"
@@ -109,7 +108,7 @@ func main() {
 	}
 
 	startControlPlane(ctx, grpcServer)
-	startWebServer()
+	newWebServer(clientset)
 
 	log.Printf("management server listening on %s\n", *appConfig.GrpcAddress)
 
@@ -141,14 +140,4 @@ func startControlPlane(ctx context.Context, grpcServer *grpc.Server) {
 	api.RegisterClusterDiscoveryServiceServer(grpcServer, server)
 	api.RegisterRouteDiscoveryServiceServer(grpcServer, server)
 	api.RegisterListenerDiscoveryServiceServer(grpcServer, server)
-}
-
-func startWebServer() {
-	go func() {
-		http.HandleFunc("/", handler)
-		log.Info("http.port=", *appConfig.WebAddress)
-		if err := http.ListenAndServe(*appConfig.WebAddress, nil); err != nil {
-			log.Fatal(err)
-		}
-	}()
 }
