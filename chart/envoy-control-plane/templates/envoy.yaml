@@ -70,11 +70,15 @@ spec:
         - --config-path
         - /etc/envoy/envoy.yaml
         - --log-level
-        - error
+        - warn
         - --service-cluster
         - test
         - --service-node
         - test1-id
+        resources:
+          requests:
+            cpu: 10m
+            memory: 100Mi
         env:
         - name: JAEGER_AGENT_HOST
           valueFrom:

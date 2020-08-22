@@ -5,7 +5,7 @@ metadata:
   labels:
     app: envoy-control-plane
 data:
-  test1-id.yaml: |-
+  test1-id: |-
     listeners:
     - name: listener_0
       address:
@@ -76,30 +76,35 @@ data:
                 weight: 50
               - name: local_service2
                 weight: 50
+    kubernetes:
+    - cluster_name: local_service1
+      port: 80
+      selector:
+        app: test-001
+    - cluster_name: local_service2
+      port: 80
+      selector:
+        app: test-002
     clusters:
     - name: local_service1
       connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN
-      type: STATIC
-      load_assignment:
-        cluster_name: local_service1
-        endpoints:
-        - lb_endpoints:
-          - endpoint:
-              address:
-                socket_address:
-                  address: 127.0.0.1
-                  port_value: 8000
+      type: EDS
+      eds_cluster_config:
+        eds_config:
+          api_config_source:
+            api_type: GRPC
+            grpc_services:
+            - envoy_grpc:
+                cluster_name: xds_cluster
     - name: local_service2
       connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN
-      type: STRICT_DNS
-      load_assignment:
-        cluster_name: local_service2
-        endpoints:
-        - lb_endpoints:
-          - endpoint:
-              address:
-                socket_address:
-                  address: envoy-control-plane
-                  port_value: 18081
+      type: EDS
+      eds_cluster_config:
+        eds_config:
+          api_config_source:
+            api_type: GRPC
+            grpc_services:
+            - envoy_grpc:
+                cluster_name: xds_cluster

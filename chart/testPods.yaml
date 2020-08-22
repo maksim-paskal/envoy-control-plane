@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-001
+  labels:
+    app: test-001
+spec:
+  selector:
+    matchLabels:
+      app: test-001
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: test-001
+    spec:
+      containers:
+      - name: test-001
+        image: nginxdemos/hello:plain-text
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: 10m
+            memory: 100Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-002
+  labels:
+    app: test-002
+spec:
+  selector:
+    matchLabels:
+      app: test-002
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: test-002
+    spec:
+      containers:
+      - name: test-002
+        image: nginxdemos/hello:plain-text
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: 10m
+            memory: 100Mi

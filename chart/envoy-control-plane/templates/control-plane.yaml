@@ -27,6 +27,10 @@ spec:
               fieldPath: metadata.namespace
         command:
         - /app/envoy-control-plane
+        resources:
+          requests:
+            cpu: 10m
+            memory: 100Mi
         ports:
         - containerPort: 18080
         - containerPort: 18081
