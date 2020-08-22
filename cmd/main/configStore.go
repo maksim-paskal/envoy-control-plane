@@ -20,12 +20,14 @@ type ConfigStore struct {
 	ep                  *EndpointsStore
 	kubernetesEndpoints sync.Map
 	lastEndpoints       []types.Resource
+	isTypeInited        bool
 }
 
 func newConfigStore(config ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs := ConfigStore{
-		config: config,
-		ep:     ep,
+		config:       config,
+		ep:           ep,
+		isTypeInited: false,
 	}
 
 	for _, v := range ep.informer.GetStore().List() {
@@ -35,12 +37,16 @@ func newConfigStore(config ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs.saveLastEndpoints()
 
 	cs.Push()
+	cs.isTypeInited = true
 	return &cs
 }
 
 func (cs *ConfigStore) newPod(pod *v1.Pod) {
-	cs.LoadEndpoint(pod)
-	cs.saveLastEndpoints()
+	// ignore new pods while newConfigStore
+	if cs.isTypeInited {
+		cs.LoadEndpoint(pod)
+		cs.saveLastEndpoints()
+	}
 }
 
 func (cs *ConfigStore) Push() {
@@ -122,6 +128,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 			for _, value2 := range value1.LbEndpoints {
 				address := value2.GetEndpoint().GetAddress().GetSocketAddress().Address
 				if net.ParseIP(address) == nil {
+					isInvalidIP = true
 					log.Errorf("clusterName=%s,ip=%s is invalid", clusterName, address)
 				}
 			}
@@ -134,8 +141,9 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	if isInvalidIP {
 		return
 	}
-	if !reflect.DeepEqual(cs.lastEndpoints, endpoints) {
+	if !reflect.DeepEqual(cs.lastEndpoints, publishEp) {
 		cs.lastEndpoints = publishEp
+		log.Debugf("new endpoints,node=%s", cs.config.Id)
 		// endpoints changes
 		cs.Push()
 	}
