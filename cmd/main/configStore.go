@@ -32,14 +32,12 @@ type ConfigStore struct {
 	ep                  *EndpointsStore
 	kubernetesEndpoints sync.Map
 	lastEndpoints       []types.Resource
-	isTypeInited        bool
 }
 
 func newConfigStore(config ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs := ConfigStore{
-		config:       config,
-		ep:           ep,
-		isTypeInited: false,
+		config: config,
+		ep:     ep,
 	}
 
 	for _, v := range ep.informer.GetStore().List() {
@@ -49,16 +47,12 @@ func newConfigStore(config ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs.saveLastEndpoints()
 
 	cs.Push()
-	cs.isTypeInited = true
 	return &cs
 }
 
 func (cs *ConfigStore) newPod(pod *v1.Pod) {
-	// ignore new pods while newConfigStore
-	if cs.isTypeInited {
-		cs.LoadEndpoint(pod)
-		cs.saveLastEndpoints()
-	}
+	cs.LoadEndpoint(pod)
+	cs.saveLastEndpoints()
 }
 
 func (cs *ConfigStore) Push() {
