@@ -32,26 +32,7 @@ data:
             "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
             stat_prefix: ingress_http
             codec_type: AUTO
-            tracing:
-              provider:
-                name: envoy.tracers.dynamic_ot
-                typed_config:
-                  "@type": type.googleapis.com/envoy.config.trace.v2.DynamicOtConfig
-                  library: /usr/local/lib/libjaegertracing_plugin.so
-                  config:
-                    service_name: front-proxy
-                    sampler:
-                      type: const
-                      param: 1
-                    reporter:
-                      localAgentHostPort: jaeger:6831
-                    headers:
-                      jaegerDebugHeader: jaeger-debug-id
-                      jaegerBaggageHeader: jaeger-baggage
-                      traceBaggageHeaderPrefix: uberctx-
-                    baggage_restrictions:
-                      denyBaggageOnInitializationFailure: false
-                      hostPort: ""
+            tracing: {}
             access_log:
             - name: envoy.access_loggers.file
               typed_config:

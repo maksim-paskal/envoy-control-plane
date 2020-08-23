@@ -12,11 +12,25 @@ dynamic_resources:
       - envoy_grpc:
           cluster_name: xds_cluster
 
+cluster_manager:
+  local_cluster_name: {{ env "ENVOY_SERVICE_NAME" }}
+
 static_resources:
   clusters:
+  - name: {{ env "ENVOY_SERVICE_NAME" }}
+    connect_timeout: 0.25s
+    lb_policy: ROUND_ROBIN
+    type: EDS
+    eds_cluster_config:
+      eds_config:
+        api_config_source:
+          api_type: GRPC
+          grpc_services:
+          - envoy_grpc:
+              cluster_name: xds_cluster
   - name: xds_cluster
     connect_timeout: 1s
-    #type: STRICT_DNS
+    type: STRICT_DNS
     http2_protocol_options: {}
     load_assignment:
       cluster_name: xds_cluster
@@ -25,9 +39,9 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                # host IP address
-                address: 192.168.88.240
-                #address: envoy-control-plane
+                # add /etc/host for develop
+                # <host external ip> envoy-control-plane
+                address: envoy-control-plane
                 port_value: 18080
 admin:
   access_log_path: "/dev/null"
@@ -35,3 +49,30 @@ admin:
     socket_address:
       address: 0.0.0.0
       port_value: 8000
+   
+layered_runtime:
+  layers:
+    - name: static_layer_0
+      static_layer:
+        overload:
+          global_downstream_max_connections: 50000
+tracing:
+  http:
+    name: envoy.tracers.dynamic_ot
+    typed_config:
+      "@type": type.googleapis.com/envoy.config.trace.v2.DynamicOtConfig
+      library: /usr/local/lib/libjaegertracing_plugin.so
+      config:
+        service_name: {{ env "ENVOY_SERVICE_NAME" }}
+        sampler:
+          type: const
+          param: 1
+        reporter:
+          localAgentHostPort: {{ env "JAEGER_HOST" }}:6831
+        headers:
+          jaegerDebugHeader: jaeger-debug-id
+          jaegerBaggageHeader: jaeger-baggage
+          traceBaggageHeaderPrefix: uberctx-
+        baggage_restrictions:
+          denyBaggageOnInitializationFailure: false
+          hostPort: ""

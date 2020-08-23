@@ -32,7 +32,8 @@ func newWebServer(clientset *kubernetes.Clientset) *WebServer {
 	}
 
 	go func() {
-		http.HandleFunc("/", ws.handler)
+		http.HandleFunc("/api/ready", ws.handlerReady)
+		http.HandleFunc("/api/status", ws.handlerStatus)
 		http.HandleFunc("/api/zone", ws.handlerZone)
 		log.Info("http.port=", *appConfig.WebAddress)
 		if err := http.ListenAndServe(*appConfig.WebAddress, nil); err != nil {
@@ -42,47 +43,40 @@ func newWebServer(clientset *kubernetes.Clientset) *WebServer {
 
 	return &ws
 }
-func (ws *WebServer) handler(w http.ResponseWriter, r *http.Request) {
+func (ws *WebServer) handlerReady(w http.ResponseWriter, r *http.Request) {
+	_, err := w.Write([]byte("ready"))
+	if err != nil {
+		log.Error(err)
+	}
+}
+func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	action := r.URL.Query()["action"]
+	type StatusResponce struct {
+		Status     []string
+		StatusInfo cache.Snapshot
+	}
 
-	if len(action) < 1 {
-		http.Error(w, "no action", http.StatusInternalServerError)
+	var results []StatusResponce
+
+	for _, v := range snapshotCache.GetStatusKeys() {
+		sn, _ := snapshotCache.GetSnapshot(v)
+
+		results = append(results, StatusResponce{
+			Status:     snapshotCache.GetStatusKeys(),
+			StatusInfo: sn,
+		})
+	}
+
+	if len(results) == 0 {
+		http.Error(w, "no results", http.StatusInternalServerError)
 		return
 	}
 
-	switch action[0] {
-	case "status":
-		type StatusResponce struct {
-			Status     []string
-			StatusInfo cache.Snapshot
-		}
-
-		var results []StatusResponce
-
-		for _, v := range snapshotCache.GetStatusKeys() {
-			sn, _ := snapshotCache.GetSnapshot(v)
-
-			results = append(results, StatusResponce{
-				Status:     snapshotCache.GetStatusKeys(),
-				StatusInfo: sn,
-			})
-		}
-
-		if len(results) == 0 {
-			http.Error(w, "no results", http.StatusInternalServerError)
-			return
-		}
-
-		b, _ := json.MarshalIndent(results, "", " ")
-		_, err := w.Write(b)
-		if err != nil {
-			log.Error(err)
-		}
-
-	default:
-		http.Error(w, "no action defined", http.StatusInternalServerError)
+	b, _ := json.MarshalIndent(results, "", " ")
+	_, err := w.Write(b)
+	if err != nil {
+		log.Error(err)
 	}
 }
 

@@ -63,18 +63,21 @@ spec:
           name: envoy-config
       containers:
       - name: envoy
-        image: paskalmaksim/envoy-docker-image:v0.0.1
-        imagePullPolicy: IfNotPresent
+        image: {{ .Values.envoy.registry.image | quote }}
+        imagePullPolicy: {{ .Values.envoy.registry.imagePullPolicy | quote }}
         command:
-        - /usr/local/bin/envoy
-        - --config-path
-        - /etc/envoy/envoy.yaml
-        - --log-level
-        - warn
-        - --service-cluster
-        - test
-        - --service-node
-        - test1-id
+        - /bin/sh
+        - -c
+        - |
+          zone="unknown"
+          zone=$(cli)
+
+          /usr/local/bin/envoy \
+          --config-path /etc/envoy/envoy.yaml \
+          --log-level warn \
+          --service-cluster test \
+          --service-zone $zone \
+          --service-node test1-id
         resources:
           requests:
             cpu: 10m
@@ -85,6 +88,11 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: status.hostIP
+        - name: MY_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
         volumeMounts:
         - name: envoy-config
           mountPath: /etc/envoy/

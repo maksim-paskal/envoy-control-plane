@@ -16,11 +16,8 @@
 
 export CGO_ENABLED=0
 export GOFLAGS="-trimpath"
-export MY_POD_NAMESPACE="default"
-export HOSTNAME="default"
 
 set -ex
 
-rm -rf ./cli
-go build -o cli -v ./cmd/cli
-./cli -server localhost $*
+rm -rf ./cli-linux
+GOOS=linux GOARCH=amd64 go build -o cli-linux -v ./cmd/cli

@@ -1,3 +1,8 @@
 registry:
   image: paskalmaksim/envoy-control-plane:dev
   imagePullPolicy: Always
+
+envoy:
+  registry:
+    image: paskalmaksim/envoy-docker-image:dev
+    imagePullPolicy: Always

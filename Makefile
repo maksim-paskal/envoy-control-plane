@@ -1,12 +1,19 @@
 test:
 	./scripts/validate-license.sh
 	go test ./cmd/main
+	go test ./cmd/cli
 	golangci-lint run
 testChart:
 	helm lint --strict ./chart/envoy-control-plane
 	helm template ./chart/envoy-control-plane | kubectl apply --dry-run --validate -f -
 build:
 	docker build . -t paskalmaksim/envoy-control-plane:dev
+	docker build ./envoy -t paskalmaksim/envoy-docker-image:dev
+build-cli:
+	./scripts/build-cli.sh
+push:
+	docker push paskalmaksim/envoy-control-plane:dev
+	docker push paskalmaksim/envoy-docker-image:dev
 k8sConfig:
 	kubectl apply -f ./config/
 runEnvoy:

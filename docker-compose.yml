@@ -9,16 +9,22 @@ services:
     - 8001:8001
     volumes:
     - ./envoy.yaml:/envoy/envoy.yaml
+    environment:
+    - ENVOY_SERVICE_NAME=test-envoy-service
+    - JAEGER_HOST=jaeger
     command:
-    - /usr/local/bin/envoy
+    - /bin/sh
     - -c
-    - /etc/envoy/envoy.yaml
-    - --log-level
-    - warn
-    - --service-cluster
-    - test
-    - --service-node
-    - test1-id
+    - |
+      zone="unknown"
+      #zone=$$(cli)
+
+      /usr/local/bin/envoy \
+      --config-path /etc/envoy/envoy.yaml \
+      --log-level warn \
+      --service-cluster test \
+      --service-zone $$zone \
+      --service-node test1-id
   nginxdemo:
     image: nginxdemos/hello:plain-text
   jaeger:
