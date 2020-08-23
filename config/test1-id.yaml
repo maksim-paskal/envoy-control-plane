@@ -76,14 +76,6 @@ data:
         - "*"
         routes:
         - match:
-            prefix: "/4"
-          route:
-            cluster: local_service4
-        - match:
-            prefix: "/1"
-          route:
-            cluster: local_service1
-        - match:
             prefix: "/"
           route:
             weighted_clusters:
@@ -110,57 +102,6 @@ data:
       type: STRICT_DNS
       load_assignment:
         cluster_name: local_service2
-        endpoints:
-        - lb_endpoints:
-          - endpoint:
-              address:
-                socket_address:
-                  address: nginxdemo
-                  port_value: 80
-    clusters1:
-    - name: local_service1
-      connect_timeout: 0.25s
-      lb_policy: ROUND_ROBIN
-      type: EDS
-      eds_cluster_config:
-        eds_config:
-          api_config_source:
-            api_type: GRPC
-            grpc_services:
-            - envoy_grpc:
-                cluster_name: xds_cluster
-    - name: local_service2
-      connect_timeout: 0.25s
-      lb_policy: ROUND_ROBIN
-      type: STRICT_DNS
-      load_assignment:
-        cluster_name: local_service2
-        endpoints:
-        - lb_endpoints:
-          - endpoint:
-              address:
-                socket_address:
-                  address: nginxdemo
-                  port_value: 80
-    - name: local_service3
-      connect_timeout: 0.25s
-      lb_policy: ROUND_ROBIN
-      type: STRICT_DNS
-      load_assignment:
-        cluster_name: local_service3
-        endpoints:
-        - lb_endpoints:
-          - endpoint:
-              address:
-                socket_address:
-                  address: nginxdemo
-                  port_value: 80
-    - name: local_service4
-      connect_timeout: 0.25s
-      lb_policy: ROUND_ROBIN
-      type: STRICT_DNS
-      load_assignment:
-        cluster_name: local_service4
         endpoints:
         - lb_endpoints:
           - endpoint:

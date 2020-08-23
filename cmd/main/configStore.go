@@ -89,11 +89,12 @@ func (cs *ConfigStore) saveLastEndpoints() {
 		if info.ready {
 			nodeLocality := &core.Locality{}
 
-			if *appConfig.ZoneLabels {
-				nodeLocality = &core.Locality{
-					Region: info.nodeRegion,
-					Zone:   info.nodeZone,
-				}
+			if len(info.nodeRegion) > 0 {
+				nodeLocality.Region = info.nodeRegion
+			}
+
+			if len(info.nodeZone) > 0 {
+				nodeLocality.Zone = info.nodeZone
 			}
 
 			var priority uint32 = 0
