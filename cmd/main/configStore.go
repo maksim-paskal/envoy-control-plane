@@ -85,6 +85,7 @@ func (cs *ConfigStore) LoadEndpoint(pod *v1.Pod) {
 	}
 }
 
+// save endpoints
 func (cs *ConfigStore) saveLastEndpoints() {
 	endpoints, err := yamlToResources(cs.config.Endpoints, api.ClusterLoadAssignment{})
 	if err != nil {
@@ -114,12 +115,19 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				priority = info.priority
 			}
 
+			healthCheckConfig := &endpoint.Endpoint_HealthCheckConfig{}
+
+			if info.healthCheckPort > 0 {
+				healthCheckConfig.PortValue = info.healthCheckPort
+			}
+
 			lbEndpoints[info.clusterName] = append(lbEndpoints[info.clusterName], &endpoint.LocalityLbEndpoints{
 				Locality: nodeLocality,
 				Priority: priority,
 				LbEndpoints: []*endpoint.LbEndpoint{{
 					HostIdentifier: &endpoint.LbEndpoint_Endpoint{
 						Endpoint: &endpoint.Endpoint{
+							HealthCheckConfig: healthCheckConfig,
 							Address: &core.Address{
 								Address: &core.Address_SocketAddress{
 									SocketAddress: &core.SocketAddress{
@@ -168,13 +176,14 @@ func (cs *ConfigStore) saveLastEndpoints() {
 }
 
 type checkPodResult struct {
-	check       bool
-	clusterName string
-	podIP       string
-	port        uint32
-	ready       bool
-	nodeZone    string
-	priority    uint32
+	check           bool
+	clusterName     string
+	podIP           string
+	port            uint32
+	ready           bool
+	nodeZone        string
+	priority        uint32
+	healthCheckPort uint32
 }
 
 func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
@@ -202,12 +211,13 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 				}
 
 				result := checkPodResult{
-					check:       true,
-					clusterName: config.ClusterName,
-					podIP:       pod.Status.PodIP,
-					ready:       ready,
-					port:        config.Port,
-					priority:    config.Priority,
+					check:           true,
+					clusterName:     config.ClusterName,
+					podIP:           pod.Status.PodIP,
+					ready:           ready,
+					healthCheckPort: config.HealthCheckPort,
+					port:            config.Port,
+					priority:        config.Priority,
 				}
 				if ready && *appConfig.ZoneLabels {
 					nodeInfo := cs.getNode(pod.Spec.NodeName)

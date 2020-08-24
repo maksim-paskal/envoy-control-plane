@@ -22,11 +22,12 @@ import (
 )
 
 type KubernetesType struct {
-	ClusterName string            `yaml:"cluster_name"`
-	Namespace   string            `yaml:"namespace"`
-	Port        uint32            `yaml:"port"`
-	Priority    uint32            `yaml:"priority"`
-	Selector    map[string]string `yaml:"selector"`
+	ClusterName     string            `yaml:"cluster_name"`
+	Namespace       string            `yaml:"namespace"`
+	Port            uint32            `yaml:"port"`
+	HealthCheckPort uint32            `yaml:"healthcheckport"`
+	Priority        uint32            `yaml:"priority"`
+	Selector        map[string]string `yaml:"selector"`
 }
 type ConfigType struct {
 	Id              string `yaml:"id"`
