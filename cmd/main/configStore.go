@@ -28,13 +28,13 @@ import (
 )
 
 type ConfigStore struct {
-	config              ConfigType
+	config              *ConfigType
 	ep                  *EndpointsStore
 	kubernetesEndpoints sync.Map
 	lastEndpoints       []types.Resource
 }
 
-func newConfigStore(config ConfigType, ep *EndpointsStore) *ConfigStore {
+func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs := ConfigStore{
 		config: config,
 		ep:     ep,
@@ -169,7 +169,11 @@ type checkPodResult struct {
 
 func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 	for _, config := range cs.config.Kubernetes {
-		if config.Namespace == pod.Namespace || len(config.Namespace) == 0 {
+		// if config not set namespace - use namespace of configmap
+		if len(config.Namespace) == 0 {
+			config.Namespace = cs.config.configNamespace
+		}
+		if config.Namespace == pod.Namespace {
 			labelsFound := 0
 			for k2, v2 := range pod.Labels {
 				if config.Selector[k2] == v2 {

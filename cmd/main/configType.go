@@ -30,15 +30,16 @@ type KubernetesType struct {
 	Selector    map[string]string `yaml:"selector"`
 }
 type ConfigType struct {
-	Id         string           `yaml:"id"`
-	Kubernetes []KubernetesType `yaml:"kubernetes"`
-	Endpoints  []interface{}    `yaml:"endpoints"`
-	Routes     []interface{}    `yaml:"routes"`
-	Clusters   []interface{}    `yaml:"clusters"`
-	Listeners  []interface{}    `yaml:"listeners"`
+	Id              string `yaml:"id"`
+	configNamespace string
+	Kubernetes      []KubernetesType `yaml:"kubernetes"`
+	Endpoints       []interface{}    `yaml:"endpoints"`
+	Routes          []interface{}    `yaml:"routes"`
+	Clusters        []interface{}    `yaml:"clusters"`
+	Listeners       []interface{}    `yaml:"listeners"`
 }
 
-func parseConfigYaml(nodeId string, data string) ConfigType {
+func parseConfigYaml(nodeId string, data string) *ConfigType {
 	t := template.New(nodeId)
 	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).Parse(data))
 
@@ -57,5 +58,5 @@ func parseConfigYaml(nodeId string, data string) ConfigType {
 	if len(config.Id) == 0 {
 		config.Id = nodeId
 	}
-	return config
+	return &config
 }

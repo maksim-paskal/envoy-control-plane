@@ -24,7 +24,7 @@ import (
 
 type ConfigMapStore struct {
 	stopCh      chan struct{}
-	onNewConfig func(ConfigType)
+	onNewConfig func(*ConfigType)
 }
 
 func newConfigMapStore(clientset *kubernetes.Clientset) *ConfigMapStore {
@@ -72,6 +72,8 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 
 	for fileName, text := range cm.Data {
 		config := parseConfigYaml(fileName, text)
+
+		config.configNamespace = cm.Namespace
 
 		cms.onNewConfig(config)
 	}

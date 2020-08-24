@@ -59,7 +59,7 @@ func main() {
 
 	cms := newConfigMapStore(clientset)
 
-	cms.onNewConfig = func(config ConfigType) {
+	cms.onNewConfig = func(config *ConfigType) {
 		if configStore[config.Id] != nil {
 			configStore[config.Id].Stop()
 		}

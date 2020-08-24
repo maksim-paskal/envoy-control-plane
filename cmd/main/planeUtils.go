@@ -24,7 +24,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func getConfigSnapshot(version string, config ConfigType, endpoints []types.Resource) cache.Snapshot {
+func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Resource) cache.Snapshot {
 	return cache.NewSnapshot(
 		version,
 		endpoints,
