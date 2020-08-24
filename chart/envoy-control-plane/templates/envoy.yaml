@@ -17,13 +17,23 @@ spec:
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - envoy
-            topologyKey: topology.kubernetes.io/zone
+            - labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - envoy
+              topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - envoy
+              topologyKey: topology.kubernetes.io/zone
+            weight: 100
       containers:
       - name: envoy
         image: {{ .Values.envoy.registry.image | quote }}
