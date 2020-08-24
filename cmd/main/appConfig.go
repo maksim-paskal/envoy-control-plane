@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 )
 
@@ -56,7 +57,7 @@ func (ac *AppConfig) String() string {
 }
 
 var appConfig = &AppConfig{
-	Version:   buildTime,
+	Version:   fmt.Sprintf("%s-%s", gitVersion, buildTime),
 	LogLevel:  flag.String("log.level", "INFO", "log level"),
 	LogInJSON: flag.Bool("log.json", false, "log in json format"),
 	// files
