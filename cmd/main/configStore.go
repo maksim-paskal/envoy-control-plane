@@ -221,7 +221,11 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 				}
 				if ready && *appConfig.ZoneLabels {
 					nodeInfo := cs.getNode(pod.Spec.NodeName)
-					result.nodeZone = nodeInfo.Labels[*appConfig.NodeZoneLabel]
+					zone := nodeInfo.Labels[*appConfig.NodeZoneLabel]
+					if len(zone) == 0 {
+						zone = "unknown"
+					}
+					result.nodeZone = zone
 				}
 				return result
 			}

@@ -42,7 +42,6 @@ spec:
         - /bin/sh
         - -c
         - |
-          zone="unknown"
           zone=$(cli)
 
           /usr/local/bin/envoy \

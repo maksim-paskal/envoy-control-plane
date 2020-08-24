@@ -101,7 +101,12 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = w.Write([]byte(nodeInfo.Labels[*appConfig.NodeZoneLabel]))
+	zone := nodeInfo.Labels[*appConfig.NodeZoneLabel]
+	if len(zone) == 0 {
+		zone = "unknown"
+	}
+
+	_, err = w.Write([]byte(zone))
 	if err != nil {
 		log.Error(err)
 	}
