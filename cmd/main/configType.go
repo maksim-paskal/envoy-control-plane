@@ -30,7 +30,7 @@ type KubernetesType struct {
 }
 type ConfigType struct {
 	Id              string `yaml:"id"`
-	configNamespace string
+	ConfigNamespace string
 	Kubernetes      []KubernetesType `yaml:"kubernetes"`
 	Endpoints       []interface{}    `yaml:"endpoints"`
 	Routes          []interface{}    `yaml:"routes"`

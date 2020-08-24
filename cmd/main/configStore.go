@@ -23,6 +23,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -38,6 +39,11 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs := ConfigStore{
 		config: config,
 		ep:     ep,
+	}
+
+	if log.GetLevel() >= log.DebugLevel {
+		obj, _ := yaml.Marshal(config)
+		log.Debugf("loaded config: \n%s", string(obj))
 	}
 
 	for _, v := range ep.informer.GetStore().List() {
@@ -71,6 +77,8 @@ func (cs *ConfigStore) Push() {
 }
 func (cs *ConfigStore) LoadEndpoint(pod *v1.Pod) {
 	podInfo := cs.podInfo(pod)
+
+	log.Debugf("pod=%s,namespace=%s,podInfo=%+v", pod.Name, pod.Namespace, podInfo)
 
 	if podInfo.check {
 		cs.kubernetesEndpoints.Store(pod.Name, podInfo)
@@ -171,11 +179,11 @@ type checkPodResult struct {
 
 func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 	for _, config := range cs.config.Kubernetes {
-		// if config not set namespace - use namespace of configmap
-		if len(config.Namespace) == 0 {
-			config.Namespace = cs.config.configNamespace
+		searchNamespace := config.Namespace
+		if len(searchNamespace) == 0 {
+			searchNamespace = cs.config.ConfigNamespace
 		}
-		if config.Namespace == pod.Namespace {
+		if searchNamespace == pod.Namespace {
 			labelsFound := 0
 			for k2, v2 := range pod.Labels {
 				if config.Selector[k2] == v2 {

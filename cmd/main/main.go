@@ -22,6 +22,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+var buildTime = "dev"
+
 const (
 	grpcMaxConcurrentStreams = 1000000
 )
@@ -47,6 +49,8 @@ func main() {
 	}
 
 	log.SetLevel(logLevel)
+
+	log.Infof("Starting %s...", appConfig.Version)
 
 	log.Debugf("loaded application config = \n%s", appConfig.String())
 

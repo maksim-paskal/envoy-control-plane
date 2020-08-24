@@ -20,6 +20,7 @@ import (
 )
 
 type AppConfig struct {
+	Version            string
 	LogLevel           *string
 	ReadConfigDir      *bool
 	ReadConfigMap      *bool
@@ -55,6 +56,7 @@ func (ac *AppConfig) String() string {
 }
 
 var appConfig = &AppConfig{
+	Version:   buildTime,
 	LogLevel:  flag.String("log.level", "INFO", "log level"),
 	LogInJSON: flag.Bool("log.json", false, "log in json format"),
 	// files

@@ -56,16 +56,16 @@ data:
                       cluster_name: xds_cluster
             http_filters:
             - name: envoy.filters.http.router
-    # endpoints:
-    # - cluster_name: local_service1
-    #   endpoints:
-    #   - priority: 1
-    #     lb_endpoints:
-    #     - endpoint:
-    #         address:
-    #           socket_address:
-    #             address: 127.0.0.1
-    #             port_value: 8000
+    endpoints:
+    - cluster_name: local_service1
+      endpoints:
+      - priority: 1
+        lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 8000
     routes:
     - name: test
       virtual_hosts:

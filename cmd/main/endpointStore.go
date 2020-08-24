@@ -13,6 +13,7 @@ limitations under the License.
 package main
 
 import (
+	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -33,6 +34,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 	go func() {
 		var factory informers.SharedInformerFactory
 		if *appConfig.WatchNamespaced {
+			log.Debugf("start namespaced %s", *appConfig.Namespace)
 			factory = informers.NewSharedInformerFactoryWithOptions(
 				es.clientset, 0,
 				informers.WithNamespace(*appConfig.Namespace),

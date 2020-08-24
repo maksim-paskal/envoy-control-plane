@@ -32,11 +32,20 @@ func newConfigMapStore(clientset *kubernetes.Clientset) *ConfigMapStore {
 	cms := ConfigMapStore{}
 
 	go func() {
-		infFactory := informers.NewSharedInformerFactoryWithOptions(clientset, 0,
-			informers.WithNamespace(*appConfig.Namespace),
-		)
+		var factory informers.SharedInformerFactory
+		if *appConfig.WatchNamespaced {
+			log.Debugf("start namespaced %s", *appConfig.Namespace)
+			factory = informers.NewSharedInformerFactoryWithOptions(
+				clientset, 0,
+				informers.WithNamespace(*appConfig.Namespace),
+			)
+		} else {
+			factory = informers.NewSharedInformerFactoryWithOptions(
+				clientset, 0,
+			)
+		}
 
-		informer := infFactory.Core().V1().ConfigMaps().Informer()
+		informer := factory.Core().V1().ConfigMaps().Informer()
 
 		informer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -76,7 +85,7 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 		if err != nil {
 			log.Errorf("error parsing %s: %s", nodeId, err)
 		} else {
-			config.configNamespace = cm.Namespace
+			config.ConfigNamespace = cm.Namespace
 			cms.onNewConfig(config)
 		}
 	}

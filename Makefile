@@ -1,5 +1,6 @@
 test:
 	./scripts/validate-license.sh
+	go mod tidy
 	go test ./cmd/main
 	go test ./cmd/cli
 	golangci-lint run
