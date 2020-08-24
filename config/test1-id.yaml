@@ -11,12 +11,12 @@ data:
     - cluster_name: local_service1
       port: 1234
       selector:
-        app: cluster001
+        app: test-001
 
     - cluster_name: test-envoy-service
       port: 1234
       selector:
-        app: cluster002
+        app: test-002
 
     listeners:
     - name: listener_0
@@ -53,20 +53,6 @@ data:
                       cluster_name: xds_cluster
             http_filters:
             - name: envoy.filters.http.router
-    endpoints:
-    - cluster_name: local_service1
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: 127.0.0.1
-                port_value: 8000
-        - endpoint:
-            address:
-              socket_address:
-                address: 127.0.0.2
-                port_value: 8000
     routes:
     - name: test
       virtual_hosts:
@@ -74,6 +60,14 @@ data:
         domains:
         - "*"
         routes:
+        - match:
+            prefix: "/1"
+          route:
+            cluster: local_service1
+        - match:
+            prefix: "/2"
+          route:
+            cluster: local_service2
         - match:
             prefix: "/"
           route:
@@ -102,9 +96,19 @@ data:
       load_assignment:
         cluster_name: local_service2
         endpoints:
-        - lb_endpoints:
+        - locality:
+            zone: us-east-1a
+          lb_endpoints:
           - endpoint:
               address:
                 socket_address:
-                  address: nginxdemo
+                  address: nginxdemo-a
+                  port_value: 80
+        - locality:
+            zone: us-east-1b
+          lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: nginxdemo-b
                   port_value: 80

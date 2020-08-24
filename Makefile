@@ -15,13 +15,12 @@ push:
 	docker push paskalmaksim/envoy-control-plane:dev
 	docker push paskalmaksim/envoy-docker-image:dev
 k8sConfig:
+	kubectl apply -f ./chart/testPods.yaml
 	kubectl apply -f ./config/
 runEnvoy:
 	docker-compose down --remove-orphans && docker-compose up
 installDev:
 	helm delete --purge envoy-control-plane || true
-	kubectl delete -n envoy-control-plane -f ./chart/testPods.yaml || true
-	kubectl delete ns envoy-control-plane || true
 	helm install --namespace envoy-control-plane --name envoy-control-plane ./chart/envoy-control-plane
 	kubectl apply -n envoy-control-plane -f ./chart/testPods.yaml
 	watch kubectl -n envoy-control-plane get pods
@@ -31,4 +30,5 @@ clean:
 	helm delete --purge envoy-control-plane || true
 	kubectl delete ns envoy-control-plane || true
 	kubectl delete -f ./config/ || true
+	kubectl delete -f ./chart/testPods.yaml || true
 	docker-compose down --remove-orphans

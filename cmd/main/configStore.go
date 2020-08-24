@@ -96,10 +96,6 @@ func (cs *ConfigStore) saveLastEndpoints() {
 		if info.ready {
 			nodeLocality := &core.Locality{}
 
-			if len(info.nodeRegion) > 0 {
-				nodeLocality.Region = info.nodeRegion
-			}
-
 			if len(info.nodeZone) > 0 {
 				nodeLocality.Zone = info.nodeZone
 			}
@@ -169,7 +165,6 @@ type checkPodResult struct {
 	podIP       string
 	port        uint32
 	ready       bool
-	nodeRegion  string
 	nodeZone    string
 	priority    uint32
 }
@@ -208,8 +203,6 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 				}
 				if ready && *appConfig.ZoneLabels {
 					nodeInfo := cs.getNode(pod.Spec.NodeName)
-
-					result.nodeRegion = nodeInfo.Labels[*appConfig.NodeRegionLabel]
 					result.nodeZone = nodeInfo.Labels[*appConfig.NodeZoneLabel]
 				}
 				return result

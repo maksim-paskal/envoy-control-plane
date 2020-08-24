@@ -6,6 +6,21 @@ metadata:
     app: envoy-control-plane
 data:
   test1-id: |-
+    kubernetes:
+    - cluster_name: local_service1
+      port: 80
+      selector:
+        app: test-001
+    - cluster_name: local_service2
+      port: 80
+      selector:
+        app: test-002
+
+    - cluster_name: test-envoy-service
+      port: 7000
+      selector:
+        app: envoy
+
     listeners:
     - name: listener_0
       address:
@@ -19,26 +34,7 @@ data:
             "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
             stat_prefix: ingress_http
             codec_type: AUTO
-            tracing:
-              provider:
-                name: envoy.tracers.dynamic_ot
-                typed_config:
-                  "@type": type.googleapis.com/envoy.config.trace.v2.DynamicOtConfig
-                  library: /usr/local/lib/libjaegertracing_plugin.so
-                  config:
-                    service_name: test-proxy
-                    sampler:
-                      type: const
-                      param: 1
-                    reporter:
-                      localAgentHostPort: kubernetes-node:6831
-                    headers:
-                      jaegerDebugHeader: jaeger-debug-id
-                      jaegerBaggageHeader: jaeger-baggage
-                      traceBaggageHeaderPrefix: uberctx-
-                    baggage_restrictions:
-                      denyBaggageOnInitializationFailure: false
-                      hostPort: ""
+            tracing: {}
             access_log:
             - name: envoy.access_loggers.file
               typed_config:
@@ -60,6 +56,16 @@ data:
                       cluster_name: xds_cluster
             http_filters:
             - name: envoy.filters.http.router
+    # endpoints:
+    # - cluster_name: local_service1
+    #   endpoints:
+    #   - priority: 1
+    #     lb_endpoints:
+    #     - endpoint:
+    #         address:
+    #           socket_address:
+    #             address: 127.0.0.1
+    #             port_value: 8000
     routes:
     - name: test
       virtual_hosts:
@@ -67,6 +73,14 @@ data:
         domains:
         - "*"
         routes:
+        - match:
+            prefix: "/1"
+          route:
+            cluster: local_service1
+        - match:
+            prefix: "/2"
+          route:
+            cluster: local_service2
         - match:
             prefix: "/"
           route:
@@ -76,15 +90,6 @@ data:
                 weight: 50
               - name: local_service2
                 weight: 50
-    kubernetes:
-    - cluster_name: local_service1
-      port: 80
-      selector:
-        app: test-001
-    - cluster_name: local_service2
-      port: 80
-      selector:
-        app: test-002
     clusters:
     - name: local_service1
       connect_timeout: 0.25s

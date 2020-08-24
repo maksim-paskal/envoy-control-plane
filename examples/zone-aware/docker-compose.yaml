@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  envoy:
+    image: envoyproxy/envoy:v1.15.0
+    ports:
+    - 8000:8000
+    - 8001:8001
+    volumes:
+    - ./envoy.yaml:/etc/envoy/envoy.yaml
+    command:
+    - /bin/sh
+    - -c
+    - |
+      /usr/local/bin/envoy \
+      --config-path /etc/envoy/envoy.yaml \
+      --log-level warn \
+      --service-cluster test \
+      --service-node test1-id \
+      --service-zone a
+  nginxdemo-a:
+    hostname: nginxdemo-a
+    image: nginxdemos/hello:plain-text
+  nginxdemo-b:
+    hostname: nginxdemo-b
+    image: nginxdemos/hello:plain-text

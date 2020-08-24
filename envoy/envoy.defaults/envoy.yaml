@@ -1,3 +1,16 @@
+cluster_manager:
+  local_cluster_name: {{ env "ENVOY_SERVICE_NAME" }}
+
+layered_runtime:
+  layers:
+  - name: static_layer_0
+    static_layer:
+      overload:
+        global_downstream_max_connections: 50000
+      upstream:
+        zone_routing:
+          min_cluster_size: 1
+
 dynamic_resources:
   lds_config:
     api_config_source:
@@ -11,9 +24,6 @@ dynamic_resources:
       grpc_services:
       - envoy_grpc:
           cluster_name: xds_cluster
-
-cluster_manager:
-  local_cluster_name: {{ env "ENVOY_SERVICE_NAME" }}
 
 static_resources:
   clusters:
@@ -43,19 +53,14 @@ static_resources:
                 # <host external ip> envoy-control-plane
                 address: envoy-control-plane
                 port_value: 18080
+
 admin:
   access_log_path: "/dev/null"
   address:
     socket_address:
       address: 0.0.0.0
       port_value: 8000
-   
-layered_runtime:
-  layers:
-    - name: static_layer_0
-      static_layer:
-        overload:
-          global_downstream_max_connections: 50000
+
 tracing:
   http:
     name: envoy.tracers.dynamic_ot
@@ -68,7 +73,7 @@ tracing:
           type: const
           param: 1
         reporter:
-          localAgentHostPort: {{ env "JAEGER_HOST" }}:6831
+          localAgentHostPort: {{ env "JAEGER_AGENT_HOST" }}:6831
         headers:
           jaegerDebugHeader: jaeger-debug-id
           jaegerBaggageHeader: jaeger-baggage

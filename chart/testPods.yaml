@@ -8,12 +8,22 @@ spec:
   selector:
     matchLabels:
       app: test-001
-  replicas: 5
+  replicas: 2
   template:
     metadata:
       labels:
         app: test-001
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - test-001
+            topologyKey: topology.kubernetes.io/zone
       containers:
       - name: test-001
         image: nginxdemos/hello:plain-text
@@ -33,12 +43,22 @@ spec:
   selector:
     matchLabels:
       app: test-002
-  replicas: 5
+  replicas: 2
   template:
     metadata:
       labels:
         app: test-002
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - test-002
+            topologyKey: topology.kubernetes.io/zone
       containers:
       - name: test-002
         image: nginxdemos/hello:plain-text

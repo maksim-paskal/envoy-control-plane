@@ -27,6 +27,7 @@ spec:
               fieldPath: metadata.namespace
         command:
         - /app/envoy-control-plane
+        - --log.json
         resources:
           requests:
             cpu: 10m

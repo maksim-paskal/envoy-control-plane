@@ -29,6 +29,7 @@ var (
 	server    = flag.String("server", "envoy-control-plane", "controlplane host")
 	port      = flag.Int("port", 18081, "controlplane port")
 	wait      = flag.Bool("wait", true, "wait controlplane")
+	debug     = flag.Bool("debug", false, "debug mode")
 )
 
 func waitForAPI() {
@@ -38,7 +39,9 @@ func waitForAPI() {
 		if resp != nil && resp.StatusCode == 200 {
 			return
 		}
-		fmt.Println("Wait for api ready...")
+		if *debug {
+			fmt.Println("Wait for api ready...")
+		}
 		time.Sleep(1 * time.Second)
 	}
 }

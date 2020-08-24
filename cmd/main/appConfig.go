@@ -34,7 +34,6 @@ type AppConfig struct {
 	GrpcAddress        *string
 	WebAddress         *string
 	ZoneLabels         *bool
-	NodeRegionLabel    *string
 	NodeZoneLabel      *string
 }
 
@@ -74,7 +73,6 @@ var appConfig = &AppConfig{
 	GrpcAddress:     flag.String("grpcAddress", ":18080", "grpc address"),
 	WebAddress:      flag.String("webAddress", ":18081", "web address"),
 
-	ZoneLabels:      flag.Bool("node.label.enabled", true, "add zone labels"),
-	NodeRegionLabel: flag.String("node.label.region", "topology.kubernetes.io/region", "node label region"),
-	NodeZoneLabel:   flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
+	ZoneLabels:    flag.Bool("node.label.enabled", true, "add zone labels"),
+	NodeZoneLabel: flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
 }
