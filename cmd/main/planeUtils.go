@@ -57,12 +57,14 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 
 	jsonObj, err := json.Marshal(yamlObjJson)
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
 	var resources []interface{}
 	err = json.Unmarshal(jsonObj, &resources)
 	if err != nil {
+		log.Error(err)
 		return nil, err
 	}
 
@@ -72,6 +74,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 		resourcesJSON, err := utils.GetJSONfromYAML(v)
 
 		if err != nil {
+			log.Error(err)
 			return nil, err
 		}
 
@@ -80,7 +83,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			resource := api.Cluster{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
-				log.Errorf("json=%s", string(resourcesJSON))
+				log.Errorf("error=%s,json=%s", err, string(resourcesJSON))
 				return nil, err
 			}
 			results[k] = &resource
@@ -88,7 +91,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			resource := api.RouteConfiguration{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
-				log.Errorf("json=%s", string(resourcesJSON))
+				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
 				return nil, err
 			}
 			results[k] = &resource
@@ -96,7 +99,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			resource := api.ClusterLoadAssignment{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
-				log.Errorf("json=%s", string(resourcesJSON))
+				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
 				return nil, err
 			}
 			results[k] = &resource
@@ -104,7 +107,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			resource := api.Listener{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
-				log.Errorf("json=%s", string(resourcesJSON))
+				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
 				return nil, err
 			}
 			results[k] = &resource
