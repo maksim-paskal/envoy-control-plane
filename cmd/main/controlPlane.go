@@ -17,9 +17,12 @@ import (
 
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v2"
+	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	xds "github.com/envoyproxy/go-control-plane/pkg/server/v2"
 	"google.golang.org/grpc"
 )
+
+var snapshotCache cache.SnapshotCache = cache.NewSnapshotCache(false, cache.IDHash{}, &Logger{})
 
 type ControlPlane struct {
 }

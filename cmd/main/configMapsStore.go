@@ -71,7 +71,7 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 	}
 
 	for fileName, text := range cm.Data {
-		config := parseConfigYaml(fileName, text)
+		config := parseConfigYaml(fileName, text, nil)
 
 		config.configNamespace = cm.Namespace
 

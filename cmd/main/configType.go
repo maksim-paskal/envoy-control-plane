@@ -39,12 +39,12 @@ type ConfigType struct {
 	Listeners       []interface{}    `yaml:"listeners"`
 }
 
-func parseConfigYaml(nodeId string, data string) *ConfigType {
+func parseConfigYaml(nodeId string, text string, data interface{}) *ConfigType {
 	t := template.New(nodeId)
-	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).Parse(data))
+	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).Parse(text))
 
 	var tpl bytes.Buffer
-	err := templates.ExecuteTemplate(&tpl, path.Base(nodeId), nil)
+	err := templates.ExecuteTemplate(&tpl, path.Base(nodeId), data)
 	if err != nil {
 		log.Panic(err)
 	}

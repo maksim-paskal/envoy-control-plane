@@ -17,13 +17,14 @@ import (
 	"flag"
 	"net"
 
-	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	v1 "k8s.io/api/core/v1"
 )
 
-var snapshotCache cache.SnapshotCache = cache.NewSnapshotCache(false, cache.IDHash{}, &Logger{})
+const (
+	grpcMaxConcurrentStreams = 1000000
+)
 
 func main() {
 	flag.Parse()
@@ -72,8 +73,9 @@ func main() {
 
 	ctx := context.Background()
 	var grpcOptions []grpc.ServerOption
-	//grpcOptions = append(grpcOptions, grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams))
+	grpcOptions = append(grpcOptions, grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams))
 	grpcServer := grpc.NewServer(grpcOptions...)
+	defer grpcServer.GracefulStop()
 
 	lis, err := net.Listen("tcp", *appConfig.GrpcAddress)
 	if err != nil {
