@@ -20,9 +20,7 @@ COPY --from=build /usr/src/envoy-control-plane/envoy-control-plane /app/envoy-co
 WORKDIR /app
 
 RUN addgroup -g 82 -S app \
-&& adduser -u 82 -D -S -G app app \
-&& mkdir -p /app/tmp \
-&& chown app:app /app/tmp
+&& adduser -u 82 -D -S -G app app
 
 USER 82
 
