@@ -57,11 +57,15 @@ func (cs *ConfigStore) newPod(pod *v1.Pod) {
 
 func (cs *ConfigStore) Push() {
 	version := uuid.New().String()
-	snap := getConfigSnapshot(version, cs.config, cs.lastEndpoints)
-
-	err := snapshotCache.SetSnapshot(cs.config.Id, snap)
+	snap, err := getConfigSnapshot(version, cs.config, cs.lastEndpoints)
 	if err != nil {
 		log.Error(err)
+		return
+	}
+	err = snapshotCache.SetSnapshot(cs.config.Id, snap)
+	if err != nil {
+		log.Error(err)
+		return
 	}
 	log.Infof("pushed node=%s,version=%s", cs.config.Id, version)
 }
@@ -74,8 +78,11 @@ func (cs *ConfigStore) LoadEndpoint(pod *v1.Pod) {
 }
 
 func (cs *ConfigStore) saveLastEndpoints() {
-	endpoints := yamlToResources(cs.config.Endpoints, api.ClusterLoadAssignment{})
-
+	endpoints, err := yamlToResources(cs.config.Endpoints, api.ClusterLoadAssignment{})
+	if err != nil {
+		log.Error(err)
+		return
+	}
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
 
 	for _, ep := range endpoints {

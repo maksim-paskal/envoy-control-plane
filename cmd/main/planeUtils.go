@@ -14,6 +14,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v2"
@@ -24,33 +25,45 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Resource) cache.Snapshot {
+func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Resource) (cache.Snapshot, error) {
+	clusters, err := yamlToResources(config.Clusters, api.Cluster{})
+	if err != nil {
+		return cache.Snapshot{}, err
+	}
+	routes, err := yamlToResources(config.Routes, api.RouteConfiguration{})
+	if err != nil {
+		return cache.Snapshot{}, err
+	}
+	listiners, err := yamlToResources(config.Listeners, api.Listener{})
+	if err != nil {
+		return cache.Snapshot{}, err
+	}
 	return cache.NewSnapshot(
 		version,
 		endpoints,
-		yamlToResources(config.Clusters, api.Cluster{}),
-		yamlToResources(config.Routes, api.RouteConfiguration{}),
-		yamlToResources(config.Listeners, api.Listener{}),
+		clusters,
+		routes,
+		listiners,
 		nil,
-	)
+	), nil
 
 }
-func yamlToResources(yamlObj []interface{}, outType interface{}) []types.Resource {
+func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resource, error) {
 	if len(yamlObj) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	var yamlObjJson interface{} = utils.ConvertYAMLtoJSON(yamlObj)
 
 	jsonObj, err := json.Marshal(yamlObjJson)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	var resources []interface{}
 	err = json.Unmarshal(jsonObj, &resources)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	results := make([]types.Resource, len(resources))
@@ -59,7 +72,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) []types.Resourc
 		resourcesJSON, err := utils.GetJSONfromYAML(v)
 
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		switch outType.(type) {
@@ -67,33 +80,37 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) []types.Resourc
 			resource := api.Cluster{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
-				log.Fatal(err, ",json=", string(resourcesJSON))
+				log.Errorf("json=%s", string(resourcesJSON))
+				return nil, err
 			}
 			results[k] = &resource
 		case api.RouteConfiguration:
 			resource := api.RouteConfiguration{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
-				log.Fatal(err, ",json=", string(resourcesJSON))
+				log.Errorf("json=%s", string(resourcesJSON))
+				return nil, err
 			}
 			results[k] = &resource
 		case api.ClusterLoadAssignment:
 			resource := api.ClusterLoadAssignment{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
-				log.Fatal(err, ",json=", string(resourcesJSON))
+				log.Errorf("json=%s", string(resourcesJSON))
+				return nil, err
 			}
 			results[k] = &resource
 		case api.Listener:
 			resource := api.Listener{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
-				log.Fatal(err, ",json=", string(resourcesJSON))
+				log.Errorf("json=%s", string(resourcesJSON))
+				return nil, err
 			}
 			results[k] = &resource
 		default:
-			log.Fatal("unknown class")
+			return nil, errors.New("unknown class")
 		}
 	}
-	return results
+	return results, nil
 }

@@ -18,7 +18,6 @@ import (
 	"text/template"
 
 	"github.com/maksim-paskal/utils-go"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -39,24 +38,24 @@ type ConfigType struct {
 	Listeners       []interface{}    `yaml:"listeners"`
 }
 
-func parseConfigYaml(nodeId string, text string, data interface{}) *ConfigType {
+func parseConfigYaml(nodeId string, text string, data interface{}) (*ConfigType, error) {
 	t := template.New(nodeId)
 	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).Parse(text))
 
 	var tpl bytes.Buffer
 	err := templates.ExecuteTemplate(&tpl, path.Base(nodeId), data)
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 
 	var config ConfigType
 
 	err = yaml.Unmarshal(tpl.Bytes(), &config)
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 	if len(config.Id) == 0 {
 		config.Id = nodeId
 	}
-	return &config
+	return &config, nil
 }

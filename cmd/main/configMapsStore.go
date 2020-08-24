@@ -16,6 +16,7 @@ import (
 	"reflect"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -70,12 +71,14 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 		return
 	}
 
-	for fileName, text := range cm.Data {
-		config := parseConfigYaml(fileName, text, nil)
-
-		config.configNamespace = cm.Namespace
-
-		cms.onNewConfig(config)
+	for nodeId, text := range cm.Data {
+		config, err := parseConfigYaml(nodeId, text, nil)
+		if err != nil {
+			log.Errorf("error parsing %s: %s", nodeId, err)
+		} else {
+			config.configNamespace = cm.Namespace
+			cms.onNewConfig(config)
+		}
 	}
 }
 

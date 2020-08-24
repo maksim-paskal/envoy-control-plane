@@ -29,9 +29,14 @@ const (
 func main() {
 	flag.Parse()
 
+	err := appConfig.CheckConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	logLevel, err := log.ParseLevel(*appConfig.LogLevel)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 	if *appConfig.LogInJSON {
 		log.SetFormatter(&log.JSONFormatter{})
@@ -45,9 +50,12 @@ func main() {
 
 	log.Debugf("loaded application config = \n%s", appConfig.String())
 
-	var configStore map[string]*ConfigStore = make(map[string]*ConfigStore)
+	clientset, err := getKubernetesClient()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	clientset := getKubernetesClient()
+	var configStore map[string]*ConfigStore = make(map[string]*ConfigStore)
 
 	ep := newEndpointsStore(clientset)
 
@@ -89,7 +97,7 @@ func main() {
 
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
-			log.Println(err)
+			log.Fatal(err)
 		}
 	}()
 

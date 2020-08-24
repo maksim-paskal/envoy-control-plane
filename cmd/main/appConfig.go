@@ -14,6 +14,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"os"
 )
@@ -37,6 +38,14 @@ type AppConfig struct {
 	NodeZoneLabel      *string
 }
 
+func (ac *AppConfig) CheckConfig() error {
+	if *ac.WatchNamespaced {
+		if len(*ac.Namespace) == 0 {
+			return errors.New("use namespace name if using namespaced")
+		}
+	}
+	return nil
+}
 func (ac *AppConfig) String() string {
 	b, err := json.MarshalIndent(ac, "", " ")
 

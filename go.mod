@@ -14,11 +14,11 @@ require (
 	golang.org/x/sys v0.0.0-20200806125547-5acd03effb82 // indirect
 	golang.org/x/text v0.3.3 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	google.golang.org/genproto v0.0.0-20200806141610-86f49bd18e98 // indirect
+	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70 // indirect
 	google.golang.org/grpc v1.31.0
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api v0.17.9
-	k8s.io/apimachinery v0.17.9
-	k8s.io/client-go v0.17.9
+	k8s.io/api v0.17.11
+	k8s.io/apimachinery v0.17.11
+	k8s.io/client-go v0.17.11
 )

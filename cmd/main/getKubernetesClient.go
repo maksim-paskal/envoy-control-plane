@@ -13,31 +13,30 @@ limitations under the License.
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func getKubernetesClient() *kubernetes.Clientset {
+func getKubernetesClient() (*kubernetes.Clientset, error) {
 	var kubeconfig *rest.Config
 	var err error
 
 	if len(*appConfig.KubeconfigFile) > 0 {
 		kubeconfig, err = clientcmd.BuildConfigFromFlags("", *appConfig.KubeconfigFile)
 		if err != nil {
-			log.Panic(err)
+			return nil, err
 		}
 	} else {
 		kubeconfig, err = rest.InClusterConfig()
 		if err != nil {
-			log.Panic(err)
+			return nil, err
 		}
 	}
 
 	clientset, err := kubernetes.NewForConfig(kubeconfig)
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
-	return clientset
+	return clientset, nil
 }
