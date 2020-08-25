@@ -8,7 +8,10 @@ ADD --chown=envoy:envoy https://github.com/maksim-paskal/envoy-control-plane/rel
 COPY ./entrypoint.sh /entrypoint.sh
 COPY ./envoy.defaults /envoy.defaults/
 
-RUN chmod +x /usr/local/bin/go-template /entrypoint.sh /usr/local/bin/cli
+RUN chmod +x /usr/local/bin/go-template /entrypoint.sh /usr/local/bin/cli \
+&& chown -R 101:101 /etc/envoy
+
+USER 101
 
 ENTRYPOINT [ "/entrypoint.sh" ]
 CMD ["/usr/local/bin/envoy","-c","/etc/envoy/envoy.yaml"]
