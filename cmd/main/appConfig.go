@@ -24,6 +24,7 @@ type AppConfig struct {
 	Version         string
 	LogLevel        *string
 	LogPretty       *bool
+	LogAccess       *bool
 	ConfigMapLabels *string
 	KubeconfigFile  *string
 	WatchNamespaced *bool
@@ -55,6 +56,7 @@ var appConfig = &AppConfig{
 	Version:         fmt.Sprintf("%s-%s", gitVersion, buildTime),
 	LogLevel:        flag.String("log.level", "INFO", "log level"),
 	LogPretty:       flag.Bool("log.pretty", false, "log in pretty format"),
+	LogAccess:       flag.Bool("log.access", false, "access log"),
 	ConfigMapLabels: flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
 	KubeconfigFile:  flag.String("kubeconfig.path", "", "kubeconfig path"),
 	WatchNamespaced: flag.Bool("namespaced", true, "watch pod in one namespace"),

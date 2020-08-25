@@ -30,18 +30,25 @@ type callbacks struct {
 func (cb *callbacks) Report() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	log.WithFields(log.Fields{"fetches": cb.fetches, "requests": cb.requests}).Info("cb.Report()  callbacks")
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		log.WithFields(log.Fields{"fetches": cb.fetches, "requests": cb.requests}).Info("cb.Report()  callbacks")
+	}
 }
 func (cb *callbacks) OnStreamOpen(ctx context.Context, id int64, typ string) error {
-	log.Infof("OnStreamOpen %d open for %s", id, typ)
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		log.Debugf("OnStreamOpen %d open for %s", id, typ)
+	}
 	return nil
 }
 func (cb *callbacks) OnStreamClosed(id int64) {
-	log.Infof("OnStreamClosed %d closed", id)
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		log.Debugf("OnStreamClosed %d closed", id)
+	}
 }
 func (cb *callbacks) OnStreamRequest(id int64, r *api.DiscoveryRequest) error {
-	log.Infof("OnStreamRequest")
-	//log.Infof("r=%s", r)
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		log.Debugf("OnStreamRequest")
+	}
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	cb.requests++
@@ -52,14 +59,16 @@ func (cb *callbacks) OnStreamRequest(id int64, r *api.DiscoveryRequest) error {
 	return nil
 }
 func (cb *callbacks) OnStreamResponse(id int64, r *api.DiscoveryRequest, w *api.DiscoveryResponse) {
-	log.Infof("OnStreamResponse...")
-	//log.Infof("r=%s", r)
-	//log.Infof("w=%s", w)
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		log.Debugf("OnStreamResponse...")
+	}
 
 	cb.Report()
 }
 func (cb *callbacks) OnFetchRequest(ctx context.Context, req *api.DiscoveryRequest) error {
-	log.Infof("OnFetchRequest...")
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		log.Debugf("OnFetchRequest...")
+	}
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	cb.fetches++
