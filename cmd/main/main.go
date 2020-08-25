@@ -86,6 +86,13 @@ func main() {
 		configStore[config.Id] = newConfigStore(config, ep)
 	}
 
+	cms.onDeleteConfig = func(nodeId string) {
+		if configStore[nodeId] != nil {
+			configStore[nodeId].Stop()
+			configStore[nodeId] = nil
+		}
+	}
+
 	defer cms.Stop()
 
 	ctx := context.Background()

@@ -24,8 +24,9 @@ import (
 )
 
 type ConfigMapStore struct {
-	stopCh      chan struct{}
-	onNewConfig func(*ConfigType)
+	stopCh         chan struct{}
+	onNewConfig    func(*ConfigType)
+	onDeleteConfig func(string)
 }
 
 func newConfigMapStore(clientset *kubernetes.Clientset) *ConfigMapStore {
@@ -63,6 +64,11 @@ func newConfigMapStore(clientset *kubernetes.Clientset) *ConfigMapStore {
 
 				cms.CheckData(curConfig)
 			},
+			DeleteFunc: func(obj interface{}) {
+				cm := obj.(*v1.ConfigMap)
+
+				cms.deleteUnusedConfig(cm)
+			},
 		})
 		cms.stopCh = make(chan struct{})
 		informer.Run(cms.stopCh)
@@ -74,6 +80,16 @@ func (cms *ConfigMapStore) CheckConfigMapLabels(cm *v1.ConfigMap) bool {
 	label := strings.Split(*appConfig.ConfigMapLabels, "=")
 
 	return (cm.Labels[label[0]] == label[1])
+}
+func (cms *ConfigMapStore) deleteUnusedConfig(cm *v1.ConfigMap) {
+	if !cms.CheckConfigMapLabels(cm) {
+		return
+	}
+
+	for nodeId := range cm.Data {
+		cms.onDeleteConfig(nodeId)
+	}
+
 }
 func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 	if !cms.CheckConfigMapLabels(cm) {
