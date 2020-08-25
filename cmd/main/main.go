@@ -43,7 +43,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if *appConfig.LogInJSON {
+	if *appConfig.LogPretty {
+		log.SetFormatter(&log.TextFormatter{})
+	} else {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
 

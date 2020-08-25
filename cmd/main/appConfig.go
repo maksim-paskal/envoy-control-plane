@@ -21,22 +21,17 @@ import (
 )
 
 type AppConfig struct {
-	Version            string
-	LogLevel           *string
-	ReadConfigDir      *bool
-	ReadConfigMap      *bool
-	LogInJSON          *bool
-	ConfigDirectory    *string
-	ConfigMapLabels    *string
-	ConfigMapNamespace *string
-	KubeconfigFile     *string
-	WatchNamespaced    *bool
-	Namespace          *string
-	RuntimeDir         *string
-	GrpcAddress        *string
-	WebAddress         *string
-	ZoneLabels         *bool
-	NodeZoneLabel      *string
+	Version         string
+	LogLevel        *string
+	LogPretty       *bool
+	ConfigMapLabels *string
+	KubeconfigFile  *string
+	WatchNamespaced *bool
+	Namespace       *string
+	GrpcAddress     *string
+	WebAddress      *string
+	ZoneLabels      *bool
+	NodeZoneLabel   *string
 }
 
 func (ac *AppConfig) CheckConfig() error {
@@ -57,25 +52,15 @@ func (ac *AppConfig) String() string {
 }
 
 var appConfig = &AppConfig{
-	Version:   fmt.Sprintf("%s-%s", gitVersion, buildTime),
-	LogLevel:  flag.String("log.level", "INFO", "log level"),
-	LogInJSON: flag.Bool("log.json", false, "log in json format"),
-	// files
-	ReadConfigDir:   flag.Bool("dir.enabled", false, "reads config yaml from file directory"),
-	ConfigDirectory: flag.String("dir.path", "config", "config directory"),
-	// kubernetes
-	ReadConfigMap:      flag.Bool("configmap.enabled", true, "reads config yaml from configmap"),
-	ConfigMapLabels:    flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
-	ConfigMapNamespace: flag.String("configmap.namespace", "", "configmap namespace"),
-
-	RuntimeDir:     flag.String("runtime.directory", "tmp", "directory for saving runtime files"),
-	KubeconfigFile: flag.String("kubeconfig.path", "", "kubeconfig path"),
-
+	Version:         fmt.Sprintf("%s-%s", gitVersion, buildTime),
+	LogLevel:        flag.String("log.level", "INFO", "log level"),
+	LogPretty:       flag.Bool("log.pretty", true, "log in pretty format"),
+	ConfigMapLabels: flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
+	KubeconfigFile:  flag.String("kubeconfig.path", "", "kubeconfig path"),
 	WatchNamespaced: flag.Bool("namespaced", true, "watch pod in one namespace"),
 	Namespace:       flag.String("namespace", os.Getenv("MY_POD_NAMESPACE"), "watch namespace"),
 	GrpcAddress:     flag.String("grpcAddress", ":18080", "grpc address"),
 	WebAddress:      flag.String("webAddress", ":18081", "web address"),
-
-	ZoneLabels:    flag.Bool("node.label.enabled", true, "add zone labels"),
-	NodeZoneLabel: flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
+	ZoneLabels:      flag.Bool("node.label.enabled", true, "add zone labels"),
+	NodeZoneLabel:   flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
 }
