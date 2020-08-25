@@ -16,6 +16,7 @@ import (
 	"context"
 	"flag"
 	"net"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -70,7 +71,9 @@ func main() {
 
 	ep.onNewPod = func(pod *v1.Pod) {
 		for _, v := range configStore {
-			v.newPod(pod)
+			if v != nil {
+				v.newPod(pod)
+			}
 		}
 	}
 	defer ep.Stop()
@@ -89,6 +92,7 @@ func main() {
 	cms.onDeleteConfig = func(nodeId string) {
 		if configStore[nodeId] != nil {
 			configStore[nodeId].Stop()
+			time.Sleep(5 * time.Second)
 			configStore[nodeId] = nil
 		}
 	}

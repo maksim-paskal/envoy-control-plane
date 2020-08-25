@@ -28,17 +28,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	ConfigStoreStateRun int = iota
+	ConfigStoreStateStop
+)
+
 type ConfigStore struct {
 	config              *ConfigType
 	ep                  *EndpointsStore
 	kubernetesEndpoints sync.Map
 	lastEndpoints       []types.Resource
+	ConfigStoreState    int
 }
 
 func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs := ConfigStore{
-		config: config,
-		ep:     ep,
+		config:           config,
+		ep:               ep,
+		ConfigStoreState: ConfigStoreStateRun,
 	}
 
 	if log.GetLevel() >= log.DebugLevel {
@@ -57,6 +64,9 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 }
 
 func (cs *ConfigStore) newPod(pod *v1.Pod) {
+	if cs.ConfigStoreState == ConfigStoreStateStop {
+		return
+	}
 	cs.LoadEndpoint(pod)
 	cs.saveLastEndpoints()
 }
@@ -235,7 +245,9 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 }
 
 func (cs *ConfigStore) Stop() {
-	log.Info("stop")
+	log.Infof("stop=%s", cs.config.Id)
+	cs.ConfigStoreState = ConfigStoreStateStop
+
 	snapshotCache.ClearSnapshot(cs.config.Id)
 }
 

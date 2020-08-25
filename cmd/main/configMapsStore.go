@@ -87,7 +87,7 @@ func (cms *ConfigMapStore) deleteUnusedConfig(cm *v1.ConfigMap) {
 	}
 
 	for nodeId := range cm.Data {
-		cms.onDeleteConfig(nodeId)
+		go cms.onDeleteConfig(nodeId)
 	}
 
 }
@@ -102,7 +102,7 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 			log.Errorf("error parsing %s: %s", nodeId, err)
 		} else {
 			config.ConfigNamespace = cm.Namespace
-			cms.onNewConfig(config)
+			go cms.onNewConfig(config)
 		}
 	}
 }

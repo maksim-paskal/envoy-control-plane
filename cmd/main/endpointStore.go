@@ -72,5 +72,5 @@ func (es *EndpointsStore) Stop() {
 }
 
 func (es *EndpointsStore) newMessage(pod *v1.Pod) {
-	es.onNewPod(pod)
+	go es.onNewPod(pod)
 }
