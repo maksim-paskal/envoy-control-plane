@@ -23,4 +23,4 @@ set -ex
 make k8sConfig
 rm -rf main
 go build -o main -v ./cmd/main
-./main -log.level=DEBUG -kubeconfig.path=kubeconfig $*
+./main -log.pretty -log.level=DEBUG -kubeconfig.path=kubeconfig $*

@@ -54,7 +54,7 @@ func (ac *AppConfig) String() string {
 var appConfig = &AppConfig{
 	Version:         fmt.Sprintf("%s-%s", gitVersion, buildTime),
 	LogLevel:        flag.String("log.level", "INFO", "log level"),
-	LogPretty:       flag.Bool("log.pretty", true, "log in pretty format"),
+	LogPretty:       flag.Bool("log.pretty", false, "log in pretty format"),
 	ConfigMapLabels: flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
 	KubeconfigFile:  flag.String("kubeconfig.path", "", "kubeconfig path"),
 	WatchNamespaced: flag.Bool("namespaced", true, "watch pod in one namespace"),
