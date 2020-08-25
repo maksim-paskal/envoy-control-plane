@@ -2,6 +2,7 @@ FROM golang:1.14 as build
 
 COPY ./cmd /usr/src/envoy-control-plane/cmd
 COPY go.* /usr/src/envoy-control-plane/
+COPY .git /usr/src/envoy-control-plane/
 
 ENV GOOS=linux
 ENV GOARCH=amd64
