@@ -22,6 +22,8 @@ import (
 )
 
 type KubernetesType struct {
+	// add version on configmap to selector
+	UseVersionLabel bool              `yaml:"useversionlabel"`
 	ClusterName     string            `yaml:"cluster_name"`
 	Namespace       string            `yaml:"namespace"`
 	Port            uint32            `yaml:"port"`
@@ -30,8 +32,10 @@ type KubernetesType struct {
 	Selector        map[string]string `yaml:"selector"`
 }
 type ConfigType struct {
-	Id              string `yaml:"id"`
-	ConfigNamespace string
+	Id string `yaml:"id"`
+	// add version to node name
+	UseVersionLabel bool `yaml:"useversionlabel"`
+	VersionLabel    string
 	Kubernetes      []KubernetesType `yaml:"kubernetes"`
 	Endpoints       []interface{}    `yaml:"endpoints"`
 	Routes          []interface{}    `yaml:"routes"`
@@ -39,24 +43,22 @@ type ConfigType struct {
 	Listeners       []interface{}    `yaml:"listeners"`
 }
 
-func parseConfigYaml(nodeId string, text string, data interface{}) (*ConfigType, error) {
+func parseConfigYaml(nodeId string, text string, data interface{}) (ConfigType, error) {
 	t := template.New(nodeId)
 	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).Parse(text))
 
 	var tpl bytes.Buffer
 	err := templates.ExecuteTemplate(&tpl, path.Base(nodeId), data)
 	if err != nil {
-		return nil, err
+		return ConfigType{}, err
 	}
 
 	var config ConfigType
 
 	err = yaml.Unmarshal(tpl.Bytes(), &config)
 	if err != nil {
-		return nil, err
+		return ConfigType{}, err
 	}
-	if len(config.Id) == 0 {
-		config.Id = nodeId
-	}
-	return &config, nil
+
+	return config, nil
 }

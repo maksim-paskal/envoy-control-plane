@@ -13,6 +13,7 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -27,15 +28,20 @@ type ConfigMapStore struct {
 	stopCh         chan struct{}
 	onNewConfig    func(*ConfigType)
 	onDeleteConfig func(string)
+	log            *log.Entry
 }
 
 func newConfigMapStore(clientset *kubernetes.Clientset) *ConfigMapStore {
-	cms := ConfigMapStore{}
+	cms := ConfigMapStore{
+		log: log.WithFields(log.Fields{
+			"type": "ConfigMapStore",
+		}),
+	}
 
 	go func() {
 		var factory informers.SharedInformerFactory
 		if *appConfig.WatchNamespaced {
-			log.Debugf("start namespaced %s", *appConfig.Namespace)
+			cms.log.Debugf("start namespaced %s", *appConfig.Namespace)
 			factory = informers.NewSharedInformerFactoryWithOptions(
 				clientset, 0,
 				informers.WithNamespace(*appConfig.Namespace),
@@ -97,12 +103,36 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 	}
 
 	for nodeId, text := range cm.Data {
+		log := cms.log.WithFields(log.Fields{
+			"configMapName":      cm.Name,
+			"configMapNamespace": cm.Namespace,
+			"nodeId":             nodeId,
+		})
+
 		config, err := parseConfigYaml(nodeId, text, nil)
 		if err != nil {
 			log.Errorf("error parsing %s: %s", nodeId, err)
 		} else {
-			config.ConfigNamespace = cm.Namespace
-			go cms.onNewConfig(config)
+			if len(config.Id) == 0 {
+				config.Id = nodeId
+			}
+			if config.UseVersionLabel && len(cm.Labels["version"]) > 0 {
+				log.Debug("update Id, using UseVersionLabel")
+				config.VersionLabel = cm.Labels["version"]
+				config.Id = fmt.Sprintf("%s-%s", config.Id, config.VersionLabel)
+			}
+
+			for i := 0; i < len(config.Kubernetes); i++ {
+				if len(config.Kubernetes[i].Namespace) == 0 {
+					log.Debug("namespace not set - using configmap namespace")
+					config.Kubernetes[i].Namespace = cm.Namespace
+				}
+				if config.Kubernetes[i].UseVersionLabel {
+					log.Debug("add selector, using Kubernetes.UseVersionLabel")
+					config.Kubernetes[i].Selector["version"] = config.VersionLabel
+				}
+			}
+			go cms.onNewConfig(&config)
 		}
 	}
 }

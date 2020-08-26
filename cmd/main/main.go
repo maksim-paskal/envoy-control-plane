@@ -71,7 +71,7 @@ func main() {
 
 	ep.onNewPod = func(pod *v1.Pod) {
 		for _, v := range configStore {
-			if v != nil {
+			if v.ConfigStoreState != ConfigStoreStateStop {
 				v.newPod(pod)
 			}
 		}
@@ -93,7 +93,7 @@ func main() {
 		if configStore[nodeId] != nil {
 			configStore[nodeId].Stop()
 			time.Sleep(5 * time.Second)
-			configStore[nodeId] = nil
+			delete(configStore, nodeId)
 		}
 	}
 

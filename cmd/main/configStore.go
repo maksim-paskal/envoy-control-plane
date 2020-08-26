@@ -39,6 +39,7 @@ type ConfigStore struct {
 	kubernetesEndpoints sync.Map
 	lastEndpoints       []types.Resource
 	ConfigStoreState    int
+	log                 *log.Entry
 }
 
 func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
@@ -46,11 +47,15 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 		config:           config,
 		ep:               ep,
 		ConfigStoreState: ConfigStoreStateRun,
+		log: log.WithFields(log.Fields{
+			"type":   "ConfigStore",
+			"nodeId": config.Id,
+		}),
 	}
 
 	if log.GetLevel() >= log.DebugLevel {
 		obj, _ := yaml.Marshal(config)
-		log.Debugf("loaded config: \n%s", string(obj))
+		cs.log.Debugf("loaded config: \n%s", string(obj))
 	}
 
 	for _, v := range ep.informer.GetStore().List() {
@@ -75,20 +80,20 @@ func (cs *ConfigStore) Push() {
 	version := uuid.New().String()
 	snap, err := getConfigSnapshot(version, cs.config, cs.lastEndpoints)
 	if err != nil {
-		log.Error(err)
+		cs.log.Error(err)
 		return
 	}
 	err = snapshotCache.SetSnapshot(cs.config.Id, snap)
 	if err != nil {
-		log.Error(err)
+		cs.log.Error(err)
 		return
 	}
-	log.Infof("pushed node=%s,version=%s", cs.config.Id, version)
+	cs.log.Infof("pushed,version=%s", version)
 }
 func (cs *ConfigStore) LoadEndpoint(pod *v1.Pod) {
 	podInfo := cs.podInfo(pod)
 
-	log.Debugf("pod=%s,namespace=%s,podInfo=%+v", pod.Name, pod.Namespace, podInfo)
+	cs.log.Debugf("pod=%s,namespace=%s,podInfo=%+v", pod.Name, pod.Namespace, podInfo)
 
 	if podInfo.check {
 		cs.kubernetesEndpoints.Store(pod.Name, podInfo)
@@ -99,7 +104,7 @@ func (cs *ConfigStore) LoadEndpoint(pod *v1.Pod) {
 func (cs *ConfigStore) saveLastEndpoints() {
 	endpoints, err := yamlToResources(cs.config.Endpoints, api.ClusterLoadAssignment{})
 	if err != nil {
-		log.Error(err)
+		cs.log.Error(err)
 		return
 	}
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
@@ -165,7 +170,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				address := value2.GetEndpoint().GetAddress().GetSocketAddress().Address
 				if net.ParseIP(address) == nil {
 					isInvalidIP = true
-					log.Errorf("clusterName=%s,ip=%s is invalid", clusterName, address)
+					cs.log.Errorf("clusterName=%s,ip=%s is invalid", clusterName, address)
 				}
 			}
 		}
@@ -179,7 +184,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	}
 	if !reflect.DeepEqual(cs.lastEndpoints, publishEp) {
 		cs.lastEndpoints = publishEp
-		log.Debugf("new endpoints,node=%s", cs.config.Id)
+		cs.log.Debug("new endpoints")
 		// endpoints changes
 		cs.Push()
 	}
@@ -198,11 +203,7 @@ type checkPodResult struct {
 
 func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 	for _, config := range cs.config.Kubernetes {
-		searchNamespace := config.Namespace
-		if len(searchNamespace) == 0 {
-			searchNamespace = cs.config.ConfigNamespace
-		}
-		if searchNamespace == pod.Namespace {
+		if config.Namespace == pod.Namespace {
 			labelsFound := 0
 			for k2, v2 := range pod.Labels {
 				if config.Selector[k2] == v2 {
@@ -245,7 +246,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 }
 
 func (cs *ConfigStore) Stop() {
-	log.Infof("stop=%s", cs.config.Id)
+	cs.log.Info("stop")
 	cs.ConfigStoreState = ConfigStoreStateStop
 
 	snapshotCache.ClearSnapshot(cs.config.Id)
@@ -254,7 +255,7 @@ func (cs *ConfigStore) Stop() {
 func (cs *ConfigStore) getNode(nodeName string) *v1.Node {
 	nodeInfo, err := cs.ep.clientset.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
 	if err != nil {
-		log.Error(err)
+		cs.log.Error(err)
 	}
 	return nodeInfo
 }
