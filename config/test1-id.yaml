@@ -8,12 +8,9 @@ metadata:
     version: v1
 data:
   test1-id: |-
-    useversionlabel: true
-
     kubernetes:
     - cluster_name: local_service1
       port: 1234
-      useversionlabel: true
       selector:
         app: test-001
 
