@@ -91,6 +91,7 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error(err)
 		return
 	}
 	namespace := r.Form.Get("namespace")
@@ -99,12 +100,14 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 	podInfo, err := ws.clientset.CoreV1().Pods(namespace).Get(pod, metav1.GetOptions{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error(err)
 		return
 	}
 
 	nodeInfo, err := ws.clientset.CoreV1().Nodes().Get(podInfo.Spec.NodeName, metav1.GetOptions{})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Error(err)
 		return
 	}
 
