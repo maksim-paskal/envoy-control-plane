@@ -76,6 +76,14 @@ func (cs *ConfigStore) newPod(pod *v1.Pod) {
 	cs.saveLastEndpoints()
 }
 
+func (cs *ConfigStore) deletePod(pod *v1.Pod) {
+	if cs.ConfigStoreState == ConfigStoreStateStop {
+		return
+	}
+	cs.kubernetesEndpoints.Delete(pod.Name)
+	cs.saveLastEndpoints()
+}
+
 func (cs *ConfigStore) Push() {
 	version := uuid.New().String()
 	snap, err := getConfigSnapshot(version, cs.config, cs.lastEndpoints)
@@ -117,7 +125,18 @@ func (cs *ConfigStore) saveLastEndpoints() {
 
 	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
 		info := value.(checkPodResult)
-		if info.ready {
+
+		if len(info.podIP) > 0 {
+			healthStatus := core.HealthStatus_UNHEALTHY
+
+			if info.ready {
+				healthStatus = core.HealthStatus_HEALTHY
+			}
+
+			if info.podDeletion {
+				healthStatus = core.HealthStatus_DRAINING
+			}
+
 			nodeLocality := &core.Locality{}
 
 			if len(info.nodeZone) > 0 {
@@ -140,6 +159,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				Locality: nodeLocality,
 				Priority: priority,
 				LbEndpoints: []*endpoint.LbEndpoint{{
+					HealthStatus: healthStatus,
 					HostIdentifier: &endpoint.LbEndpoint_Endpoint{
 						Endpoint: &endpoint.Endpoint{
 							HealthCheckConfig: healthCheckConfig,
@@ -192,6 +212,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 
 type checkPodResult struct {
 	check           bool
+	podDeletion     bool
 	clusterName     string
 	podIP           string
 	port            uint32
@@ -212,6 +233,11 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 			}
 			if labelsFound == len(config.Selector) {
 				ready := false
+				podDeletion := false
+
+				if pod.DeletionTimestamp != nil {
+					podDeletion = true
+				}
 
 				if pod.Status.Phase == v1.PodRunning {
 					for _, v := range pod.Status.Conditions {
@@ -226,6 +252,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					clusterName:     config.ClusterName,
 					podIP:           pod.Status.PodIP,
 					ready:           ready,
+					podDeletion:     podDeletion,
 					healthCheckPort: config.HealthCheckPort,
 					port:            config.Port,
 					priority:        config.Priority,

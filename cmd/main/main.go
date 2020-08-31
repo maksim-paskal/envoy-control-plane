@@ -76,6 +76,14 @@ func main() {
 			}
 		}
 	}
+
+	ep.onDeletePod = func(pod *v1.Pod) {
+		for _, v := range configStore {
+			if v.ConfigStoreState != ConfigStoreStateStop {
+				v.deletePod(pod)
+			}
+		}
+	}
 	defer ep.Stop()
 
 	cms := newConfigMapStore(clientset)

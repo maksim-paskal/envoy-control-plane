@@ -10,12 +10,12 @@ data:
   test1-id: |-
     kubernetes:
     - cluster_name: local_service1
-      port: 1234
+      port: 80
       selector:
         app: test-001
 
     - cluster_name: test-envoy-service
-      port: 1234
+      port: 80
       selector:
         app: test-002
 

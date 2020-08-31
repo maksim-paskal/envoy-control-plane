@@ -21,10 +21,11 @@ import (
 )
 
 type EndpointsStore struct {
-	clientset *kubernetes.Clientset
-	informer  cache.SharedIndexInformer
-	stopCh    chan struct{}
-	onNewPod  func(pod *v1.Pod)
+	clientset   *kubernetes.Clientset
+	informer    cache.SharedIndexInformer
+	stopCh      chan struct{}
+	onNewPod    func(pod *v1.Pod)
+	onDeletePod func(pod *v1.Pod)
 }
 
 func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
@@ -51,15 +52,15 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 		es.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				es.newMessage(pod)
+				go es.onNewPod(pod)
 			},
 			UpdateFunc: func(oldObj interface{}, newObj interface{}) {
 				pod := newObj.(*v1.Pod)
-				es.newMessage(pod)
+				go es.onNewPod(pod)
 			},
 			DeleteFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				es.newMessage(pod)
+				go es.onDeletePod(pod)
 			},
 		})
 		es.informer.Run(es.stopCh)
@@ -69,8 +70,4 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 
 func (es *EndpointsStore) Stop() {
 	close(es.stopCh)
-}
-
-func (es *EndpointsStore) newMessage(pod *v1.Pod) {
-	go es.onNewPod(pod)
 }
