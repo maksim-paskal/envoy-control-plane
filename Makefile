@@ -15,6 +15,7 @@ build-cli:
 	./scripts/build-cli.sh
 push:
 	docker push paskalmaksim/envoy-control-plane:dev
+pushEnvoy:
 	docker push paskalmaksim/envoy-docker-image:dev
 k8sConfig:
 	kubectl apply -f ./chart/testPods.yaml
