@@ -9,6 +9,7 @@ testChart:
 	helm template ./chart/envoy-control-plane | kubectl apply --dry-run --validate -f -
 build:
 	docker build . -t paskalmaksim/envoy-control-plane:dev
+buildEnvoy:
 	docker build ./envoy -t paskalmaksim/envoy-docker-image:dev
 build-cli:
 	./scripts/build-cli.sh

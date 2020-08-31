@@ -248,8 +248,6 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 func (cs *ConfigStore) Stop() {
 	cs.log.Info("stop")
 	cs.ConfigStoreState = ConfigStoreStateStop
-
-	snapshotCache.ClearSnapshot(cs.config.Id)
 }
 
 func (cs *ConfigStore) getNode(nodeName string) *v1.Node {

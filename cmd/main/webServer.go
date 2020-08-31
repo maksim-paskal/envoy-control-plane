@@ -33,6 +33,7 @@ func newWebServer(clientset *kubernetes.Clientset) *WebServer {
 
 	go func() {
 		http.HandleFunc("/api/ready", ws.handlerReady)
+		http.HandleFunc("/api/healthz", ws.handlerHealthz)
 		http.HandleFunc("/api/status", ws.handlerStatus)
 		http.HandleFunc("/api/zone", ws.handlerZone)
 		log.Info("http.port=", *appConfig.WebAddress)
@@ -45,6 +46,12 @@ func newWebServer(clientset *kubernetes.Clientset) *WebServer {
 }
 func (ws *WebServer) handlerReady(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte("ready"))
+	if err != nil {
+		log.Error(err)
+	}
+}
+func (ws *WebServer) handlerHealthz(w http.ResponseWriter, r *http.Request) {
+	_, err := w.Write([]byte("LIVE"))
 	if err != nil {
 		log.Error(err)
 	}

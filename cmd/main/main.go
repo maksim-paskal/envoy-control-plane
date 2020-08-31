@@ -94,6 +94,7 @@ func main() {
 			configStore[nodeId].Stop()
 			time.Sleep(5 * time.Second)
 			delete(configStore, nodeId)
+			snapshotCache.ClearSnapshot(nodeId)
 		}
 	}
 

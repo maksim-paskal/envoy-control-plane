@@ -127,7 +127,7 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 					log.Debug("namespace not set - using configmap namespace")
 					config.Kubernetes[i].Namespace = cm.Namespace
 				}
-				if config.Kubernetes[i].UseVersionLabel {
+				if config.Kubernetes[i].UseVersionLabel && len(config.VersionLabel) > 0 {
 					log.Debug("add selector, using Kubernetes.UseVersionLabel")
 					config.Kubernetes[i].Selector["version"] = config.VersionLabel
 				}
