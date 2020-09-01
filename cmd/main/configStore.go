@@ -13,8 +13,10 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"net"
 	"reflect"
+	"sort"
 	"sync"
 
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
@@ -38,6 +40,7 @@ type ConfigStore struct {
 	ep                  *EndpointsStore
 	kubernetesEndpoints sync.Map
 	lastEndpoints       []types.Resource
+	lastEndpointsArray  []string
 	ConfigStoreState    int
 	log                 *log.Entry
 }
@@ -160,7 +163,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 			if info.healthCheckPort > 0 {
 				healthCheckConfig.PortValue = info.healthCheckPort
 			}
-
+			// add element to publishEpArray
 			lbEndpoints[info.clusterName] = append(lbEndpoints[info.clusterName], &endpoint.LocalityLbEndpoints{
 				Locality: nodeLocality,
 				Priority: priority,
@@ -191,10 +194,23 @@ func (cs *ConfigStore) saveLastEndpoints() {
 
 	var isInvalidIP bool = false
 	publishEp := []types.Resource{}
+	publishEpArray := []string{} // for reflect.DeepEqual
+
 	for clusterName, ep := range lbEndpoints {
 		for _, value1 := range ep {
 			for _, value2 := range value1.LbEndpoints {
 				address := value2.GetEndpoint().GetAddress().GetSocketAddress().Address
+
+				publishEpArray = append(publishEpArray, fmt.Sprintf(
+					"%s|%s|%d|%s|%d|%d",
+					clusterName,
+					value1.Locality.GetZone(),
+					value1.Priority,
+					value2.GetEndpoint().GetAddress().GetSocketAddress().Address,
+					value2.GetEndpoint().GetAddress().GetSocketAddress().GetPortValue(),
+					value2.GetEndpoint().GetHealthCheckConfig().GetPortValue(),
+				))
+
 				if net.ParseIP(address) == nil {
 					isInvalidIP = true
 					cs.log.Errorf("clusterName=%s,ip=%s is invalid", clusterName, address)
@@ -209,8 +225,13 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	if isInvalidIP {
 		return
 	}
-	if !reflect.DeepEqual(cs.lastEndpoints, publishEp) {
+
+	// reflect.DeepEqual only on sorted values
+	sort.Strings(publishEpArray)
+
+	if !reflect.DeepEqual(cs.lastEndpointsArray, publishEpArray) {
 		cs.lastEndpoints = publishEp
+		cs.lastEndpointsArray = publishEpArray
 		cs.log.Debug("new endpoints")
 		// endpoints changes
 		cs.Push()

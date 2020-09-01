@@ -100,11 +100,11 @@ func main() {
 	cms.onDeleteConfig = func(nodeID string) {
 		if configStore[nodeID] != nil {
 			configStore[nodeID].Stop()
-			drainDuration, err := time.ParseDuration(*appConfig.ConfigDrainDuration)
+			drainPeriod, err := time.ParseDuration(*appConfig.ConfigDrainPeriod)
 			if err != nil {
 				log.Error(err)
 			} else {
-				time.Sleep(drainDuration)
+				time.Sleep(drainPeriod)
 			}
 			delete(configStore, nodeID)
 			snapshotCache.ClearSnapshot(nodeID)
@@ -132,6 +132,23 @@ func main() {
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
 			log.Fatal(err)
+		}
+	}()
+
+	// sync manual
+	go func() {
+		WaitTime, err := time.ParseDuration(*appConfig.EndpointCheckPeriod)
+		if err != nil {
+			panic(err)
+		}
+		for {
+			time.Sleep(WaitTime)
+			for _, v := range configStore {
+				if v.ConfigStoreState != ConfigStoreStateStop {
+					log.Debug("check endpoints")
+					v.saveLastEndpoints()
+				}
+			}
 		}
 	}()
 

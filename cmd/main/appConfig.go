@@ -32,7 +32,8 @@ type AppConfig struct {
 	GrpcAddress         *string
 	WebAddress          *string
 	NodeZoneLabel       *string
-	ConfigDrainDuration *string
+	ConfigDrainPeriod   *string
+	EndpointCheckPeriod *string
 }
 
 func (ac *AppConfig) CheckConfig() error {
@@ -42,7 +43,10 @@ func (ac *AppConfig) CheckConfig() error {
 		}
 	}
 
-	if _, err := time.ParseDuration(*ac.ConfigDrainDuration); err != nil {
+	if _, err := time.ParseDuration(*ac.ConfigDrainPeriod); err != nil {
+		return err
+	}
+	if _, err := time.ParseDuration(*ac.EndpointCheckPeriod); err != nil {
 		return err
 	}
 
@@ -70,5 +74,6 @@ var appConfig = &AppConfig{
 	GrpcAddress:         flag.String("grpcAddress", ":18080", "grpc address"),
 	WebAddress:          flag.String("webAddress", ":18081", "web address"),
 	NodeZoneLabel:       flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
-	ConfigDrainDuration: flag.String("config.drainDuration", "5s", "drain duration"),
+	ConfigDrainPeriod:   flag.String("config.drainPeriod", "5s", "drain period"),
+	EndpointCheckPeriod: flag.String("endpoint.checkPeriod", "60s", "check period"),
 }
