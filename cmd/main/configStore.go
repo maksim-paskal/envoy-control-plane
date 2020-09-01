@@ -49,7 +49,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 		ConfigStoreState: ConfigStoreStateRun,
 		log: log.WithFields(log.Fields{
 			"type":   "ConfigStore",
-			"nodeId": config.ID,
+			"nodeID": config.ID,
 		}),
 	}
 
@@ -134,7 +134,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
 		info := value.(checkPodResult)
 
-		if len(info.podIP) > 0 {
+		if len(info.podIP) > 0 && len(info.nodeZone) > 0 {
 			healthStatus := core.HealthStatus_UNHEALTHY
 
 			if info.ready {
@@ -145,10 +145,8 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				healthStatus = core.HealthStatus_DRAINING
 			}
 
-			nodeLocality := &core.Locality{}
-
-			if len(info.nodeZone) > 0 {
-				nodeLocality.Zone = info.nodeZone
+			nodeLocality := &core.Locality{
+				Zone: info.nodeZone,
 			}
 
 			var priority uint32 = 0
@@ -266,7 +264,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					port:            config.Port,
 					priority:        config.Priority,
 				}
-				if ready && *appConfig.ZoneLabels {
+				if len(pod.Spec.NodeName) > 0 {
 					nodeInfo := cs.getNode(pod.Spec.NodeName)
 					zone := nodeInfo.Labels[*appConfig.NodeZoneLabel]
 					if len(zone) == 0 {

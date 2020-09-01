@@ -108,7 +108,7 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 		log := cms.log.WithFields(log.Fields{
 			"configMapName":      cm.Name,
 			"configMapNamespace": cm.Namespace,
-			"nodeId":             nodeID,
+			"nodeID":             nodeID,
 		})
 
 		config, err := parseConfigYaml(nodeID, text, nil)

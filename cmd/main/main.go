@@ -97,17 +97,17 @@ func main() {
 		configStore[config.ID] = newConfigStore(config, ep)
 	}
 
-	cms.onDeleteConfig = func(nodeId string) {
-		if configStore[nodeId] != nil {
-			configStore[nodeId].Stop()
+	cms.onDeleteConfig = func(nodeID string) {
+		if configStore[nodeID] != nil {
+			configStore[nodeID].Stop()
 			drainDuration, err := time.ParseDuration(*appConfig.ConfigDrainDuration)
 			if err != nil {
 				log.Error(err)
 			} else {
 				time.Sleep(drainDuration)
 			}
-			delete(configStore, nodeId)
-			snapshotCache.ClearSnapshot(nodeId)
+			delete(configStore, nodeID)
+			snapshotCache.ClearSnapshot(nodeID)
 		}
 	}
 

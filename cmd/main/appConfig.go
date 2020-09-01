@@ -31,7 +31,6 @@ type AppConfig struct {
 	Namespace           *string
 	GrpcAddress         *string
 	WebAddress          *string
-	ZoneLabels          *bool
 	NodeZoneLabel       *string
 	ConfigDrainDuration *string
 }
@@ -70,7 +69,6 @@ var appConfig = &AppConfig{
 	Namespace:           flag.String("namespace", os.Getenv("MY_POD_NAMESPACE"), "watch namespace"),
 	GrpcAddress:         flag.String("grpcAddress", ":18080", "grpc address"),
 	WebAddress:          flag.String("webAddress", ":18081", "web address"),
-	ZoneLabels:          flag.Bool("node.label.enabled", true, "add zone labels"),
 	NodeZoneLabel:       flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
 	ConfigDrainDuration: flag.String("config.drainDuration", "5s", "drain duration"),
 }
