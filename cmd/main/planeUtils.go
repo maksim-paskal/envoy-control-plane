@@ -118,7 +118,6 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			}
 			results[k] = &resource
 		default:
-
 			return nil, ErrUnknownClass
 		}
 	}
