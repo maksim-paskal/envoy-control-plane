@@ -6,3 +6,5 @@ envoy:
   registry:
     image: paskalmaksim/envoy-docker-image:dev
     imagePullPolicy: Always
+
+clusterRole: true

@@ -25,8 +25,9 @@ k8sConfig:
 runEnvoy:
 	docker-compose down --remove-orphans && docker-compose up
 installDev:
+	kubectl apply -f chart/clusterrole.yaml
 	helm delete --purge envoy-control-plane || true
-	helm install --namespace envoy-control-plane --name envoy-control-plane ./chart/envoy-control-plane
+	helm install --namespace envoy-control-plane --set clusterRole=false --name envoy-control-plane ./chart/envoy-control-plane
 	kubectl apply -n envoy-control-plane -f ./chart/testPods.yaml
 	watch kubectl -n envoy-control-plane get pods
 installDevConfig:

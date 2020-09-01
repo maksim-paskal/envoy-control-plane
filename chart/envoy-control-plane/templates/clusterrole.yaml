@@ -1,0 +1,10 @@
+{{- if .Values.clusterRole }}
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: envoy-control-plane-role
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
+{{- end }}
