@@ -23,18 +23,21 @@ import (
 )
 
 type WebServer struct {
-	clientset *kubernetes.Clientset
+	clientset   *kubernetes.Clientset
+	configStore map[string]*ConfigStore
 }
 
-func newWebServer(clientset *kubernetes.Clientset) *WebServer {
+func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*ConfigStore) *WebServer {
 	ws := WebServer{
-		clientset: clientset,
+		clientset:   clientset,
+		configStore: configStore,
 	}
 
 	go func() {
 		http.HandleFunc("/api/ready", ws.handlerReady)
 		http.HandleFunc("/api/healthz", ws.handlerHealthz)
 		http.HandleFunc("/api/status", ws.handlerStatus)
+		http.HandleFunc("/api/dump_configs", ws.handlerDumpConfigs)
 		http.HandleFunc("/api/zone", ws.handlerZone)
 		log.Info("http.port=", *appConfig.WebAddress)
 		if err := http.ListenAndServe(*appConfig.WebAddress, nil); err != nil {
@@ -52,6 +55,26 @@ func (ws *WebServer) handlerReady(w http.ResponseWriter, r *http.Request) {
 }
 func (ws *WebServer) handlerHealthz(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte("LIVE"))
+	if err != nil {
+		log.Error(err)
+	}
+}
+func (ws *WebServer) handlerDumpConfigs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var results []*ConfigType
+
+	for _, v := range ws.configStore {
+		results = append(results, v.config)
+	}
+
+	if len(results) == 0 {
+		http.Error(w, "no results", http.StatusInternalServerError)
+		return
+	}
+
+	b, _ := json.MarshalIndent(results, "", " ")
+	_, err := w.Write(b)
 	if err != nil {
 		log.Error(err)
 	}

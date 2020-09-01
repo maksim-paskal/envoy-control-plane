@@ -120,9 +120,9 @@ func main() {
 	}
 
 	newControlPlane(ctx, grpcServer)
-	newWebServer(clientset)
+	newWebServer(clientset, configStore)
 
-	log.Printf("management server listening on %s\n", *appConfig.GrpcAddress)
+	log.Infof("management server listening on %s\n", *appConfig.GrpcAddress)
 
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
