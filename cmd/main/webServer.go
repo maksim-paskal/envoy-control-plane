@@ -47,22 +47,25 @@ func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*Confi
 
 	return &ws
 }
+
 func (ws *WebServer) handlerReady(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte("ready"))
 	if err != nil {
 		log.Error(err)
 	}
 }
+
 func (ws *WebServer) handlerHealthz(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte("LIVE"))
 	if err != nil {
 		log.Error(err)
 	}
 }
+
 func (ws *WebServer) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var results []*ConfigType
+	results := []*ConfigType{}
 
 	for _, v := range ws.configStore {
 		results = append(results, v.config)
@@ -70,6 +73,7 @@ func (ws *WebServer) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 
 	if len(results) == 0 {
 		http.Error(w, "no results", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -82,31 +86,34 @@ func (ws *WebServer) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 	}
 }
+
 func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	type StatusResponce struct {
-		NodeId   string
+		NodeID   string
 		Snapshot cache.Snapshot
 	}
 
-	var results []StatusResponce
+	statusKeys := snapshotCache.GetStatusKeys()
 
-	for _, nodeId := range snapshotCache.GetStatusKeys() {
-		sn, err := snapshotCache.GetSnapshot(nodeId)
+	results := []StatusResponce{}
 
+	for _, nodeID := range statusKeys {
+		sn, err := snapshotCache.GetSnapshot(nodeID)
 		if err != nil {
 			log.Error(err)
 		}
 
 		results = append(results, StatusResponce{
-			NodeId:   nodeId,
+			NodeID:   nodeID,
 			Snapshot: sn,
 		})
 	}
 
 	if len(results) == 0 {
 		http.Error(w, "no results", http.StatusInternalServerError)
+
 		return
 	}
 
@@ -125,6 +132,7 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Error(err)
+
 		return
 	}
 	namespace := r.Form.Get("namespace")
@@ -134,6 +142,7 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Error(err)
+
 		return
 	}
 
@@ -141,6 +150,7 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Error(err)
+
 		return
 	}
 

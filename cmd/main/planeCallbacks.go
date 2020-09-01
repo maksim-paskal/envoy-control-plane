@@ -34,17 +34,21 @@ func (cb *callbacks) Report() {
 		log.WithFields(log.Fields{"fetches": cb.fetches, "requests": cb.requests}).Info("cb.Report()  callbacks")
 	}
 }
+
 func (cb *callbacks) OnStreamOpen(ctx context.Context, id int64, typ string) error {
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
 		log.Debugf("OnStreamOpen %d open for %s", id, typ)
 	}
+
 	return nil
 }
+
 func (cb *callbacks) OnStreamClosed(id int64) {
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
 		log.Debugf("OnStreamClosed %d closed", id)
 	}
 }
+
 func (cb *callbacks) OnStreamRequest(id int64, r *api.DiscoveryRequest) error {
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
 		log.Debugf("OnStreamRequest")
@@ -56,8 +60,10 @@ func (cb *callbacks) OnStreamRequest(id int64, r *api.DiscoveryRequest) error {
 		close(cb.signal)
 		cb.signal = nil
 	}
+
 	return nil
 }
+
 func (cb *callbacks) OnStreamResponse(id int64, r *api.DiscoveryRequest, w *api.DiscoveryResponse) {
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
 		log.Debugf("OnStreamResponse...")
@@ -65,6 +71,7 @@ func (cb *callbacks) OnStreamResponse(id int64, r *api.DiscoveryRequest, w *api.
 
 	cb.Report()
 }
+
 func (cb *callbacks) OnFetchRequest(ctx context.Context, req *api.DiscoveryRequest) error {
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
 		log.Debugf("OnFetchRequest...")
@@ -76,6 +83,7 @@ func (cb *callbacks) OnFetchRequest(ctx context.Context, req *api.DiscoveryReque
 		close(cb.signal)
 		cb.signal = nil
 	}
+
 	return nil
 }
 func (cb *callbacks) OnFetchResponse(*api.DiscoveryRequest, *api.DiscoveryResponse) {}

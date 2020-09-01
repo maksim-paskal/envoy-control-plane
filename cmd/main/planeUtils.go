@@ -14,7 +14,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v2"
@@ -38,6 +37,7 @@ func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Res
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
+
 	return cache.NewSnapshot(
 		version,
 		endpoints,
@@ -46,18 +46,19 @@ func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Res
 		listiners,
 		nil,
 	), nil
-
 }
+
 func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resource, error) {
 	if len(yamlObj) == 0 {
 		return nil, nil
 	}
 
-	var yamlObjJson interface{} = utils.ConvertYAMLtoJSON(yamlObj)
+	var yamlObjJSON interface{} = utils.ConvertYAMLtoJSON(yamlObj)
 
-	jsonObj, err := json.Marshal(yamlObjJson)
+	jsonObj, err := json.Marshal(yamlObjJSON)
 	if err != nil {
 		log.Error(err)
+
 		return nil, err
 	}
 
@@ -65,6 +66,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 	err = json.Unmarshal(jsonObj, &resources)
 	if err != nil {
 		log.Error(err)
+
 		return nil, err
 	}
 
@@ -72,9 +74,9 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 
 	for k, v := range resources {
 		resourcesJSON, err := utils.GetJSONfromYAML(v)
-
 		if err != nil {
 			log.Error(err)
+
 			return nil, err
 		}
 
@@ -84,6 +86,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.Errorf("error=%s,json=%s", err, string(resourcesJSON))
+
 				return nil, err
 			}
 			results[k] = &resource
@@ -92,6 +95,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
+
 				return nil, err
 			}
 			results[k] = &resource
@@ -100,6 +104,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
+
 				return nil, err
 			}
 			results[k] = &resource
@@ -108,12 +113,15 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
+
 				return nil, err
 			}
 			results[k] = &resource
 		default:
-			return nil, errors.New("unknown class")
+
+			return nil, ErrUnknownClass
 		}
 	}
+
 	return results, nil
 }

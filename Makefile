@@ -1,9 +1,11 @@
 test:
 	./scripts/validate-license.sh
+	go fmt ./cmd/main
+	go fmt ./cmd/cli
 	go mod tidy
 	go test ./cmd/main
 	go test ./cmd/cli
-	golangci-lint run
+	golangci-lint run --allow-parallel-runners -v --enable-all --disable wsl,maligned,nestif,gochecknoglobals,funlen,gocognit --fix
 testChart:
 	helm lint --strict ./chart/envoy-control-plane
 	helm template ./chart/envoy-control-plane | kubectl apply --dry-run --validate -f -

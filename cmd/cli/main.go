@@ -13,12 +13,14 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -33,11 +35,23 @@ var (
 )
 
 func waitForAPI() {
+	cli := &http.Client{}
+	ctx := context.Background()
+	url := fmt.Sprintf("http://%s:%d/api/ready", *server, *port)
+
 	for {
-		resp, err := http.Get(fmt.Sprintf("http://%s:%d/api/ready", *server, *port))
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil && *debug {
 			fmt.Println(err)
 		}
+		resp, err := cli.Do(req)
+		if err != nil && *debug {
+			fmt.Println(err)
+		}
+		if resp != nil && resp.Body != nil {
+			defer resp.Body.Close()
+		}
+
 		if resp != nil && resp.StatusCode == 200 {
 			return
 		}
@@ -47,6 +61,7 @@ func waitForAPI() {
 		time.Sleep(1 * time.Second)
 	}
 }
+
 func main() {
 	flag.Parse()
 	if len(*namespace) == 0 {
@@ -59,14 +74,30 @@ func main() {
 	if *wait {
 		waitForAPI()
 	}
-	formData := url.Values{
+
+	cli := &http.Client{}
+	ctx := context.Background()
+	requestURL := fmt.Sprintf("http://%s:%d%s", *server, *port, *action)
+
+	data := url.Values{
 		"namespace": {*namespace},
 		"pod":       {*pod},
 	}
-	resp, err := http.PostForm(fmt.Sprintf("http://%s:%d%s", *server, *port, *action), formData)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		panic(err)
 	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := cli.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	if resp.Body != nil {
+		defer resp.Body.Close()
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
@@ -74,7 +105,7 @@ func main() {
 
 	fmt.Println(string(body))
 
-	if resp.StatusCode != 200 {
-		panic("result not 200")
+	if resp.StatusCode != http.StatusOK {
+		panic("result not ok")
 	}
 }

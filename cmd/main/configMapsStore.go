@@ -31,7 +31,7 @@ type ConfigMapStore struct {
 	log            *log.Entry
 }
 
-func newConfigMapStore(clientset *kubernetes.Clientset) *ConfigMapStore {
+func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 	cms := ConfigMapStore{
 		log: log.WithFields(log.Fields{
 			"type": "ConfigMapStore",
@@ -79,6 +79,7 @@ func newConfigMapStore(clientset *kubernetes.Clientset) *ConfigMapStore {
 		cms.stopCh = make(chan struct{})
 		informer.Run(cms.stopCh)
 	}()
+
 	return &cms
 }
 
@@ -87,34 +88,35 @@ func (cms *ConfigMapStore) CheckConfigMapLabels(cm *v1.ConfigMap) bool {
 
 	return (cm.Labels[label[0]] == label[1])
 }
+
 func (cms *ConfigMapStore) deleteUnusedConfig(cm *v1.ConfigMap) {
 	if !cms.CheckConfigMapLabels(cm) {
 		return
 	}
 
-	for nodeId := range cm.Data {
-		go cms.onDeleteConfig(nodeId)
+	for nodeID := range cm.Data {
+		go cms.onDeleteConfig(nodeID)
 	}
-
 }
+
 func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 	if !cms.CheckConfigMapLabels(cm) {
 		return
 	}
 
-	for nodeId, text := range cm.Data {
+	for nodeID, text := range cm.Data {
 		log := cms.log.WithFields(log.Fields{
 			"configMapName":      cm.Name,
 			"configMapNamespace": cm.Namespace,
-			"nodeId":             nodeId,
+			"nodeId":             nodeID,
 		})
 
-		config, err := parseConfigYaml(nodeId, text, nil)
+		config, err := parseConfigYaml(nodeID, text, nil)
 		if err != nil {
-			log.Errorf("error parsing %s: %s", nodeId, err)
+			log.Errorf("error parsing %s: %s", nodeID, err)
 		} else {
-			if len(config.Id) == 0 {
-				config.Id = nodeId
+			if len(config.ID) == 0 {
+				config.ID = nodeID
 			}
 			config.ConfigMapName = cm.Name
 			config.ConfigMapNamespace = cm.Namespace
@@ -122,7 +124,7 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 			if config.UseVersionLabel && len(cm.Labels["version"]) > 0 {
 				log.Debug("update Id, using UseVersionLabel")
 				config.VersionLabel = cm.Labels["version"]
-				config.Id = fmt.Sprintf("%s-%s", config.Id, config.VersionLabel)
+				config.ID = fmt.Sprintf("%s-%s", config.ID, config.VersionLabel)
 			}
 
 			for i := 0; i < len(config.Kubernetes); i++ {

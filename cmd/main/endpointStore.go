@@ -65,6 +65,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 		})
 		es.informer.Run(es.stopCh)
 	}()
+
 	return &es
 }
 

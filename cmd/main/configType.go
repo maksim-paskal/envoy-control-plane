@@ -31,8 +31,9 @@ type KubernetesType struct {
 	Priority        uint32            `yaml:"priority"`
 	Selector        map[string]string `yaml:"selector"`
 }
+
 type ConfigType struct {
-	Id string `yaml:"id"`
+	ID string `yaml:"id"`
 	// add version to node name
 	UseVersionLabel bool `yaml:"useversionlabel"`
 	VersionLabel    string
@@ -46,12 +47,12 @@ type ConfigType struct {
 	Listeners          []interface{}    `yaml:"listeners"`
 }
 
-func parseConfigYaml(nodeId string, text string, data interface{}) (ConfigType, error) {
-	t := template.New(nodeId)
+func parseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, error) {
+	t := template.New(nodeID)
 	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).Parse(text))
 
 	var tpl bytes.Buffer
-	err := templates.ExecuteTemplate(&tpl, path.Base(nodeId), data)
+	err := templates.ExecuteTemplate(&tpl, path.Base(nodeID), data)
 	if err != nil {
 		return ConfigType{}, err
 	}

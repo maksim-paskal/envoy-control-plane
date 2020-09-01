@@ -49,7 +49,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 		ConfigStoreState: ConfigStoreStateRun,
 		log: log.WithFields(log.Fields{
 			"type":   "ConfigStore",
-			"nodeId": config.Id,
+			"nodeId": config.ID,
 		}),
 	}
 
@@ -68,6 +68,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs.saveLastEndpoints()
 
 	cs.Push()
+
 	return &cs
 }
 
@@ -92,15 +93,18 @@ func (cs *ConfigStore) Push() {
 	snap, err := getConfigSnapshot(version, cs.config, cs.lastEndpoints)
 	if err != nil {
 		cs.log.Error(err)
+
 		return
 	}
-	err = snapshotCache.SetSnapshot(cs.config.Id, snap)
+	err = snapshotCache.SetSnapshot(cs.config.ID, snap)
 	if err != nil {
 		cs.log.Error(err)
+
 		return
 	}
 	cs.log.Infof("pushed,version=%s", version)
 }
+
 func (cs *ConfigStore) LoadEndpoint(pod *v1.Pod) {
 	podInfo := cs.podInfo(pod)
 
@@ -111,11 +115,12 @@ func (cs *ConfigStore) LoadEndpoint(pod *v1.Pod) {
 	}
 }
 
-// save endpoints
+// save endpoints.
 func (cs *ConfigStore) saveLastEndpoints() {
 	endpoints, err := yamlToResources(cs.config.Endpoints, api.ClusterLoadAssignment{})
 	if err != nil {
 		cs.log.Error(err)
+
 		return
 	}
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
@@ -182,11 +187,12 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				}},
 			})
 		}
+
 		return true
 	})
 
 	var isInvalidIP bool = false
-	var publishEp []types.Resource
+	publishEp := []types.Resource{}
 	for clusterName, ep := range lbEndpoints {
 		for _, value1 := range ep {
 			for _, value2 := range value1.LbEndpoints {
@@ -231,7 +237,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 			labelsFound := 0
 			for k2, v2 := range pod.Labels {
 				if config.Selector[k2] == v2 {
-					labelsFound = labelsFound + 1
+					labelsFound++
 				}
 			}
 			if labelsFound == len(config.Selector) {
@@ -268,10 +274,12 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					}
 					result.nodeZone = zone
 				}
+
 				return result
 			}
 		}
 	}
+
 	return checkPodResult{check: false}
 }
 
@@ -285,5 +293,6 @@ func (cs *ConfigStore) getNode(nodeName string) *v1.Node {
 	if err != nil {
 		cs.log.Error(err)
 	}
+
 	return nodeInfo
 }

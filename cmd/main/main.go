@@ -89,18 +89,23 @@ func main() {
 	cms := newConfigMapStore(clientset)
 
 	cms.onNewConfig = func(config *ConfigType) {
-		if configStore[config.Id] != nil {
-			configStore[config.Id].Stop()
+		if configStore[config.ID] != nil {
+			configStore[config.ID].Stop()
 		}
 
-		log.Infof("Create configStore %s", config.Id)
-		configStore[config.Id] = newConfigStore(config, ep)
+		log.Infof("Create configStore %s", config.ID)
+		configStore[config.ID] = newConfigStore(config, ep)
 	}
 
 	cms.onDeleteConfig = func(nodeId string) {
 		if configStore[nodeId] != nil {
 			configStore[nodeId].Stop()
-			time.Sleep(5 * time.Second)
+			drainDuration, err := time.ParseDuration(*appConfig.ConfigDrainDuration)
+			if err != nil {
+				log.Error(err)
+			} else {
+				time.Sleep(drainDuration)
+			}
 			delete(configStore, nodeId)
 			snapshotCache.ClearSnapshot(nodeId)
 		}

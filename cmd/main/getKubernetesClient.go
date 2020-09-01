@@ -38,5 +38,6 @@ func getKubernetesClient() (*kubernetes.Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return clientset, nil
 }
