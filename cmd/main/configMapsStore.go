@@ -116,6 +116,9 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 			if len(config.Id) == 0 {
 				config.Id = nodeId
 			}
+			config.ConfigMapName = cm.Name
+			config.ConfigMapNamespace = cm.Namespace
+
 			if config.UseVersionLabel && len(cm.Labels["version"]) > 0 {
 				log.Debug("update Id, using UseVersionLabel")
 				config.VersionLabel = cm.Labels["version"]

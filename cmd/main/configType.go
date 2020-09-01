@@ -36,11 +36,14 @@ type ConfigType struct {
 	// add version to node name
 	UseVersionLabel bool `yaml:"useversionlabel"`
 	VersionLabel    string
-	Kubernetes      []KubernetesType `yaml:"kubernetes"`
-	Endpoints       []interface{}    `yaml:"endpoints"`
-	Routes          []interface{}    `yaml:"routes"`
-	Clusters        []interface{}    `yaml:"clusters"`
-	Listeners       []interface{}    `yaml:"listeners"`
+	// src configMap
+	ConfigMapName      string
+	ConfigMapNamespace string
+	Kubernetes         []KubernetesType `yaml:"kubernetes"`
+	Endpoints          []interface{}    `yaml:"endpoints"`
+	Routes             []interface{}    `yaml:"routes"`
+	Clusters           []interface{}    `yaml:"clusters"`
+	Listeners          []interface{}    `yaml:"listeners"`
 }
 
 func parseConfigYaml(nodeId string, text string, data interface{}) (ConfigType, error) {
