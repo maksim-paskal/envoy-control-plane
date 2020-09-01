@@ -37,7 +37,7 @@ func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*Confi
 		http.HandleFunc("/api/ready", ws.handlerReady)
 		http.HandleFunc("/api/healthz", ws.handlerHealthz)
 		http.HandleFunc("/api/status", ws.handlerStatus)
-		http.HandleFunc("/api/dump_configs", ws.handlerDumpConfigs)
+		http.HandleFunc("/api/config_dump", ws.handlerConfigDump)
 		http.HandleFunc("/api/zone", ws.handlerZone)
 		log.Info("http.port=", *appConfig.WebAddress)
 		if err := http.ListenAndServe(*appConfig.WebAddress, nil); err != nil {
@@ -59,7 +59,7 @@ func (ws *WebServer) handlerHealthz(w http.ResponseWriter, r *http.Request) {
 		log.Error(err)
 	}
 }
-func (ws *WebServer) handlerDumpConfigs(w http.ResponseWriter, r *http.Request) {
+func (ws *WebServer) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var results []*ConfigType
