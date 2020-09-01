@@ -54,7 +54,10 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	}
 
 	if log.GetLevel() >= log.DebugLevel {
-		obj, _ := yaml.Marshal(config)
+		obj, err := yaml.Marshal(config)
+		if err != nil {
+			log.Error(err)
+		}
 		cs.log.Debugf("loaded config: \n%s", string(obj))
 	}
 

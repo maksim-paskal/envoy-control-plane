@@ -34,8 +34,10 @@ var (
 
 func waitForAPI() {
 	for {
-		resp, _ := http.Get(fmt.Sprintf("http://%s:%d/api/ready", *server, *port))
-
+		resp, err := http.Get(fmt.Sprintf("http://%s:%d/api/ready", *server, *port))
+		if err != nil && *debug {
+			fmt.Println(err)
+		}
 		if resp != nil && resp.StatusCode == 200 {
 			return
 		}

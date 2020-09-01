@@ -73,8 +73,11 @@ func (ws *WebServer) handlerDumpConfigs(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	b, _ := json.MarshalIndent(results, "", " ")
-	_, err := w.Write(b)
+	b, err := json.MarshalIndent(results, "", " ")
+	if err != nil {
+		log.Error(err)
+	}
+	_, err = w.Write(b)
 	if err != nil {
 		log.Error(err)
 	}
@@ -83,18 +86,22 @@ func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	type StatusResponce struct {
-		Status     []string
-		StatusInfo cache.Snapshot
+		NodeId   string
+		Snapshot cache.Snapshot
 	}
 
 	var results []StatusResponce
 
-	for _, v := range snapshotCache.GetStatusKeys() {
-		sn, _ := snapshotCache.GetSnapshot(v)
+	for _, nodeId := range snapshotCache.GetStatusKeys() {
+		sn, err := snapshotCache.GetSnapshot(nodeId)
+
+		if err != nil {
+			log.Error(err)
+		}
 
 		results = append(results, StatusResponce{
-			Status:     snapshotCache.GetStatusKeys(),
-			StatusInfo: sn,
+			NodeId:   nodeId,
+			Snapshot: sn,
 		})
 	}
 
@@ -103,8 +110,11 @@ func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b, _ := json.MarshalIndent(results, "", " ")
-	_, err := w.Write(b)
+	b, err := json.MarshalIndent(results, "", " ")
+	if err != nil {
+		log.Error(err)
+	}
+	_, err = w.Write(b)
 	if err != nil {
 		log.Error(err)
 	}
