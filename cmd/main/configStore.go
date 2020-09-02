@@ -202,10 +202,11 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				address := value2.GetEndpoint().GetAddress().GetSocketAddress().Address
 
 				publishEpArray = append(publishEpArray, fmt.Sprintf(
-					"%s|%s|%d|%s|%d|%d",
+					"%s|%s|%d|%d|%s|%d|%d",
 					clusterName,
 					value1.Locality.GetZone(),
 					value1.Priority,
+					value2.HealthStatus,
 					value2.GetEndpoint().GetAddress().GetSocketAddress().Address,
 					value2.GetEndpoint().GetAddress().GetSocketAddress().GetPortValue(),
 					value2.GetEndpoint().GetHealthCheckConfig().GetPortValue(),

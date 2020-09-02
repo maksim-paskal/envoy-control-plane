@@ -145,7 +145,7 @@ func main() {
 			time.Sleep(WaitTime)
 			for _, v := range configStore {
 				if v.ConfigStoreState != ConfigStoreStateStop {
-					log.Debug("check endpoints")
+					log.Debugf("check endpoints=%s", v.config.ID)
 					v.saveLastEndpoints()
 				}
 			}
