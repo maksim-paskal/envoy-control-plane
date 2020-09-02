@@ -39,6 +39,7 @@ type ConfigStore struct {
 	config              *ConfigType
 	ep                  *EndpointsStore
 	kubernetesEndpoints sync.Map
+	configEndpoints     map[string][]*endpoint.LocalityLbEndpoints
 	lastEndpoints       []types.Resource
 	lastEndpointsArray  []string
 	ConfigStoreState    int
@@ -64,34 +65,39 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 		cs.log.Debugf("loaded config: \n%s", string(obj))
 	}
 
+	var err error
+	cs.configEndpoints, err = cs.getConfigEndpoints()
+	if err != nil {
+		log.Error(err)
+	}
+
 	for _, v := range ep.informer.GetStore().List() {
 		pod := v.(*v1.Pod)
-		cs.LoadEndpoint(pod)
+		cs.loadEndpoint(pod)
 	}
 	cs.saveLastEndpoints()
 
-	cs.Push()
+	cs.push()
 
 	return &cs
 }
 
-func (cs *ConfigStore) newPod(pod *v1.Pod) {
+func (cs *ConfigStore) NewPod(pod *v1.Pod) {
 	if cs.ConfigStoreState == ConfigStoreStateStop {
 		return
 	}
-	cs.LoadEndpoint(pod)
+	cs.loadEndpoint(pod)
 	cs.saveLastEndpoints()
 }
 
-func (cs *ConfigStore) deletePod(pod *v1.Pod) {
+func (cs *ConfigStore) DeletePod() {
 	if cs.ConfigStoreState == ConfigStoreStateStop {
 		return
 	}
-	cs.kubernetesEndpoints.Delete(pod.Name)
 	cs.saveLastEndpoints()
 }
 
-func (cs *ConfigStore) Push() {
+func (cs *ConfigStore) push() {
 	version := uuid.New().String()
 	snap, err := getConfigSnapshot(version, cs.config, cs.lastEndpoints)
 	if err != nil {
@@ -108,30 +114,44 @@ func (cs *ConfigStore) Push() {
 	cs.log.Infof("pushed,version=%s", version)
 }
 
-func (cs *ConfigStore) LoadEndpoint(pod *v1.Pod) {
-	podInfo := cs.podInfo(pod)
+func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
+	// load only valid pods with ip
+	if len(pod.Status.PodIP) > 0 {
+		podInfo := cs.podInfo(pod)
 
-	cs.log.Debugf("pod=%s,namespace=%s,podInfo=%+v", pod.Name, pod.Namespace, podInfo)
+		cs.log.Debugf("pod=%s,namespace=%s,podInfo=%+v", pod.Name, pod.Namespace, podInfo)
 
-	if podInfo.check {
-		cs.kubernetesEndpoints.Store(pod.Name, podInfo)
+		if podInfo.check {
+			cs.kubernetesEndpoints.Store(pod.Name, podInfo)
+		}
 	}
 }
 
-// save endpoints.
-func (cs *ConfigStore) saveLastEndpoints() {
+func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEndpoints, error) {
 	endpoints, err := yamlToResources(cs.config.Endpoints, api.ClusterLoadAssignment{})
 	if err != nil {
 		cs.log.Error(err)
 
-		return
+		return nil, err
 	}
+
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
 
 	for _, ep := range endpoints {
 		fixed := ep.(*api.ClusterLoadAssignment)
 
 		lbEndpoints[fixed.GetClusterName()] = append(lbEndpoints[fixed.GetClusterName()], fixed.GetEndpoints()...)
+	}
+
+	return lbEndpoints, nil
+}
+
+// save endpoints.
+func (cs *ConfigStore) saveLastEndpoints() {
+	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
+	// copy map
+	for key, value := range cs.configEndpoints {
+		lbEndpoints[key] = value
 	}
 
 	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
@@ -235,7 +255,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 		cs.lastEndpointsArray = publishEpArray
 		cs.log.Debug("new endpoints")
 		// endpoints changes
-		cs.Push()
+		cs.push()
 	}
 }
 
@@ -286,7 +306,14 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					port:            config.Port,
 					priority:        config.Priority,
 				}
-				if len(pod.Spec.NodeName) > 0 {
+
+				ep, ok := cs.kubernetesEndpoints.Load(pod.Name)
+				if ok {
+					saved := ep.(checkPodResult)
+					result.nodeZone = saved.nodeZone
+				}
+
+				if len(result.nodeZone) == 0 && len(pod.Spec.NodeName) > 0 {
 					nodeInfo := cs.getNode(pod.Spec.NodeName)
 					zone := nodeInfo.Labels[*appConfig.NodeZoneLabel]
 					if len(zone) == 0 {
@@ -315,4 +342,21 @@ func (cs *ConfigStore) getNode(nodeName string) *v1.Node {
 	}
 
 	return nodeInfo
+}
+
+func (cs *ConfigStore) Sync() {
+	if cs.ConfigStoreState == ConfigStoreStateStop {
+		return
+	}
+
+	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
+		info := value.(checkPodResult)
+		if info.podDeletion {
+			log.Debugf("delete drain pod=%s", key)
+			cs.kubernetesEndpoints.Delete(key)
+		}
+
+		return true
+	})
+	cs.saveLastEndpoints()
 }

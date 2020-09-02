@@ -18,7 +18,20 @@ data:
       port: 80
       selector:
         app: test-002
-
+    endpoints:
+    - cluster_name: local_service1
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 8000
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.2
+                port_value: 8000
     listeners:
     - name: listener_0
       address:
