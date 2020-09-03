@@ -33,6 +33,7 @@ const (
 )
 
 func main() {
+	log.Infof("Starting %s...", appConfig.Version)
 	flag.Parse()
 
 	err := appConfig.CheckConfig()
@@ -55,8 +56,6 @@ func main() {
 	}
 
 	log.SetLevel(logLevel)
-
-	log.Infof("Starting %s...", appConfig.Version)
 
 	log.Debugf("loaded application config = \n%s", appConfig.String())
 
