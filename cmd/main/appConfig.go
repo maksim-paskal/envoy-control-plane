@@ -33,6 +33,7 @@ type AppConfig struct {
 	WebAddress          *string
 	NodeZoneLabel       *string
 	ConfigDrainPeriod   *string
+	PodDrainPeriod      *string
 	EndpointCheckPeriod *string
 }
 
@@ -47,6 +48,9 @@ func (ac *AppConfig) CheckConfig() error {
 		return err
 	}
 	if _, err := time.ParseDuration(*ac.EndpointCheckPeriod); err != nil {
+		return err
+	}
+	if _, err := time.ParseDuration(*ac.PodDrainPeriod); err != nil {
 		return err
 	}
 
@@ -76,4 +80,5 @@ var appConfig = &AppConfig{
 	NodeZoneLabel:       flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
 	ConfigDrainPeriod:   flag.String("config.drainPeriod", "5s", "drain period"),
 	EndpointCheckPeriod: flag.String("endpoint.checkPeriod", "60s", "check period"),
+	PodDrainPeriod:      flag.String("pod.drainPeriod", "10s", "pod drain time"),
 }
