@@ -21,7 +21,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	k8scache "k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/cache"
 )
 
 type ConfigMapStore struct {
@@ -54,7 +54,7 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 
 		informer := factory.Core().V1().ConfigMaps().Informer()
 
-		informer.AddEventHandler(k8scache.ResourceEventHandlerFuncs{
+		informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				cm := obj.(*v1.ConfigMap)
 
@@ -77,7 +77,17 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 			},
 		})
 		cms.stopCh = make(chan struct{})
-		informer.Run(cms.stopCh)
+		defer close(cms.stopCh)
+
+		go informer.Run(cms.stopCh)
+
+		if !cache.WaitForCacheSync(cms.stopCh, informer.HasSynced) {
+			log.Fatalf("Timed out waiting for caches to sync")
+
+			return
+		}
+
+		<-cms.stopCh
 	}()
 
 	return &cms

@@ -48,6 +48,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 
 		es.informer = factory.Core().V1().Pods().Informer()
 		es.stopCh = make(chan struct{})
+		defer close(es.stopCh)
 
 		es.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
@@ -63,7 +64,15 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 				go es.onDeletePod(pod)
 			},
 		})
-		es.informer.Run(es.stopCh)
+		go es.informer.Run(es.stopCh)
+
+		if !cache.WaitForCacheSync(es.stopCh, es.informer.HasSynced) {
+			log.Fatalf("Timed out waiting for caches to sync")
+
+			return
+		}
+
+		<-es.stopCh
 	}()
 
 	return &es
