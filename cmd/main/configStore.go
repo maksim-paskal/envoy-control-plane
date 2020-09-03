@@ -313,8 +313,13 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 				}
 
 				if len(result.nodeZone) == 0 {
-					nodeInfo := cs.getNode(pod.Spec.NodeName)
-					zone := nodeInfo.Labels[*appConfig.NodeZoneLabel]
+					zone := ""
+
+					nodeInfo, err := cs.getNode(pod.Spec.NodeName)
+					if err == nil {
+						zone = nodeInfo.Labels[*appConfig.NodeZoneLabel]
+					}
+
 					if len(zone) == 0 {
 						zone = "unknown"
 					}
@@ -334,13 +339,15 @@ func (cs *ConfigStore) Stop() {
 	cs.ConfigStoreState = ConfigStoreStateSTOP
 }
 
-func (cs *ConfigStore) getNode(nodeName string) *v1.Node {
+func (cs *ConfigStore) getNode(nodeName string) (*v1.Node, error) {
 	nodeInfo, err := cs.ep.clientset.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
 	if err != nil {
 		cs.log.Error(err)
+
+		return nil, err
 	}
 
-	return nodeInfo
+	return nodeInfo, nil
 }
 
 func (cs *ConfigStore) Sync() {
