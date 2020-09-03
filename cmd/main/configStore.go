@@ -72,6 +72,15 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 		log.Error(err)
 	}
 
+	for !cs.ep.informer.HasSynced() {
+		log.Debug("resync")
+		err = cs.ep.informer.GetIndexer().Resync()
+		if err != nil {
+			log.Error(err)
+		}
+		time.Sleep(1 * time.Second)
+	}
+
 	for _, v := range ep.informer.GetStore().List() {
 		pod := v.(*v1.Pod)
 		cs.loadEndpoint(pod)
