@@ -161,7 +161,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 			healthStatus := core.HealthStatus_UNHEALTHY
 
 			if info.ready {
-				healthStatus = core.HealthStatus_HEALTHY
+				healthStatus = core.HealthStatus_UNKNOWN
 			}
 
 			if info.podDeletion {
