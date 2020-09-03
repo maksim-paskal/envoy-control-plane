@@ -2,3 +2,5 @@
 vendor
 kubeconfig
 /cli*
+/examples/stress-test/logs
+/examples/stress-test/tank*

@@ -1,0 +1,22 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: envoy
+  labels:
+    app: envoy
+spec:
+  tls:
+  - hosts:
+    - test.dev.com
+  rules:
+  - host: test.dev.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: envoy
+          servicePort: 8000
+      - path: /api
+        backend:
+          serviceName: envoy-control-plane
+          servicePort: 18081

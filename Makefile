@@ -28,6 +28,7 @@ installDev:
 	helm delete --purge envoy-control-plane || true
 	helm install --namespace envoy-control-plane --name envoy-control-plane ./chart/envoy-control-plane
 	kubectl apply -n envoy-control-plane -f ./chart/testPods.yaml
+	kubectl apply -n envoy-control-plane -f ./chart/ingress.yaml
 	watch kubectl -n envoy-control-plane get pods
 installDevConfig:
 	kubectl -n envoy-control-plane apply -f ./chart/envoy-control-plane/templates/envoy-test1-id.yaml

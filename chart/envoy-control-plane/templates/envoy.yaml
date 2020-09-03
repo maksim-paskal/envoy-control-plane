@@ -81,10 +81,10 @@ spec:
   type: ClusterIP
   ports:
   - name: admin
-    port: 8000
+    port: 18000
     protocol: TCP
   - name: http
-    port: 8001
+    port: 8000
     protocol: TCP
   selector:
     app: envoy

@@ -1,0 +1,16 @@
+phantom:
+  address: test.dev.com:443
+  ssl: true
+  load_profile:
+    load_type: rps
+    schedule: line(10, 20, 10m)
+  header_http: "1.1"
+  headers:
+    - "[Host: test.dev.com]"
+    - "[Connection: close]"
+  uris:
+    - "/2"
+console:
+  enabled: true
+telegraf:
+  enabled: false
