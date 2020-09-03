@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+	"time"
 
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
@@ -115,8 +116,8 @@ func (cs *ConfigStore) push() {
 }
 
 func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
-	// load only valid pods with ip
-	if len(pod.Status.PodIP) > 0 {
+	// load only valid pods with ip and node
+	if len(pod.Status.PodIP) > 0 && len(pod.Spec.NodeName) > 0 {
 		podInfo := cs.podInfo(pod)
 
 		cs.log.Debugf("pod=%s,namespace=%s,podInfo=%+v", pod.Name, pod.Namespace, podInfo)
@@ -164,7 +165,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				healthStatus = core.HealthStatus_UNKNOWN
 			}
 
-			if info.podDeletion {
+			if info.DeletionTimestamp != nil {
 				healthStatus = core.HealthStatus_DRAINING
 			}
 
@@ -244,6 +245,8 @@ func (cs *ConfigStore) saveLastEndpoints() {
 		})
 	}
 	if isInvalidIP {
+		log.Warn("can not push changes, isInvalidIP")
+
 		return
 	}
 
@@ -260,15 +263,15 @@ func (cs *ConfigStore) saveLastEndpoints() {
 }
 
 type checkPodResult struct {
-	check           bool
-	podDeletion     bool
-	clusterName     string
-	podIP           string
-	port            uint32
-	ready           bool
-	nodeZone        string
-	priority        uint32
-	healthCheckPort uint32
+	check             bool
+	DeletionTimestamp *metav1.Time
+	clusterName       string
+	podIP             string
+	port              uint32
+	ready             bool
+	nodeZone          string
+	priority          uint32
+	healthCheckPort   uint32
 }
 
 func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
@@ -282,11 +285,6 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 			}
 			if labelsFound == len(config.Selector) {
 				ready := false
-				podDeletion := false
-
-				if pod.DeletionTimestamp != nil {
-					podDeletion = true
-				}
 
 				if pod.Status.Phase == v1.PodRunning {
 					for _, v := range pod.Status.Conditions {
@@ -297,14 +295,14 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 				}
 
 				result := checkPodResult{
-					check:           true,
-					clusterName:     config.ClusterName,
-					podIP:           pod.Status.PodIP,
-					ready:           ready,
-					podDeletion:     podDeletion,
-					healthCheckPort: config.HealthCheckPort,
-					port:            config.Port,
-					priority:        config.Priority,
+					check:             true,
+					clusterName:       config.ClusterName,
+					podIP:             pod.Status.PodIP,
+					ready:             ready,
+					DeletionTimestamp: pod.DeletionTimestamp,
+					healthCheckPort:   config.HealthCheckPort,
+					port:              config.Port,
+					priority:          config.Priority,
 				}
 
 				// get zone from saved endpoint
@@ -314,7 +312,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					result.nodeZone = saved.nodeZone
 				}
 
-				if len(result.nodeZone) == 0 && len(pod.Spec.NodeName) > 0 {
+				if len(result.nodeZone) == 0 {
 					nodeInfo := cs.getNode(pod.Spec.NodeName)
 					zone := nodeInfo.Labels[*appConfig.NodeZoneLabel]
 					if len(zone) == 0 {
@@ -350,11 +348,21 @@ func (cs *ConfigStore) Sync() {
 		return
 	}
 
+	podDrainPeriod, err := time.ParseDuration(*appConfig.PodDrainPeriod)
+	if err != nil {
+		log.Error(err)
+	}
+
 	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
 		info := value.(checkPodResult)
-		if info.podDeletion {
-			log.Debugf("delete drain pod=%s", key)
-			cs.kubernetesEndpoints.Delete(key)
+		if info.DeletionTimestamp != nil {
+			drainTime := time.Until(info.DeletionTimestamp.Time)
+
+			// if pod deleted or in terminating state bigger than drainTime
+			if drainTime < 0 || drainTime > podDrainPeriod {
+				log.Debugf("delete drain pod=%s", key)
+				cs.kubernetesEndpoints.Delete(key)
+			}
 		}
 
 		return true
