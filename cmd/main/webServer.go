@@ -127,6 +127,32 @@ func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (ws *WebServer) getZone(namespace string, pod string) string {
+	const unknown = "unknown"
+
+	podInfo, err := ws.clientset.CoreV1().Pods(namespace).Get(pod, metav1.GetOptions{})
+	if err != nil {
+		log.Error(err)
+
+		return unknown
+	}
+
+	nodeInfo, err := ws.clientset.CoreV1().Nodes().Get(podInfo.Spec.NodeName, metav1.GetOptions{})
+	if err != nil {
+		log.Error(err)
+
+		return unknown
+	}
+
+	zone := nodeInfo.Labels[*appConfig.NodeZoneLabel]
+
+	if len(zone) == 0 {
+		return unknown
+	}
+
+	return zone
+}
+
 func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
@@ -138,26 +164,7 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 	namespace := r.Form.Get("namespace")
 	pod := r.Form.Get("pod")
 
-	podInfo, err := ws.clientset.CoreV1().Pods(namespace).Get(pod, metav1.GetOptions{})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Error(err)
-
-		return
-	}
-
-	nodeInfo, err := ws.clientset.CoreV1().Nodes().Get(podInfo.Spec.NodeName, metav1.GetOptions{})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Error(err)
-
-		return
-	}
-
-	zone := nodeInfo.Labels[*appConfig.NodeZoneLabel]
-	if len(zone) == 0 {
-		zone = "unknown"
-	}
+	zone := ws.getZone(namespace, pod)
 
 	_, err = w.Write([]byte(zone))
 	if err != nil {
