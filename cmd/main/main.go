@@ -71,7 +71,7 @@ func main() {
 
 	ep.onNewPod = func(pod *v1.Pod) {
 		for _, v := range configStore {
-			if v.ConfigStoreState != ConfigStoreStateStop {
+			if v.ConfigStoreState != ConfigStoreStateSTOP {
 				v.NewPod(pod)
 			}
 		}
@@ -79,7 +79,7 @@ func main() {
 
 	ep.onDeletePod = func(pod *v1.Pod) {
 		for _, v := range configStore {
-			if v.ConfigStoreState != ConfigStoreStateStop {
+			if v.ConfigStoreState != ConfigStoreStateSTOP {
 				v.DeletePod()
 			}
 		}
@@ -144,7 +144,7 @@ func main() {
 		for {
 			time.Sleep(WaitTime)
 			for _, v := range configStore {
-				if v.ConfigStoreState != ConfigStoreStateStop {
+				if v.ConfigStoreState != ConfigStoreStateSTOP {
 					log.Debugf("check endpoints=%s", v.config.ID)
 					v.Sync()
 				}

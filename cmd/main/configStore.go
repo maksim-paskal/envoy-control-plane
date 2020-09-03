@@ -31,8 +31,8 @@ import (
 )
 
 const (
-	ConfigStoreStateRun int = iota
-	ConfigStoreStateStop
+	ConfigStoreStateRUN int = iota
+	ConfigStoreStateSTOP
 )
 
 type ConfigStore struct {
@@ -50,7 +50,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs := ConfigStore{
 		config:           config,
 		ep:               ep,
-		ConfigStoreState: ConfigStoreStateRun,
+		ConfigStoreState: ConfigStoreStateRUN,
 		log: log.WithFields(log.Fields{
 			"type":   "ConfigStore",
 			"nodeID": config.ID,
@@ -83,7 +83,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 }
 
 func (cs *ConfigStore) NewPod(pod *v1.Pod) {
-	if cs.ConfigStoreState == ConfigStoreStateStop {
+	if cs.ConfigStoreState == ConfigStoreStateSTOP {
 		return
 	}
 	cs.loadEndpoint(pod)
@@ -91,7 +91,7 @@ func (cs *ConfigStore) NewPod(pod *v1.Pod) {
 }
 
 func (cs *ConfigStore) DeletePod() {
-	if cs.ConfigStoreState == ConfigStoreStateStop {
+	if cs.ConfigStoreState == ConfigStoreStateSTOP {
 		return
 	}
 	cs.saveLastEndpoints()
@@ -307,6 +307,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					priority:        config.Priority,
 				}
 
+				// get zone from saved endpoint
 				ep, ok := cs.kubernetesEndpoints.Load(pod.Name)
 				if ok {
 					saved := ep.(checkPodResult)
@@ -332,7 +333,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 
 func (cs *ConfigStore) Stop() {
 	cs.log.Info("stop")
-	cs.ConfigStoreState = ConfigStoreStateStop
+	cs.ConfigStoreState = ConfigStoreStateSTOP
 }
 
 func (cs *ConfigStore) getNode(nodeName string) *v1.Node {
@@ -345,7 +346,7 @@ func (cs *ConfigStore) getNode(nodeName string) *v1.Node {
 }
 
 func (cs *ConfigStore) Sync() {
-	if cs.ConfigStoreState == ConfigStoreStateStop {
+	if cs.ConfigStoreState == ConfigStoreStateSTOP {
 		return
 	}
 
