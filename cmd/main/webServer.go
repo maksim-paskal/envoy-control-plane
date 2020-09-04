@@ -14,6 +14,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
@@ -38,6 +39,7 @@ func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*Confi
 		http.HandleFunc("/api/healthz", ws.handlerHealthz)
 		http.HandleFunc("/api/status", ws.handlerStatus)
 		http.HandleFunc("/api/config_dump", ws.handlerConfigDump)
+		http.HandleFunc("/api/config_endpoints", ws.handlerConfigEndpoints)
 		http.HandleFunc("/api/zone", ws.handlerZone)
 		log.Info("http.port=", *appConfig.WebAddress)
 		if err := http.ListenAndServe(*appConfig.WebAddress, nil); err != nil {
@@ -69,6 +71,45 @@ func (ws *WebServer) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 
 	for _, v := range ws.configStore {
 		results = append(results, v.config)
+	}
+
+	if len(results) == 0 {
+		http.Error(w, "no results", http.StatusInternalServerError)
+
+		return
+	}
+
+	b, err := json.MarshalIndent(results, "", " ")
+	if err != nil {
+		log.Error(err)
+	}
+	_, err = w.Write(b)
+	if err != nil {
+		log.Error(err)
+	}
+}
+
+func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	type EndpointsResults struct {
+		Name    string
+		PodInfo []string
+	}
+	results := []EndpointsResults{}
+
+	for _, v := range ws.configStore {
+		endpoints := EndpointsResults{
+			Name: v.config.ID,
+		}
+		v.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
+			podInfo := value.(checkPodResult)
+
+			endpoints.PodInfo = append(endpoints.PodInfo, fmt.Sprintf("%+v", podInfo))
+
+			return true
+		})
+		results = append(results, endpoints)
 	}
 
 	if len(results) == 0 {
