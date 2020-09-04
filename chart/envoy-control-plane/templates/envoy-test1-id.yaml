@@ -72,6 +72,9 @@ data:
       - name: test
         domains:
         - "*"
+        rate_limits:
+          actions:
+          - remote_address
         retry_policy:
           retry_on: "cancelled,connect-failure,gateway-error,refused-stream,reset,resource-exhausted,unavailable"
           num_retries: 1

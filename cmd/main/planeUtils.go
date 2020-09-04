@@ -17,6 +17,7 @@ import (
 
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/maksim-paskal/utils-go"

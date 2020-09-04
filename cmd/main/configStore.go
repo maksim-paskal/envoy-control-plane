@@ -115,6 +115,7 @@ func (cs *ConfigStore) push() {
 		newVersion := uuid.New().String()
 		if newVersion != cs.version {
 			cs.version = newVersion
+
 			break
 		}
 	}
@@ -371,9 +372,10 @@ func (cs *ConfigStore) Sync() {
 		if err != nil {
 			log.Error(err)
 		}
+		snapVersion := snap.GetVersion(resource.EndpointType)
 
-		if snap.GetVersion(resource.EndpointType) != cs.version {
-			log.Warnf("nodeID=%s,version not match", cs.config.ID)
+		if len(snapVersion) > 0 && snapVersion != cs.version {
+			log.Warnf("nodeID=%s,version not match %s,%s", cs.config.ID, snapVersion, cs.version)
 
 			cs.lastEndpoints = nil
 			cs.lastEndpointsArray = nil
