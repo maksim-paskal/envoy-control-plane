@@ -15,6 +15,10 @@ spec:
       - path: /
         backend:
           serviceName: envoy
+          servicePort: 18000
+      - path: /2
+        backend:
+          serviceName: envoy
           servicePort: 8000
       - path: /api
         backend:

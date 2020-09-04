@@ -23,6 +23,7 @@ import (
 type EndpointsStore struct {
 	clientset   *kubernetes.Clientset
 	informer    cache.SharedIndexInformer
+	factory     informers.SharedInformerFactory
 	stopCh      chan struct{}
 	onNewPod    func(pod *v1.Pod)
 	onDeletePod func(pod *v1.Pod)
@@ -33,20 +34,19 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 		clientset: clientset,
 	}
 	go func() {
-		var factory informers.SharedInformerFactory
 		if *appConfig.WatchNamespaced {
 			log.Debugf("start namespaced %s", *appConfig.Namespace)
-			factory = informers.NewSharedInformerFactoryWithOptions(
+			es.factory = informers.NewSharedInformerFactoryWithOptions(
 				es.clientset, 0,
 				informers.WithNamespace(*appConfig.Namespace),
 			)
 		} else {
-			factory = informers.NewSharedInformerFactoryWithOptions(
+			es.factory = informers.NewSharedInformerFactoryWithOptions(
 				es.clientset, 0,
 			)
 		}
 
-		es.informer = factory.Core().V1().Pods().Informer()
+		es.informer = es.factory.Core().V1().Pods().Informer()
 		es.stopCh = make(chan struct{})
 		defer close(es.stopCh)
 
@@ -64,6 +64,10 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 				go es.onDeletePod(pod)
 			},
 		})
+
+		es.factory.Start(es.stopCh)
+		es.factory.WaitForCacheSync(es.stopCh)
+
 		go es.informer.Run(es.stopCh)
 
 		if !cache.WaitForCacheSync(es.stopCh, es.informer.HasSynced) {

@@ -75,5 +75,5 @@ var appConfig = &AppConfig{
 	WebAddress:          flag.String("webAddress", ":18081", "web address"),
 	NodeZoneLabel:       flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
 	ConfigDrainPeriod:   flag.String("config.drainPeriod", "5s", "drain period"),
-	EndpointCheckPeriod: flag.String("endpoint.checkPeriod", "60s", "check period"),
+	EndpointCheckPeriod: flag.String("endpoint.checkPeriod", "6s", "check period"),
 }

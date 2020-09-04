@@ -73,8 +73,11 @@ data:
         domains:
         - "*"
         retry_policy:
-          retry_on: ""
-          num_retries: 3
+          retry_on: "cancelled,connect-failure,gateway-error,refused-stream,reset,resource-exhausted,unavailable"
+          num_retries: 1
+          retry_host_predicate:
+          - name: "envoy.retry_host_predicates.previous_hosts"
+          host_selection_retry_max_attempts: 5
         routes:
         - match:
             prefix: "/1"
@@ -107,9 +110,14 @@ data:
                 cluster_name: xds_cluster
     - name: local_service2
       connect_timeout: 0.25s
-      common_lb_config:
-        healthy_panic_threshold:
-          value: 0
+      circuit_breakers:
+        thresholds:
+        - max_retries: 10
+      outlier_detection:
+        consecutive_5xx: 5
+        base_ejection_time: 30s
+        max_ejection_percent: 50
+        consecutive_gateway_failure: 5
       lb_policy: ROUND_ROBIN
       type: EDS
       eds_cluster_config:

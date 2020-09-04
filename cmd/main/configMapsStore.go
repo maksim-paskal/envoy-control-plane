@@ -29,6 +29,8 @@ type ConfigMapStore struct {
 	onNewConfig    func(*ConfigType)
 	onDeleteConfig func(string)
 	log            *log.Entry
+	factory        informers.SharedInformerFactory
+	informer       cache.SharedIndexInformer
 }
 
 func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
@@ -39,22 +41,21 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 	}
 
 	go func() {
-		var factory informers.SharedInformerFactory
 		if *appConfig.WatchNamespaced {
 			cms.log.Debugf("start namespaced %s", *appConfig.Namespace)
-			factory = informers.NewSharedInformerFactoryWithOptions(
+			cms.factory = informers.NewSharedInformerFactoryWithOptions(
 				clientset, 0,
 				informers.WithNamespace(*appConfig.Namespace),
 			)
 		} else {
-			factory = informers.NewSharedInformerFactoryWithOptions(
+			cms.factory = informers.NewSharedInformerFactoryWithOptions(
 				clientset, 0,
 			)
 		}
 
-		informer := factory.Core().V1().ConfigMaps().Informer()
+		cms.informer = cms.factory.Core().V1().ConfigMaps().Informer()
 
-		informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		cms.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				cm := obj.(*v1.ConfigMap)
 
@@ -79,9 +80,12 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 		cms.stopCh = make(chan struct{})
 		defer close(cms.stopCh)
 
-		go informer.Run(cms.stopCh)
+		cms.factory.Start(cms.stopCh)
+		cms.factory.WaitForCacheSync(cms.stopCh)
 
-		if !cache.WaitForCacheSync(cms.stopCh, informer.HasSynced) {
+		go cms.informer.Run(cms.stopCh)
+
+		if !cache.WaitForCacheSync(cms.stopCh, cms.informer.HasSynced) {
 			log.Fatalf("Timed out waiting for caches to sync")
 
 			return

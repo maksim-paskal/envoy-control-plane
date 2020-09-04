@@ -1,9 +1,10 @@
 phantom:
   address: test.dev.com:443
   ssl: true
+  writelog: all
   load_profile:
     load_type: rps
-    schedule: line(10, 20, 10m)
+    schedule: line(20, 30, 10m)
   header_http: "1.1"
   headers:
     - "[Host: test.dev.com]"

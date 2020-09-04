@@ -93,14 +93,18 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "application/json")
 
 	type EndpointsResults struct {
-		Name    string
-		PodInfo []string
+		Name      string
+		Version   string
+		PodInfo   []string
+		LastSaved []string
 	}
 	results := []EndpointsResults{}
 
 	for _, v := range ws.configStore {
 		endpoints := EndpointsResults{
-			Name: v.config.ID,
+			Name:      v.config.ID,
+			Version:   v.version,
+			LastSaved: v.lastEndpointsArray,
 		}
 		v.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
 			podInfo := value.(checkPodResult)

@@ -79,7 +79,7 @@ func main() {
 	ep.onDeletePod = func(pod *v1.Pod) {
 		for _, v := range configStore {
 			if v.ConfigStoreState != ConfigStoreStateSTOP {
-				v.DeletePod()
+				v.DeletePod(pod)
 			}
 		}
 	}

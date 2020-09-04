@@ -42,6 +42,18 @@ spec:
           limits:
             cpu: 10m
             memory: 100Mi
+        # lifecycle:
+        #   preStop:
+        #     exec:
+        #       command:
+        #       - /bin/sleep
+        #       - "30"
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 80
+          initialDelaySeconds: 3
+          periodSeconds: 5
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -87,3 +99,15 @@ spec:
           limits:
             cpu: 10m
             memory: 100Mi
+        # lifecycle:
+        #   preStop:
+        #     exec:
+        #       command:
+        #       - /bin/sleep
+        #       - "30"
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 80
+          initialDelaySeconds: 3
+          periodSeconds: 5

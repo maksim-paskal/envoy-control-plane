@@ -18,17 +18,18 @@ import (
 	"reflect"
 	"sort"
 	"sync"
-	"time"
 
 	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	"github.com/envoyproxy/go-control-plane/pkg/resource/v2"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 const (
@@ -37,6 +38,7 @@ const (
 )
 
 type ConfigStore struct {
+	version             string
 	config              *ConfigType
 	ep                  *EndpointsStore
 	kubernetesEndpoints sync.Map
@@ -45,6 +47,7 @@ type ConfigStore struct {
 	lastEndpointsArray  []string
 	ConfigStoreState    int
 	log                 *log.Entry
+	mutex               sync.Mutex
 }
 
 func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
@@ -72,17 +75,12 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 		log.Error(err)
 	}
 
-	for !cs.ep.informer.HasSynced() {
-		log.Debug("resync")
-		err = cs.ep.informer.GetIndexer().Resync()
-		if err != nil {
-			log.Error(err)
-		}
-		time.Sleep(1 * time.Second)
+	pods, err := ep.factory.Core().V1().Pods().Lister().List(labels.Everything())
+	if err != nil {
+		log.Error(err)
 	}
 
-	for _, v := range ep.informer.GetStore().List() {
-		pod := v.(*v1.Pod)
+	for _, pod := range pods {
 		cs.loadEndpoint(pod)
 	}
 	cs.saveLastEndpoints()
@@ -100,16 +98,27 @@ func (cs *ConfigStore) NewPod(pod *v1.Pod) {
 	cs.saveLastEndpoints()
 }
 
-func (cs *ConfigStore) DeletePod() {
+func (cs *ConfigStore) DeletePod(pod *v1.Pod) {
 	if cs.ConfigStoreState == ConfigStoreStateSTOP {
 		return
 	}
+	cs.kubernetesEndpoints.Delete(pod.Name)
+
 	cs.saveLastEndpoints()
 }
 
 func (cs *ConfigStore) push() {
-	version := uuid.New().String()
-	snap, err := getConfigSnapshot(version, cs.config, cs.lastEndpoints)
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
+
+	for {
+		newVersion := uuid.New().String()
+		if newVersion != cs.version {
+			cs.version = newVersion
+			break
+		}
+	}
+	snap, err := getConfigSnapshot(cs.version, cs.config, cs.lastEndpoints)
 	if err != nil {
 		cs.log.Error(err)
 
@@ -121,7 +130,7 @@ func (cs *ConfigStore) push() {
 
 		return
 	}
-	cs.log.Infof("pushed,version=%s", version)
+	cs.log.Infof("pushed,version=%s", cs.version)
 }
 
 func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
@@ -131,7 +140,9 @@ func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
 
 		cs.log.Debugf("pod=%s,namespace=%s,podInfo=%+v", pod.Name, pod.Namespace, podInfo)
 
-		if podInfo.check {
+		if pod.DeletionTimestamp != nil {
+			cs.kubernetesEndpoints.Delete(pod.Name)
+		} else if podInfo.check {
 			cs.kubernetesEndpoints.Store(pod.Name, podInfo)
 		}
 	}
@@ -167,17 +178,8 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
 		info := value.(checkPodResult)
 
-		if len(info.podIP) > 0 && len(info.nodeZone) > 0 {
-			healthStatus := core.HealthStatus_UNHEALTHY
-
-			if info.ready {
-				healthStatus = core.HealthStatus_UNKNOWN
-			}
-
-			if info.DeletionTimestamp != nil {
-				healthStatus = core.HealthStatus_DRAINING
-			}
-
+		// add endpoint only if ready
+		if info.ready && len(info.podIP) > 0 && len(info.nodeZone) > 0 {
 			nodeLocality := &core.Locality{
 				Zone: info.nodeZone,
 			}
@@ -198,7 +200,6 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				Locality: nodeLocality,
 				Priority: priority,
 				LbEndpoints: []*endpoint.LbEndpoint{{
-					HealthStatus: healthStatus,
 					HostIdentifier: &endpoint.LbEndpoint_Endpoint{
 						Endpoint: &endpoint.Endpoint{
 							HealthCheckConfig: healthCheckConfig,
@@ -232,11 +233,10 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				address := value2.GetEndpoint().GetAddress().GetSocketAddress().Address
 
 				publishEpArray = append(publishEpArray, fmt.Sprintf(
-					"%s|%s|%d|%d|%s|%d|%d",
+					"%s|%s|%d|%s|%d|%d",
 					clusterName,
 					value1.Locality.GetZone(),
 					value1.Priority,
-					value2.HealthStatus,
 					value2.GetEndpoint().GetAddress().GetSocketAddress().Address,
 					value2.GetEndpoint().GetAddress().GetSocketAddress().GetPortValue(),
 					value2.GetEndpoint().GetHealthCheckConfig().GetPortValue(),
@@ -272,15 +272,16 @@ func (cs *ConfigStore) saveLastEndpoints() {
 }
 
 type checkPodResult struct {
-	check             bool
-	DeletionTimestamp *metav1.Time
-	clusterName       string
-	podIP             string
-	port              uint32
-	ready             bool
-	nodeZone          string
-	priority          uint32
-	healthCheckPort   uint32
+	check           bool
+	clusterName     string
+	podIP           string
+	podName         string
+	podNamespace    string
+	port            uint32
+	ready           bool
+	nodeZone        string
+	priority        uint32
+	healthCheckPort uint32
 }
 
 func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
@@ -304,14 +305,15 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 				}
 
 				result := checkPodResult{
-					check:             true,
-					clusterName:       config.ClusterName,
-					podIP:             pod.Status.PodIP,
-					ready:             ready,
-					DeletionTimestamp: pod.DeletionTimestamp,
-					healthCheckPort:   config.HealthCheckPort,
-					port:              config.Port,
-					priority:          config.Priority,
+					check:           true,
+					clusterName:     config.ClusterName,
+					podIP:           pod.Status.PodIP,
+					podName:         pod.Name,
+					podNamespace:    pod.Namespace,
+					ready:           ready,
+					healthCheckPort: config.HealthCheckPort,
+					port:            config.Port,
+					priority:        config.Priority,
 				}
 
 				// get zone from saved endpoint
@@ -364,24 +366,19 @@ func (cs *ConfigStore) Sync() {
 		return
 	}
 
-	podDrainPeriod, err := time.ParseDuration(*appConfig.PodDrainPeriod)
-	if err != nil {
-		log.Error(err)
-	}
-
-	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
-		info := value.(checkPodResult)
-		if info.DeletionTimestamp != nil {
-			drainTime := time.Until(info.DeletionTimestamp.Time)
-
-			// if pod deleted or in terminating state bigger than drainTime
-			if drainTime < 0 || drainTime > podDrainPeriod {
-				log.Debugf("delete drain pod=%s", key)
-				cs.kubernetesEndpoints.Delete(key)
-			}
+	if cs.lastEndpoints != nil {
+		snap, err := snapshotCache.GetSnapshot(cs.config.ID)
+		if err != nil {
+			log.Error(err)
 		}
 
-		return true
-	})
-	cs.saveLastEndpoints()
+		if snap.GetVersion(resource.EndpointType) != cs.version {
+			log.Warnf("nodeID=%s,version not match", cs.config.ID)
+
+			cs.lastEndpoints = nil
+			cs.lastEndpointsArray = nil
+
+			cs.saveLastEndpoints()
+		}
+	}
 }
