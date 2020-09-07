@@ -5,6 +5,8 @@ services:
     image: redis:alpine
   ratelimit:
     image: envoyproxy/ratelimit:v1.4.0
+    depends_on:
+    - redis
     volumes:
     - ./config:/data
     restart: "always"
