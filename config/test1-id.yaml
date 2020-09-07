@@ -84,7 +84,11 @@ data:
         - "*"
         rate_limits:
         - actions:
-          - {remote_address: {}}
+          - remote_address: {}
+        - actions:
+          - request_headers:
+              header_name: cf-connecting-ip
+              descriptor_key: cf_connecting_ip
         routes:
         - match:
             prefix: "/1"
@@ -119,6 +123,11 @@ data:
       connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN
       type: STRICT_DNS
+      circuit_breakers:
+        thresholds:
+        - max_connections: 1
+          max_pending_requests: 1
+          max_requests: 1
       load_assignment:
         cluster_name: local_service2
         endpoints:

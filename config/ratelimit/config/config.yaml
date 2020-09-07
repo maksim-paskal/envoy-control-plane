@@ -3,5 +3,15 @@ domain: test
 descriptors:
 - key: remote_address
   rate_limit:
-    unit: minute
-    requests_per_unit: 3
+    unit: second
+    requests_per_unit: 10
+- key: cf_connecting_ip
+  rate_limit:
+    unit: second
+    requests_per_unit: 5
+# black list IP
+- key: cf_connecting_ip
+  value: 203.0.113.1
+  rate_limit:
+    unit: second
+    requests_per_unit: 0
