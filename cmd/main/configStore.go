@@ -19,11 +19,10 @@ import (
 	"sort"
 	"sync"
 
-	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	"github.com/envoyproxy/go-control-plane/pkg/resource/v2"
+	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -150,7 +149,7 @@ func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
 }
 
 func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEndpoints, error) {
-	endpoints, err := yamlToResources(cs.config.Endpoints, api.ClusterLoadAssignment{})
+	endpoints, err := yamlToResources(cs.config.Endpoints, endpoint.ClusterLoadAssignment{})
 	if err != nil {
 		cs.log.Error(err)
 
@@ -160,7 +159,7 @@ func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEn
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
 
 	for _, ep := range endpoints {
-		fixed := ep.(*api.ClusterLoadAssignment)
+		fixed := ep.(*endpoint.ClusterLoadAssignment)
 
 		lbEndpoints[fixed.GetClusterName()] = append(lbEndpoints[fixed.GetClusterName()], fixed.GetEndpoints()...)
 	}
@@ -249,7 +248,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				}
 			}
 		}
-		publishEp = append(publishEp, &api.ClusterLoadAssignment{
+		publishEp = append(publishEp, &endpoint.ClusterLoadAssignment{
 			ClusterName: clusterName,
 			Endpoints:   ep,
 		})

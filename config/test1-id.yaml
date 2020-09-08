@@ -51,21 +51,42 @@ data:
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
                 path: /dev/stdout
-                json_format:
-                  protocol: "%PROTOCOL%"
-                  duration: "%DURATION%"
-                  response_code: "%RESPONSE_CODE%"
-                  response_flags: "%RESPONSE_FLAGS%"
-                  x_request_id: "%REQ(X-REQUEST-ID)%"
+                log_format:
+                  json_format:
+                    protocol: "%PROTOCOL%"
+                    duration: "%DURATION%"
+                    response_code: "%RESPONSE_CODE%"
+                    response_flags: "%RESPONSE_FLAGS%"
+                    x_request_id: "%REQ(X-REQUEST-ID)%"
             rds:
               route_config_name: test
               config_source:
+                resource_api_version: V3
                 api_config_source:
                   api_type: GRPC
+                  transport_api_version: V3
                   grpc_services:
                   - envoy_grpc:
                       cluster_name: xds_cluster
             http_filters:
+            - name: envoy.filters.http.header_to_metadata
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.header_to_metadata.v3.Config
+                request_rules:
+                - cookie: "cookie"
+                  on_header_present:
+                    metadata_namespace: envoy.lb
+                    key: client_id
+                    regex_value_rewrite:
+                      pattern:
+                        google_re2:
+                          max_program_size: 146
+                        regex: ".*?CID=([\\w]{40}).*?$"
+                      substitution: "\\1"
+                  on_header_missing:
+                    metadata_namespace: envoy.lb
+                    key: client_id
+                    value: ''
             - name: envoy.filters.http.ratelimit
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
@@ -75,21 +96,6 @@ data:
                   grpc_service:
                     envoy_grpc:
                       cluster_name: rate_limit_cluster
-            - name: envoy.filters.http.header_to_metadata
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.filters.http.header_to_metadata.v3.Config
-                request_rules:
-                  - header: x-version
-                    on_header_present:
-                      metadata_namespace: envoy.lb
-                      key: version
-                      type: STRING
-                    on_header_missing:
-                      metadata_namespace: envoy.lb
-                      key: default
-                      value: 'true'
-                      type: STRING
-                    remove: false
             - name: envoy.filters.http.router
     routes:
     - name: test
@@ -104,6 +110,13 @@ data:
           - request_headers:
               header_name: cf-connecting-ip
               descriptor_key: cf_connecting_ip
+        - actions:
+          - dynamic_metadata:
+              metadata_key:
+                key: envoy.lb
+                path:
+                - key: client_id
+              descriptor_key: client_id
         routes:
         - match:
             prefix: "/1"
@@ -129,8 +142,10 @@ data:
       type: EDS
       eds_cluster_config:
         eds_config:
+          resource_api_version: V3
           api_config_source:
             api_type: GRPC
+            transport_api_version: V3
             grpc_services:
             - envoy_grpc:
                 cluster_name: xds_cluster

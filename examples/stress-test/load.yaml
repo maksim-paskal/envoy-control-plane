@@ -8,7 +8,7 @@ phantom:
   header_http: "1.1"
   headers:
   - "[Host: test.dev.com]"
-  - "[CF-Connecting-IP: 203.0.113.11]"
+  #- "[CF-Connecting-IP: 203.0.113.11]"
   - "[Connection: close]"
   uris:
   - "/2"

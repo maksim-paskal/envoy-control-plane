@@ -15,10 +15,13 @@ package main
 import (
 	"context"
 
-	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	accesslog "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v2"
-	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-	xds "github.com/envoyproxy/go-control-plane/pkg/server/v2"
+	accesslog "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v3"
+	clusterservice "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
+	endpointservice "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
+	listenerservice "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
+	routeservice "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	xds "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"google.golang.org/grpc"
 )
 
@@ -42,10 +45,10 @@ func newControlPlane(ctx context.Context, grpcServer *grpc.Server) *ControlPlane
 	server := xds.NewServer(ctx, snapshotCache, cb)
 
 	accesslog.RegisterAccessLogServiceServer(grpcServer, als)
-	api.RegisterEndpointDiscoveryServiceServer(grpcServer, server)
-	api.RegisterClusterDiscoveryServiceServer(grpcServer, server)
-	api.RegisterRouteDiscoveryServiceServer(grpcServer, server)
-	api.RegisterListenerDiscoveryServiceServer(grpcServer, server)
+	endpointservice.RegisterEndpointDiscoveryServiceServer(grpcServer, server)
+	clusterservice.RegisterClusterDiscoveryServiceServer(grpcServer, server)
+	routeservice.RegisterRouteDiscoveryServiceServer(grpcServer, server)
+	listenerservice.RegisterListenerDiscoveryServiceServer(grpcServer, server)
 
 	return &cp
 }

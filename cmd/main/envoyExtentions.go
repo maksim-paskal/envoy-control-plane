@@ -14,9 +14,8 @@ package main
 
 // envoy type_config's must be loaded in control plane before use in envoy config.
 import (
-	_ "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v2"
-	_ "github.com/envoyproxy/go-control-plane/envoy/config/filter/network/http_connection_manager/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
+	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/header_to_metadata/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 )

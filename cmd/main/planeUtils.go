@@ -15,24 +15,27 @@ package main
 import (
 	"encoding/json"
 
-	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/maksim-paskal/utils-go"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Resource) (cache.Snapshot, error) {
-	clusters, err := yamlToResources(config.Clusters, api.Cluster{})
+	clusters, err := yamlToResources(config.Clusters, cluster.Cluster{})
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
-	routes, err := yamlToResources(config.Routes, api.RouteConfiguration{})
+	routes, err := yamlToResources(config.Routes, route.RouteConfiguration{})
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
-	listiners, err := yamlToResources(config.Listeners, api.Listener{})
+	listiners, err := yamlToResources(config.Listeners, listener.Listener{})
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
@@ -80,8 +83,8 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 		}
 
 		switch outType.(type) {
-		case api.Cluster:
-			resource := api.Cluster{}
+		case cluster.Cluster:
+			resource := cluster.Cluster{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.Errorf("error=%s,json=%s", err, string(resourcesJSON))
@@ -89,8 +92,8 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, err
 			}
 			results[k] = &resource
-		case api.RouteConfiguration:
-			resource := api.RouteConfiguration{}
+		case route.RouteConfiguration:
+			resource := route.RouteConfiguration{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
@@ -98,8 +101,8 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, err
 			}
 			results[k] = &resource
-		case api.ClusterLoadAssignment:
-			resource := api.ClusterLoadAssignment{}
+		case endpoint.ClusterLoadAssignment:
+			resource := endpoint.ClusterLoadAssignment{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
@@ -107,8 +110,8 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, err
 			}
 			results[k] = &resource
-		case api.Listener:
-			resource := api.Listener{}
+		case listener.Listener:
+			resource := listener.Listener{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))

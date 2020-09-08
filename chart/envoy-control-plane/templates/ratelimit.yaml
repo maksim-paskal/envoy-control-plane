@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-ratelimit
+  labels:
+    app: envoy-ratelimit
+data:
+  config.yaml: |-
+    ---
+    domain: test
+    descriptors:
+    - key: remote_address
+      rate_limit:
+        unit: second
+        requests_per_unit: 10
+    - key: cf_connecting_ip
+      rate_limit:
+        unit: second
+        requests_per_unit: 5
+    # black list IP
+    - key: cf_connecting_ip
+      value: 203.0.113.1
+      rate_limit:
+        unit: second
+        requests_per_unit: 0
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy-ratelimit
+  labels:
+    app: envoy-ratelimit
+spec:
+  selector:
+    matchLabels:
+      app: envoy-ratelimit
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: envoy-ratelimit
+    spec:
+      volumes:
+      - name: config
+        configMap:
+          name: envoy-ratelimit
+      containers:
+      - name: ratelimit
+        image: envoyproxy/ratelimit:v1.4.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: "USE_STATSD"
+          value: "false"
+        - name: "LOG_LEVEL"
+          value: "debug"
+        - name: "REDIS_SOCKET_TYPE"
+          value: "tcp"
+        - name: "REDIS_URL"
+          value: "127.0.0.1:6379"
+        - name: "RUNTIME_ROOT"
+          value: "/data"
+        - name: "RUNTIME_SUBDIRECTORY"
+          value: "ratelimit"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -ex
+          while ! nc -z 127.0.0.1 6379; do
+            echo wait for redis...
+            sleep 1
+          done
+          ratelimit
+        volumeMounts:
+        - name: config
+          mountPath: /data/ratelimit
+        resources:
+          requests:
+            cpu: 10m
+            memory: 100Mi
+        ports:
+        - containerPort: 8080 # grpc
+        - containerPort: 8081 # http
+      - name: redis
+        image: redis:6.0.7
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 10m
+            memory: 100Mi
+        ports:
+        - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-ratelimit
+  labels:
+    app: envoy-ratelimit
+spec:
+  type: ClusterIP
+  ports:
+  - name: grpc
+    port: 8080
+    protocol: TCP
+  - name: http
+    port: 8081
+    protocol: TCP
+  selector:
+    app: envoy-ratelimit

@@ -15,3 +15,7 @@ descriptors:
   rate_limit:
     unit: second
     requests_per_unit: 0
+- key: client_id
+  rate_limit:
+    unit: second
+    requests_per_unit: 2

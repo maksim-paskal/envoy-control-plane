@@ -10,15 +10,15 @@ testChart:
 	helm lint --strict ./chart/envoy-control-plane
 	helm template ./chart/envoy-control-plane | kubectl apply --dry-run --validate -f -
 build:
-	docker build . -t paskalmaksim/envoy-control-plane:dev
+	docker build . -t paskalmaksim/envoy-control-plane:dev-v3
 buildEnvoy:
-	docker build ./envoy -t paskalmaksim/envoy-docker-image:dev
+	docker build ./envoy -t paskalmaksim/envoy-docker-image:dev-v3
 build-cli:
 	./scripts/build-cli.sh
 push:
-	docker push paskalmaksim/envoy-control-plane:dev
+	docker push paskalmaksim/envoy-control-plane:dev-v3
 pushEnvoy:
-	docker push paskalmaksim/envoy-docker-image:dev
+	docker push paskalmaksim/envoy-docker-image:dev-v3
 k8sConfig:
 	kubectl apply -f ./chart/testPods.yaml
 	kubectl apply -f ./config/

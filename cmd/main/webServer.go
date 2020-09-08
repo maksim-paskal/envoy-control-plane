@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"

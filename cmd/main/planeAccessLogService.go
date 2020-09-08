@@ -16,8 +16,8 @@ import (
 	"fmt"
 	"time"
 
-	alf "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v2"
-	accessloggrpc "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v2"
+	alf "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
+	accessloggrpc "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v3"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -16,7 +16,7 @@ import (
 	"context"
 	"sync"
 
-	api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -49,7 +49,7 @@ func (cb *callbacks) OnStreamClosed(id int64) {
 	}
 }
 
-func (cb *callbacks) OnStreamRequest(id int64, r *api.DiscoveryRequest) error {
+func (cb *callbacks) OnStreamRequest(id int64, r *discovery.DiscoveryRequest) error {
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
 		log.Debugf("OnStreamRequest")
 	}
@@ -64,7 +64,7 @@ func (cb *callbacks) OnStreamRequest(id int64, r *api.DiscoveryRequest) error {
 	return nil
 }
 
-func (cb *callbacks) OnStreamResponse(id int64, r *api.DiscoveryRequest, w *api.DiscoveryResponse) {
+func (cb *callbacks) OnStreamResponse(id int64, r *discovery.DiscoveryRequest, w *discovery.DiscoveryResponse) {
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
 		log.Debugf("OnStreamResponse...")
 	}
@@ -72,7 +72,7 @@ func (cb *callbacks) OnStreamResponse(id int64, r *api.DiscoveryRequest, w *api.
 	cb.Report()
 }
 
-func (cb *callbacks) OnFetchRequest(ctx context.Context, req *api.DiscoveryRequest) error {
+func (cb *callbacks) OnFetchRequest(ctx context.Context, req *discovery.DiscoveryRequest) error {
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
 		log.Debugf("OnFetchRequest...")
 	}
@@ -86,4 +86,4 @@ func (cb *callbacks) OnFetchRequest(ctx context.Context, req *api.DiscoveryReque
 
 	return nil
 }
-func (cb *callbacks) OnFetchResponse(*api.DiscoveryRequest, *api.DiscoveryResponse) {}
+func (cb *callbacks) OnFetchResponse(*discovery.DiscoveryRequest, *discovery.DiscoveryResponse) {}

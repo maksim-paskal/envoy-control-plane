@@ -5,6 +5,7 @@ layered_runtime:
   layers:
   - name: static_layer_0
     static_layer:
+      envoy.deprecated_features:envoy.config.bootstrap.v3.Bootstrap.tracing: true
       overload:
         global_downstream_max_connections: 50000
       upstream:
@@ -13,14 +14,19 @@ layered_runtime:
 
 dynamic_resources:
   lds_config:
+    resource_api_version: V3
     api_config_source:
       api_type: GRPC
+      transport_api_version: V3
       grpc_services:
       - envoy_grpc:
           cluster_name: xds_cluster
+      set_node_on_first_message_only: true
   cds_config:
+    resource_api_version: V3
     api_config_source:
       api_type: GRPC
+      transport_api_version: V3
       grpc_services:
       - envoy_grpc:
           cluster_name: xds_cluster
@@ -33,8 +39,10 @@ static_resources:
     type: EDS
     eds_cluster_config:
       eds_config:
+        resource_api_version: V3
         api_config_source:
           api_type: GRPC
+          transport_api_version: V3
           grpc_services:
           - envoy_grpc:
               cluster_name: xds_cluster
@@ -65,7 +73,7 @@ tracing:
   http:
     name: envoy.tracers.dynamic_ot
     typed_config:
-      "@type": type.googleapis.com/envoy.config.trace.v2.DynamicOtConfig
+      "@type": type.googleapis.com/envoy.config.trace.v3.DynamicOtConfig
       library: /usr/local/lib/libjaegertracing_plugin.so
       config:
         service_name: {{ env "ENVOY_SERVICE_NAME" }}
