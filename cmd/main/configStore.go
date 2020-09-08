@@ -370,7 +370,7 @@ func (cs *ConfigStore) Sync() {
 	if cs.lastEndpoints != nil {
 		snap, err := snapshotCache.GetSnapshot(cs.config.ID)
 		if err != nil {
-			log.Error(err)
+			log.Warn(err)
 		}
 		snapVersion := snap.GetVersion(resource.EndpointType)
 
