@@ -9,6 +9,18 @@ envoy:
 
 ratelimit:
   enabled: true
+  domain: test
+  rate_limits:
+  - actions:
+    - header_value_match:
+        descriptor_value: no-cf-connecting-ip
+        expect_match: false
+        headers:
+        - name: "cf-connecting-ip"
+  - actions:
+    - request_headers:
+        header_name: cf-connecting-ip
+        descriptor_key: cf-connecting-ip
   config:
     domain: test
     descriptors:
