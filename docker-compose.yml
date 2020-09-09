@@ -9,7 +9,6 @@ services:
     - redis
     volumes:
     - ./config:/data
-    restart: "always"
     environment:
     - USE_STATSD=false
     - LOG_LEVEL=debug
@@ -18,7 +17,15 @@ services:
     - RUNTIME_ROOT=/data
     - RUNTIME_SUBDIRECTORY=ratelimit
     command:
-    - ratelimit
+    - /bin/sh
+    - -c
+    - |
+      set -ex
+      while ! nc -z redis 6379; do
+        echo wait for redis...
+        sleep 1
+      done
+      ratelimit
   envoy-test1:
     build:
       context: ./envoy
