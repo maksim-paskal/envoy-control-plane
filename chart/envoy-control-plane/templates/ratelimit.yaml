@@ -6,33 +6,7 @@ metadata:
     app: envoy-ratelimit
 data:
   config.yaml: |-
-    domain: test
-    descriptors:
-    - key: remote_address
-      rate_limit:
-        unit: second
-        requests_per_unit: 2
-    - key: header_match
-      value: no-cf-connecting-ip
-      rate_limit:
-        unit: minute
-        requests_per_unit: 2
-    - key: cf-connecting-ip
-      rate_limit:
-        unit: second
-        requests_per_unit: 5
-    # black list IP
-    - key: cf-connecting-ip
-      value: 203.0.113.1
-      rate_limit:
-        unit: second
-        requests_per_unit: 0
-    # auto-tests
-    - key: cf-connecting-ip
-      value: 203.0.113.144
-      rate_limit:
-        unit: second
-        requests_per_unit: 50
+{{- .Values.ratelimit.config| toYaml | nindent 5 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
