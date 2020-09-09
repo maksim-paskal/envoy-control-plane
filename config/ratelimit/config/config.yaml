@@ -4,18 +4,25 @@ descriptors:
 - key: remote_address
   rate_limit:
     unit: second
-    requests_per_unit: 10
-- key: cf_connecting_ip
+    requests_per_unit: 2
+- key: header_match
+  value: no-cf-connecting-ip
+  rate_limit:
+    unit: minute
+    requests_per_unit: 2
+- key: cf-connecting-ip
   rate_limit:
     unit: second
     requests_per_unit: 5
 # black list IP
-- key: cf_connecting_ip
+- key: cf-connecting-ip
   value: 203.0.113.1
   rate_limit:
     unit: second
     requests_per_unit: 0
-- key: client_id
+# auto-tests
+- key: cf-connecting-ip
+  value: 203.0.113.144
   rate_limit:
     unit: second
-    requests_per_unit: 2
+    requests_per_unit: 50

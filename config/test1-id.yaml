@@ -69,24 +69,6 @@ data:
                   - envoy_grpc:
                       cluster_name: xds_cluster
             http_filters:
-            - name: envoy.filters.http.header_to_metadata
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.filters.http.header_to_metadata.v3.Config
-                request_rules:
-                - cookie: "cookie"
-                  on_header_present:
-                    metadata_namespace: envoy.lb
-                    key: client_id
-                    regex_value_rewrite:
-                      pattern:
-                        google_re2:
-                          max_program_size: 146
-                        regex: ".*?CID=([\\w]{40}).*?$"
-                      substitution: "\\1"
-                  on_header_missing:
-                    metadata_namespace: envoy.lb
-                    key: client_id
-                    value: ''
             - name: envoy.filters.http.ratelimit
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
@@ -105,18 +87,15 @@ data:
         - "*"
         rate_limits:
         - actions:
-          - remote_address: {}
+          - header_value_match:
+              descriptor_value: no-cf-connecting-ip
+              expect_match: false
+              headers:
+              - name: "cf-connecting-ip"
         - actions:
           - request_headers:
               header_name: cf-connecting-ip
-              descriptor_key: cf_connecting_ip
-        - actions:
-          - dynamic_metadata:
-              metadata_key:
-                key: envoy.lb
-                path:
-                - key: client_id
-              descriptor_key: client_id
+              descriptor_key: cf-connecting-ip
         routes:
         - match:
             prefix: "/1"
