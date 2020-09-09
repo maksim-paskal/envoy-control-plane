@@ -6,23 +6,33 @@ metadata:
     app: envoy-ratelimit
 data:
   config.yaml: |-
-    ---
     domain: test
     descriptors:
     - key: remote_address
       rate_limit:
         unit: second
-        requests_per_unit: 10
-    - key: cf_connecting_ip
+        requests_per_unit: 2
+    - key: header_match
+      value: no-cf-connecting-ip
+      rate_limit:
+        unit: minute
+        requests_per_unit: 2
+    - key: cf-connecting-ip
       rate_limit:
         unit: second
         requests_per_unit: 5
     # black list IP
-    - key: cf_connecting_ip
+    - key: cf-connecting-ip
       value: 203.0.113.1
       rate_limit:
         unit: second
         requests_per_unit: 0
+    # auto-tests
+    - key: cf-connecting-ip
+      value: 203.0.113.144
+      rate_limit:
+        unit: second
+        requests_per_unit: 50
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -52,7 +62,7 @@ spec:
         - name: "USE_STATSD"
           value: "false"
         - name: "LOG_LEVEL"
-          value: "debug"
+          value: "info"
         - name: "REDIS_SOCKET_TYPE"
           value: "tcp"
         - name: "REDIS_URL"
