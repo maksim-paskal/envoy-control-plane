@@ -44,10 +44,13 @@ func waitForAPI() {
 		if err != nil && *debug {
 			fmt.Println(err)
 		}
+
 		resp, err := cli.Do(req)
+
 		if err != nil && *debug {
 			fmt.Println(err)
 		}
+
 		if resp != nil && resp.Body != nil {
 			defer resp.Body.Close()
 		}
@@ -55,18 +58,22 @@ func waitForAPI() {
 		if resp != nil && resp.StatusCode == 200 {
 			return
 		}
+
 		if *debug {
 			fmt.Println("Wait for api ready...")
 		}
+
 		time.Sleep(1 * time.Second)
 	}
 }
 
 func main() {
 	flag.Parse()
+
 	if len(*namespace) == 0 {
 		panic("no namespace")
 	}
+
 	if len(*pod) == 0 {
 		panic("no pod")
 	}
@@ -88,12 +95,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := cli.Do(req)
 	if err != nil {
 		panic(err)
 	}
+
 	if resp.Body != nil {
 		defer resp.Body.Close()
 	}

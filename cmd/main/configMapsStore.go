@@ -77,7 +77,9 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 				cms.deleteUnusedConfig(cm)
 			},
 		})
+
 		cms.stopCh = make(chan struct{})
+
 		defer close(cms.stopCh)
 
 		cms.factory.Start(cms.stopCh)

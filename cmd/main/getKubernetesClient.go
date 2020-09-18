@@ -19,8 +19,10 @@ import (
 )
 
 func getKubernetesClient() (*kubernetes.Clientset, error) {
-	var kubeconfig *rest.Config
-	var err error
+	var (
+		kubeconfig *rest.Config
+		err        error
+	)
 
 	if len(*appConfig.KubeconfigFile) > 0 {
 		kubeconfig, err = clientcmd.BuildConfigFromFlags("", *appConfig.KubeconfigFile)

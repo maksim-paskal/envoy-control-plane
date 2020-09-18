@@ -27,14 +27,17 @@ type AccessLogService struct{}
 // StreamAccessLogs implements the access log service.
 func (svc *AccessLogService) StreamAccessLogs(stream accessloggrpc.AccessLogService_StreamAccessLogsServer) error {
 	var logName string
+
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
 			return nil
 		}
+
 		if msg.Identifier != nil {
 			logName = msg.Identifier.LogName
 		}
+
 		switch entries := msg.LogEntries.(type) {
 		case *accessloggrpc.StreamAccessLogsMessage_HttpLogs:
 			for _, entry := range entries.HttpLogs.LogEntry {
@@ -42,15 +45,19 @@ func (svc *AccessLogService) StreamAccessLogs(stream accessloggrpc.AccessLogServ
 					common := entry.CommonProperties
 					req := entry.Request
 					resp := entry.Response
+
 					if common == nil {
 						common = &alf.AccessLogCommon{}
 					}
+
 					if req == nil {
 						req = &alf.HTTPRequestProperties{}
 					}
+
 					if resp == nil {
 						resp = &alf.HTTPResponseProperties{}
 					}
+
 					log.Infof(fmt.Sprintf("[%s%s] %s %s %s %d %s %s",
 						logName, time.Now().Format(time.RFC3339), req.Authority, req.Path, req.Scheme,
 						resp.ResponseCode.GetValue(), req.RequestId, common.UpstreamCluster))
@@ -63,6 +70,7 @@ func (svc *AccessLogService) StreamAccessLogs(stream accessloggrpc.AccessLogServ
 					if common == nil {
 						common = &alf.AccessLogCommon{}
 					}
+
 					log.Infof(fmt.Sprintf("[%s%s] tcp %s %s",
 						logName, time.Now().Format(time.RFC3339), common.UpstreamLocalAddress, common.UpstreamCluster))
 				}

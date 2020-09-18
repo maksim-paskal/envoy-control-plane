@@ -31,10 +31,12 @@ func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Res
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
+
 	routes, err := yamlToResources(config.Routes, route.RouteConfiguration{})
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
+
 	listiners, err := yamlToResources(config.Listeners, listener.Listener{})
 	if err != nil {
 		return cache.Snapshot{}, err
@@ -66,6 +68,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 
 	var resources []interface{}
 	err = json.Unmarshal(jsonObj, &resources)
+
 	if err != nil {
 		log.Error(err)
 
@@ -86,38 +89,46 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 		case cluster.Cluster:
 			resource := cluster.Cluster{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
+
 			if err != nil {
 				log.Errorf("error=%s,json=%s", err, string(resourcesJSON))
 
 				return nil, err
 			}
+
 			results[k] = &resource
 		case route.RouteConfiguration:
 			resource := route.RouteConfiguration{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
+
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
 
 				return nil, err
 			}
+
 			results[k] = &resource
 		case endpoint.ClusterLoadAssignment:
 			resource := endpoint.ClusterLoadAssignment{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
+
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
 
 				return nil, err
 			}
+
 			results[k] = &resource
 		case listener.Listener:
 			resource := listener.Listener{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
+
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
 
 				return nil, err
 			}
+
 			results[k] = &resource
 		default:
 			return nil, ErrUnknownClass

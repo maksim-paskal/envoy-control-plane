@@ -65,11 +65,13 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 		if err != nil {
 			log.Error(err)
 		}
+
 		cs.log.Debugf("loaded config: \n%s", string(obj))
 	}
 
 	var err error
 	cs.configEndpoints, err = cs.getConfigEndpoints()
+
 	if err != nil {
 		log.Error(err)
 	}
@@ -82,6 +84,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	for _, pod := range pods {
 		cs.loadEndpoint(pod)
 	}
+
 	cs.saveLastEndpoints()
 
 	cs.push()
@@ -93,6 +96,7 @@ func (cs *ConfigStore) NewPod(pod *v1.Pod) {
 	if cs.ConfigStoreState == ConfigStoreStateSTOP {
 		return
 	}
+
 	cs.loadEndpoint(pod)
 	cs.saveLastEndpoints()
 }
@@ -101,6 +105,7 @@ func (cs *ConfigStore) DeletePod(pod *v1.Pod) {
 	if cs.ConfigStoreState == ConfigStoreStateSTOP {
 		return
 	}
+
 	cs.kubernetesEndpoints.Delete(pod.Name)
 
 	cs.saveLastEndpoints()
@@ -118,18 +123,22 @@ func (cs *ConfigStore) push() {
 			break
 		}
 	}
+
 	snap, err := getConfigSnapshot(cs.version, cs.config, cs.lastEndpoints)
 	if err != nil {
 		cs.log.Error(err)
 
 		return
 	}
+
 	err = snapshotCache.SetSnapshot(cs.config.ID, snap)
+
 	if err != nil {
 		cs.log.Error(err)
 
 		return
 	}
+
 	cs.log.Infof("pushed,version=%s", cs.version)
 }
 
@@ -223,7 +232,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 		return true
 	})
 
-	var isInvalidIP bool = false
+	isInvalidIP := false
 	publishEp := []types.Resource{}
 	publishEpArray := []string{} // for reflect.DeepEqual
 
@@ -244,15 +253,18 @@ func (cs *ConfigStore) saveLastEndpoints() {
 
 				if net.ParseIP(address) == nil {
 					isInvalidIP = true
+
 					cs.log.Errorf("clusterName=%s,ip=%s is invalid", clusterName, address)
 				}
 			}
 		}
+
 		publishEp = append(publishEp, &endpoint.ClusterLoadAssignment{
 			ClusterName: clusterName,
 			Endpoints:   ep,
 		})
 	}
+
 	if isInvalidIP {
 		log.Warn("can not push changes, isInvalidIP")
 
@@ -288,11 +300,13 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 	for _, config := range cs.config.Kubernetes {
 		if config.Namespace == pod.Namespace {
 			labelsFound := 0
+
 			for k2, v2 := range pod.Labels {
 				if config.Selector[k2] == v2 {
 					labelsFound++
 				}
 			}
+
 			if labelsFound == len(config.Selector) {
 				ready := false
 
@@ -334,6 +348,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					if len(zone) == 0 {
 						zone = "unknown"
 					}
+
 					result.nodeZone = zone
 				}
 
@@ -371,6 +386,7 @@ func (cs *ConfigStore) Sync() {
 		if err != nil {
 			log.Warn(err)
 		}
+
 		snapVersion := snap.GetVersion(resource.EndpointType)
 
 		if len(snapVersion) > 0 && snapVersion != cs.version {

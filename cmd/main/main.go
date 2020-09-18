@@ -45,6 +45,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if *appConfig.LogPretty {
 		log.SetFormatter(&log.TextFormatter{})
 	} else {
@@ -99,12 +100,15 @@ func main() {
 	cms.onDeleteConfig = func(nodeID string) {
 		if configStore[nodeID] != nil {
 			configStore[nodeID].Stop()
+
 			drainPeriod, err := time.ParseDuration(*appConfig.ConfigDrainPeriod)
+
 			if err != nil {
 				log.Error(err)
 			} else {
 				time.Sleep(drainPeriod)
 			}
+
 			delete(configStore, nodeID)
 			snapshotCache.ClearSnapshot(nodeID)
 		}
@@ -113,9 +117,10 @@ func main() {
 	defer cms.Stop()
 
 	ctx := context.Background()
-	var grpcOptions []grpc.ServerOption
+	grpcOptions := []grpc.ServerOption{}
 	grpcOptions = append(grpcOptions, grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams))
 	grpcServer := grpc.NewServer(grpcOptions...)
+
 	defer grpcServer.GracefulStop()
 
 	lis, err := net.Listen("tcp", *appConfig.GrpcAddress)
@@ -140,8 +145,10 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
 		for {
 			time.Sleep(WaitTime)
+
 			for _, v := range configStore {
 				if v.ConfigStoreState != ConfigStoreStateSTOP {
 					log.Debugf("check endpoints=%s", v.config.ID)

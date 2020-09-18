@@ -33,6 +33,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 	es := EndpointsStore{
 		clientset: clientset,
 	}
+
 	go func() {
 		if *appConfig.WatchNamespaced {
 			log.Debugf("start namespaced %s", *appConfig.Namespace)
@@ -48,6 +49,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 
 		es.informer = es.factory.Core().V1().Pods().Informer()
 		es.stopCh = make(chan struct{})
+
 		defer close(es.stopCh)
 
 		es.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{

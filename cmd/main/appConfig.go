@@ -46,6 +46,7 @@ func (ac *AppConfig) CheckConfig() error {
 	if _, err := time.ParseDuration(*ac.ConfigDrainPeriod); err != nil {
 		return err
 	}
+
 	if _, err := time.ParseDuration(*ac.EndpointCheckPeriod); err != nil {
 		return err
 	}

@@ -42,6 +42,7 @@ func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*Confi
 		http.HandleFunc("/api/config_endpoints", ws.handlerConfigEndpoints)
 		http.HandleFunc("/api/zone", ws.handlerZone)
 		log.Info("http.port=", *appConfig.WebAddress)
+
 		if err := http.ListenAndServe(*appConfig.WebAddress, nil); err != nil {
 			log.Fatal(err)
 		}
@@ -83,6 +84,7 @@ func (ws *WebServer) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(err)
 	}
+
 	_, err = w.Write(b)
 	if err != nil {
 		log.Error(err)
@@ -98,6 +100,7 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 		PodInfo   []string
 		LastSaved []string
 	}
+
 	results := []EndpointsResults{}
 
 	for _, v := range ws.configStore {
@@ -106,6 +109,7 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 			Version:   v.version,
 			LastSaved: v.lastEndpointsArray,
 		}
+
 		v.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
 			podInfo := value.(checkPodResult)
 
@@ -113,6 +117,7 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 
 			return true
 		})
+
 		results = append(results, endpoints)
 	}
 
@@ -126,6 +131,7 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		log.Error(err)
 	}
+
 	_, err = w.Write(b)
 	if err != nil {
 		log.Error(err)
@@ -166,6 +172,7 @@ func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(err)
 	}
+
 	_, err = w.Write(b)
 	if err != nil {
 		log.Error(err)
@@ -206,6 +213,7 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+
 	namespace := r.Form.Get("namespace")
 	pod := r.Form.Get("pod")
 

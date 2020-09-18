@@ -30,6 +30,7 @@ type callbacks struct {
 func (cb *callbacks) Report() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
+
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
 		log.WithFields(log.Fields{"fetches": cb.fetches, "requests": cb.requests}).Info("cb.Report()  callbacks")
 	}
@@ -53,9 +54,11 @@ func (cb *callbacks) OnStreamRequest(id int64, r *discovery.DiscoveryRequest) er
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
 		log.Debugf("OnStreamRequest")
 	}
+
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	cb.requests++
+
 	if cb.signal != nil {
 		close(cb.signal)
 		cb.signal = nil
@@ -76,9 +79,11 @@ func (cb *callbacks) OnFetchRequest(ctx context.Context, req *discovery.Discover
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
 		log.Debugf("OnFetchRequest...")
 	}
+
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	cb.fetches++
+
 	if cb.signal != nil {
 		close(cb.signal)
 		cb.signal = nil
