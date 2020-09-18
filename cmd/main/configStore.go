@@ -283,6 +283,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	}
 }
 
+//nolint:maligned
 type checkPodResult struct {
 	check           bool
 	clusterName     string

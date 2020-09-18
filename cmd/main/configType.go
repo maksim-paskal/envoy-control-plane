@@ -21,6 +21,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+//nolint:maligned
 type KubernetesType struct {
 	// add version on configmap to selector
 	UseVersionLabel bool              `yaml:"useversionlabel"`
@@ -53,7 +54,7 @@ func parseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, 
 
 	var tpl bytes.Buffer
 	err := templates.ExecuteTemplate(&tpl, path.Base(nodeID), data)
-	if err != nil {
+	if err != nil { //nolint:wsl
 		return ConfigType{}, err
 	}
 
