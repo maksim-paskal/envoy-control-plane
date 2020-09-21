@@ -42,7 +42,6 @@ spec:
           limits:
             cpu: 10m
             memory: 100Mi
-        #
         # stop container after 30 sec
         # lifecycle:
         #   preStop:
