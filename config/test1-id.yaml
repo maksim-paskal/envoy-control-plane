@@ -170,3 +170,19 @@ data:
                 socket_address:
                   address: ratelimit
                   port_value: 8081
+    - name: tls-cluster-example
+      connect_timeout: 1s
+      type: STATIC
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      load_assignment:
+        cluster_name: tls-cluster-example
+        endpoints:
+        - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: 127.0.0.1
+                  port_value: 443
