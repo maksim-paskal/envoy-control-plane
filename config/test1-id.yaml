@@ -106,6 +106,10 @@ data:
           route:
             cluster: local_service2
         - match:
+            prefix: "/tls-cluster-example"
+          route:
+            cluster: tls-cluster-example
+        - match:
             prefix: "/aggregate-cluster"
           route:
             cluster: aggregate-cluster
@@ -138,14 +142,13 @@ data:
       type: STRICT_DNS
       circuit_breakers:
         thresholds:
-        - max_connections: 1
-          max_pending_requests: 1
-          max_requests: 1
+        - max_connections: 10
+          max_pending_requests: 10
+          max_requests: 10
       health_checks:
       - timeout: 1s
-        interval: 10s
-        interval_jitter: 1s
-        unhealthy_threshold: 6
+        interval: 5s
+        unhealthy_threshold: 3
         healthy_threshold: 1
         http_health_check:
           path: "/ready"
@@ -198,6 +201,14 @@ data:
     - name: tls-cluster-example
       connect_timeout: 1s
       type: STATIC
+      health_checks:
+      - timeout: 1s
+        interval: 5s
+        unhealthy_threshold: 3
+        healthy_threshold: 1
+        http_health_check:
+          host: "some.com"
+          path: "/status.php"
       transport_socket:
         name: envoy.transport_sockets.tls
         typed_config:
@@ -219,5 +230,6 @@ data:
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.clusters.aggregate.v3.ClusterConfig
           clusters:
+          - tls-cluster-example
           - local_service2
           - admin_cluster
