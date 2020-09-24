@@ -96,8 +96,10 @@ func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*Confi
 func (ws *WebServer) handlerHelp(w http.ResponseWriter, r *http.Request) {
 	var result bytes.Buffer
 
+	linkFormat := "<div style=\"padding:5x\"><a href=\"%s\">%s</a></div><br/>"
+
 	for _, route := range ws.routes {
-		result.WriteString(fmt.Sprintf("<div style=\"padding:5x\"><a href=\"%s\">%s</a></div><br/>", route.path, route.description))
+		result.WriteString(fmt.Sprintf(linkFormat, route.path, route.description))
 	}
 
 	_, err := w.Write(result.Bytes())
