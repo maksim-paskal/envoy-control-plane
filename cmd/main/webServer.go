@@ -13,6 +13,7 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,9 +24,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+type WebRoutes struct {
+	path        string
+	description string
+	handler     func(w http.ResponseWriter, r *http.Request)
+}
+
 type WebServer struct {
 	clientset   *kubernetes.Clientset
 	configStore map[string]*ConfigStore
+	routes      []WebRoutes
 }
 
 func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*ConfigStore) *WebServer {
@@ -33,14 +41,48 @@ func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*Confi
 		clientset:   clientset,
 		configStore: configStore,
 	}
+	ws.routes = make([]WebRoutes, 0)
+	ws.routes = append(ws.routes, WebRoutes{
+		path:        "/api/help",
+		description: "Help",
+		handler:     ws.handlerHelp,
+	})
+	ws.routes = append(ws.routes, WebRoutes{
+		path:        "/api/ready",
+		description: "Rediness probe",
+		handler:     ws.handlerReady,
+	})
+	ws.routes = append(ws.routes, WebRoutes{
+		path:        "/api/healthz",
+		description: "Health probe",
+		handler:     ws.handlerHealthz,
+	})
+	ws.routes = append(ws.routes, WebRoutes{
+		path:        "/api/status",
+		description: "Status",
+		handler:     ws.handlerStatus,
+	})
+	ws.routes = append(ws.routes, WebRoutes{
+		path:        "/api/config_dump",
+		description: "Config Dump",
+		handler:     ws.handlerConfigDump,
+	})
+	ws.routes = append(ws.routes, WebRoutes{
+		path:        "/api/config_endpoints",
+		description: "Config Endpoints",
+		handler:     ws.handlerConfigEndpoints,
+	})
+	ws.routes = append(ws.routes, WebRoutes{
+		path:        "/api/zone",
+		description: "Zone",
+		handler:     ws.handlerZone,
+	})
 
 	go func() {
-		http.HandleFunc("/api/ready", ws.handlerReady)
-		http.HandleFunc("/api/healthz", ws.handlerHealthz)
-		http.HandleFunc("/api/status", ws.handlerStatus)
-		http.HandleFunc("/api/config_dump", ws.handlerConfigDump)
-		http.HandleFunc("/api/config_endpoints", ws.handlerConfigEndpoints)
-		http.HandleFunc("/api/zone", ws.handlerZone)
+		for _, route := range ws.routes {
+			http.HandleFunc(route.path, route.handler)
+		}
+
 		log.Info("http.port=", *appConfig.WebAddress)
 
 		if err := http.ListenAndServe(*appConfig.WebAddress, nil); err != nil {
@@ -49,6 +91,19 @@ func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*Confi
 	}()
 
 	return &ws
+}
+
+func (ws *WebServer) handlerHelp(w http.ResponseWriter, r *http.Request) {
+	var result bytes.Buffer
+
+	for _, route := range ws.routes {
+		result.WriteString(fmt.Sprintf("<div style=\"padding:5x\"><a href=\"%s\">%s</a></div><br/>", route.path, route.description))
+	}
+
+	_, err := w.Write(result.Bytes())
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 func (ws *WebServer) handlerReady(w http.ResponseWriter, r *http.Request) {
