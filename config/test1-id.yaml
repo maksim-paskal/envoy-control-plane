@@ -58,6 +58,7 @@ data:
                     response_code: "%RESPONSE_CODE%"
                     response_flags: "%RESPONSE_FLAGS%"
                     x_request_id: "%REQ(X-REQUEST-ID)%"
+                    meta_cookies: "%DYNAMIC_METADATA(envoy.filters.http.lua.cookie)%"
             rds:
               route_config_name: test
               config_source:
@@ -69,6 +70,40 @@ data:
                   - envoy_grpc:
                       cluster_name: xds_cluster
             http_filters:
+            - name: envoy.lua
+              typed_config:
+                "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
+                inline_code: |
+                  function stringSplit(inputstr, sep)
+                    if sep == nil then
+                      sep = "%s"
+                    end
+                    local t={}
+                    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+                      table.insert(t, str)
+                    end
+                    return t
+                  end
+                  function envoy_on_request(request_handle)
+                    -- cookies to save in metadata
+                    local cookiesArray = {"CID"}
+                    local cookie = request_handle:headers():get("cookie")
+                    local dynamicMetadata = request_handle:streamInfo():dynamicMetadata()
+
+                    if cookie ~= nil then
+                      local splitCookieString = stringSplit(cookie, ";")
+                      for i, cookieItem in ipairs(splitCookieString) do
+                        for y, cookiesItem in ipairs(cookiesArray) do
+                          if string.find(cookieItem, cookiesItem) ~= nil then
+                            local cookieKV = stringSplit(cookieItem, "=")
+                            local cookieName = string.gsub(cookieKV[1], "%s+", "")
+                            dynamicMetadata:set("envoy.filters.http.lua.cookie", cookieName, cookieKV[2])
+                          end
+                        end
+                      end
+                    end
+                  end
+
             - name: envoy.filters.http.ratelimit
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit

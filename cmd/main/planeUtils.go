@@ -49,6 +49,7 @@ func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Res
 		routes,
 		listiners,
 		nil,
+		nil,
 	), nil
 }
 
