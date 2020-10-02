@@ -131,6 +131,13 @@ data:
           - request_headers:
               header_name: cf-connecting-ip
               descriptor_key: cf-connecting-ip
+        - actions:
+          - dynamic_metadata:
+              descriptor_key: "cookie-cid"
+              metadata_key:
+                key: envoy.filters.http.lua.cookie
+                path:
+                - key: CID
         routes:
         - match:
             prefix: "/1"
