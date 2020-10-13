@@ -1,0 +1,67 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 5893f31..280b53c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -271,7 +271,6 @@ if(JAEGERTRACING_PLUGIN)
+   add_lib_deps(jaegertracing_plugin)
+   target_link_libraries(jaegertracing_plugin PUBLIC
+     -static-libgcc
+-    -static-libstdc++
+     -Wl,--version-script=${CMAKE_CURRENT_BINARY_DIR}/export.map)
+ endif()
+ 
+diff --git a/cmake/toolchain.cmake b/cmake/toolchain.cmake
+index ad7a02f..24e5d0c 100644
+--- a/cmake/toolchain.cmake
++++ b/cmake/toolchain.cmake
+@@ -1,5 +1,5 @@
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+-set(CMAKE_CXX_STANDARD 11)
++set(CMAKE_CXX_STANDARD 14)
+ set(CMAKE_CXX_EXTENSIONS OFF)
+ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+\ No newline at end of file
+diff --git a/scripts/build-plugin.sh b/scripts/build-plugin.sh
+index 192c824..da7a99d 100755
+--- a/scripts/build-plugin.sh
++++ b/scripts/build-plugin.sh
+@@ -5,11 +5,14 @@ set -e
+ function main() {
+     local project_dir
+     project_dir="$(git rev-parse --show-toplevel)"
++    cd "$project_dir"
+ 
+     mkdir -p build
+     cd build
+     export CFLAGS="$CFLAGS -march=x86-64"
+     export CXXFLAGS="$CXXFLAGS -march=x86-64"
++    export CXX=/usr/bin/clang++
++    export CC=/usr/bin/clang
+ 
+     cat <<EOF > export.map
+ {
+@@ -23,10 +26,21 @@ EOF
+         -DJAEGERTRACING_PLUGIN=ON \
+         -DBUILD_TESTING=ON \
+         -DHUNTER_CONFIGURATION_TYPES=Release \
++        -DHUNTER_BUILD_SHARED_LIBS=OFF \
++        -DBUILD_SHARED_LIBS=OFF \
+         ..
+     make -j3
+-    mv libjaegertracing_plugin.so /libjaegertracing_plugin.so
+-    ./DynamicallyLoadTracerTest /libjaegertracing_plugin.so
+ }
+ 
++function clangwrap() {
++    tee -a /usr/bin/clang++ > /dev/null <<EOT
++#!/bin/bash
++/usr/bin/clang++-9 -stdlib=libc++ "\$@"
++EOT
++
++    chmod +x /usr/bin/clang++
++    ln -sf /usr/bin/clang-9 /usr/bin/clang
++}
++
++clangwrap
+ main
