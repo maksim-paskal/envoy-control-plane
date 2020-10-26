@@ -14,6 +14,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -239,14 +240,14 @@ func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 func (ws *WebServer) getZone(namespace string, pod string) string {
 	const unknown = "unknown"
 
-	podInfo, err := ws.clientset.CoreV1().Pods(namespace).Get(pod, metav1.GetOptions{})
+	podInfo, err := ws.clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod, metav1.GetOptions{})
 	if err != nil {
 		log.Error(err)
 
 		return unknown
 	}
 
-	nodeInfo, err := ws.clientset.CoreV1().Nodes().Get(podInfo.Spec.NodeName, metav1.GetOptions{})
+	nodeInfo, err := ws.clientset.CoreV1().Nodes().Get(context.TODO(), podInfo.Spec.NodeName, metav1.GetOptions{})
 	if err != nil {
 		log.Error(err)
 

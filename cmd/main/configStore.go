@@ -13,6 +13,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"reflect"
@@ -367,7 +368,7 @@ func (cs *ConfigStore) Stop() {
 }
 
 func (cs *ConfigStore) getNode(nodeName string) (*v1.Node, error) {
-	nodeInfo, err := cs.ep.clientset.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+	nodeInfo, err := cs.ep.clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		cs.log.Error(err)
 
