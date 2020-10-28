@@ -58,7 +58,7 @@ services:
     hostname: nginxdemo-b
     image: nginxdemos/hello:plain-text
   jaeger:
-    image: jaegertracing/all-in-one
+    image: jaegertracing/all-in-one:1.20
     environment:
     - COLLECTOR_ZIPKIN_HTTP_PORT=9411
     ports:
