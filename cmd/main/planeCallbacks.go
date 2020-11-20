@@ -18,6 +18,7 @@ import (
 
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type callbacks struct {
@@ -69,7 +70,13 @@ func (cb *callbacks) OnStreamRequest(id int64, r *discovery.DiscoveryRequest) er
 
 func (cb *callbacks) OnStreamResponse(id int64, r *discovery.DiscoveryRequest, w *discovery.DiscoveryResponse) {
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
-		log.Debugf("OnStreamResponse...")
+
+		json, _ := protojson.Marshal(r)
+		log.Debugf("DiscoveryRequest=>\n%s\n", string(json))
+
+		json, _ = protojson.Marshal(w)
+		log.Debugf("DiscoveryResponse=>\n%s\n", string(json))
+
 	}
 
 	cb.Report()
@@ -91,4 +98,12 @@ func (cb *callbacks) OnFetchRequest(ctx context.Context, req *discovery.Discover
 
 	return nil
 }
-func (cb *callbacks) OnFetchResponse(*discovery.DiscoveryRequest, *discovery.DiscoveryResponse) {}
+func (cb *callbacks) OnFetchResponse(r *discovery.DiscoveryRequest, w *discovery.DiscoveryResponse) {
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		json, _ := protojson.Marshal(r)
+		log.Debugf("DiscoveryRequest=>\n%s\n", string(json))
+
+		json, _ = protojson.Marshal(w)
+		log.Debugf("DiscoveryResponse=>\n%s\n", string(json))
+	}
+}
