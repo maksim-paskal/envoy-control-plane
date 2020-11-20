@@ -1,0 +1,15 @@
+# envoyproxy/envoy:v1.15.2
+docker run \
+  -it \
+  --rm \
+  -v $(pwd)/config/:/etc/envoy \
+  -p 8000:8000 \
+  -p 8001:8001 \
+  envoyproxy/envoy-debug-dev:6e08670ac7ff459ef8058427663759acab980175 \
+  --config-path /etc/envoy/envoy.yaml \
+  --log-level warning \
+  --log-format "%v" \
+  --bootstrap-version 3 \
+  --service-cluster test \
+  --service-node test1-id \
+  --service-zone test-zone

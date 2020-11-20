@@ -1,0 +1,51 @@
+dynamic_resources:
+  cds_config:
+    path: /etc/envoy/cds.json
+admin:
+  access_log_path: "/dev/null"
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 8001
+static_resources:
+  clusters:
+  - name: admin_cluster
+    connect_timeout: 0.25s
+    lb_policy: ROUND_ROBIN
+    type: STATIC
+    load_assignment:
+      cluster_name: admin_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 18000
+  listeners:
+  - name: listener_0
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 8000
+    traffic_direction: INBOUND
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          codec_type: AUTO
+          route_config:
+            name: route
+            virtual_hosts:
+            - name: backend
+              domains:
+              - "*"
+              routes:
+              - match:
+                  prefix: /
+                route:
+                  cluster: admin_cluster
+          http_filters:
+          - name: envoy.filters.http.router
