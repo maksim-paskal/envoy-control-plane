@@ -1,6 +1,10 @@
 version: '3'
 
 services:
+  statsd:
+    image: prom/statsd-exporter:v0.18.0
+    ports:
+    - 9102:9102
   redis:
     image: redis:alpine
   ratelimit:
@@ -10,7 +14,9 @@ services:
     volumes:
     - ./config:/data
     environment:
-    - USE_STATSD=false
+    - USE_STATSD=true
+    - STATSD_HOST=statsd
+    - STATSD_PORT=9125
     - LOG_LEVEL=error
     - REDIS_SOCKET_TYPE=tcp
     - REDIS_URL=redis:6379
