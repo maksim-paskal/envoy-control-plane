@@ -6,6 +6,8 @@ layered_runtime:
   - name: static_layer_0
     static_layer:
       envoy.deprecated_features:envoy.config.bootstrap.v3.Bootstrap.tracing: true
+      re2.max_program_size.error_level: 1000
+      re2.max_program_size.warn_level: 1000
       overload:
         global_downstream_max_connections: 50000
       upstream:
