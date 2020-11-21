@@ -8,20 +8,6 @@ admin:
       address: 0.0.0.0
       port_value: 8001
 static_resources:
-  clusters:
-  - name: admin_cluster
-    connect_timeout: 0.25s
-    lb_policy: ROUND_ROBIN
-    type: STATIC
-    load_assignment:
-      cluster_name: admin_cluster
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: 127.0.0.1
-                port_value: 18000
   listeners:
   - name: listener_0
     address:
@@ -36,16 +22,9 @@ static_resources:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           stat_prefix: ingress_http
           codec_type: AUTO
-          route_config:
-            name: route
-            virtual_hosts:
-            - name: backend
-              domains:
-              - "*"
-              routes:
-              - match:
-                  prefix: /
-                route:
-                  cluster: admin_cluster
+          rds:
+            route_config_name: test
+            config_source:
+              path: "/etc/envoy/rds.json"
           http_filters:
           - name: envoy.filters.http.router

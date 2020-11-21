@@ -1,16 +1,18 @@
-*Description*:
-We have our implementation of go-control-plane, we use latest v3 API, it's work on envoy v1.15.2 - but upgrading envoy to v1.16+ we got a Caught Segmentation fault on CDS message with aggregated cluster
+We have our implementation of go-control-plane, it's work great on envoy v1.15.2 - but upgrading to envoy v1.16.0 - got a Caught Segmentation fault on CDS message with aggregated cluster
 
 ```
+# envoyproxy/envoy-alpine-debug:v1.15.2 - works
+# envoyproxy/envoy-alpine-debug:v1.16.0 - not-works
+# envoyproxy/envoy-alpine-debug:v1.16.1 - not-works
 docker run \
   -it \
   --rm \
   -v $(pwd)/config/:/etc/envoy \
   -p 8000:8000 \
   -p 8001:8001 \
-  envoyproxy/envoy-debug-dev:6e08670ac7ff459ef8058427663759acab980175 \
+  envoyproxy/envoy-alpine-debug:v1.16.0 \
   --config-path /etc/envoy/envoy.yaml \
-  --log-level warning \
+  --log-level warn \
   --log-format "%v" \
   --bootstrap-version 3 \
   --service-cluster test \
@@ -30,20 +32,6 @@ admin:
       address: 0.0.0.0
       port_value: 8001
 static_resources:
-  clusters:
-  - name: admin_cluster
-    connect_timeout: 0.25s
-    lb_policy: ROUND_ROBIN
-    type: STATIC
-    load_assignment:
-      cluster_name: admin_cluster
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: 127.0.0.1
-                port_value: 18000
   listeners:
   - name: listener_0
     address:
@@ -58,17 +46,10 @@ static_resources:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           stat_prefix: ingress_http
           codec_type: AUTO
-          route_config:
-            name: route
-            virtual_hosts:
-            - name: backend
-              domains:
-              - "*"
-              routes:
-              - match:
-                  prefix: /
-                route:
-                  cluster: admin_cluster
+          rds:
+            route_config_name: test
+            config_source:
+              path: "/etc/envoy/rds.json"
           http_filters:
           - name: envoy.filters.http.router
 ```
@@ -234,44 +215,114 @@ static_resources:
 }
 ```
 
+**rds.json**
+```
+{
+  "versionInfo": "d8e61033-fec9-4565-8ce3-a40d7a565b90",
+  "resources": [
+    {
+      "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
+      "name": "test",
+      "virtualHosts": [
+        {
+          "name": "test",
+          "domains": [
+            "*"
+          ],
+          "routes": [
+            {
+              "match": {
+                "prefix": "/1"
+              },
+              "route": {
+                "cluster": "local_service1"
+              }
+            },
+            {
+              "match": {
+                "prefix": "/2"
+              },
+              "route": {
+                "cluster": "local_service2"
+              }
+            },
+            {
+              "match": {
+                "prefix": "/tls-cluster-example"
+              },
+              "route": {
+                "cluster": "tls-cluster-example"
+              }
+            },
+            {
+              "match": {
+                "prefix": "/aggregate-cluster"
+              },
+              "route": {
+                "cluster": "aggregate-cluster"
+              }
+            },
+            {
+              "match": {
+                "prefix": "/"
+              },
+              "route": {
+                "weightedClusters": {
+                  "clusters": [
+                    {
+                      "name": "local_service1",
+                      "weight": 50
+                    },
+                    {
+                      "name": "local_service2",
+                      "weight": 50
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "typeUrl": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
+  "nonce": "1"
+}
+```
+
 **envoy output**
 ```
-Caught Segmentation fault, suspect faulting address 0x0
-Backtrace (use tools/stack_decode.py to get line numbers):
-Envoy version: 6e08670ac7ff459ef8058427663759acab980175/1.17.0-dev/Clean/RELEASE/BoringSSL
-#0: __restore_rt [0x7f7ab3750980]
-#1: std::__1::__function::__func<>::operator()() [0x563daaf9fb93]
-#2: std::__1::__function::__func<>::operator()() [0x563dac69434c]
-#3: Envoy::ThreadLocal::InstanceImpl::runOnAllThreads() [0x563dac693143]
-#4: Envoy::ThreadLocal::InstanceImpl::SlotImpl::runOnAllThreads() [0x563dac69300b]
-#5: Envoy::ThreadLocal::TypedSlot<>::runOnAllThreads() [0x563daaf9b865]
-#6: Envoy::Extensions::Clusters::Aggregate::Cluster::refresh() [0x563daaf9b675]
-#7: Envoy::Extensions::Clusters::Aggregate::Cluster::startPreInit() [0x563daaf9b40d]
-#8: Envoy::Upstream::ClusterImplBase::initialize() [0x563dac84d865]
-#9: Envoy::Upstream::ClusterManagerInitHelper::initializeSecondaryClusters() [0x563dac700354]
-#10: Envoy::Upstream::ClusterManagerInitHelper::maybeFinishInitialize() [0x563dac6ffb2c]
-#11: Envoy::Upstream::ClusterManagerInitHelper::removeCluster() [0x563dac6fee49]
-#12: Envoy::Upstream::ClusterImplBase::finishInitialization() [0x563dac84ddb7]
-#13: Envoy::Upstream::ClusterImplBase::onInitDone() [0x563dac84dc13]
-#14: Envoy::Init::WatcherHandleImpl::ready() [0x563daca705ab]
-#15: Envoy::Init::ManagerImpl::initialize() [0x563daca6d28b]
-#16: Envoy::Upstream::ClusterImplBase::onPreInitComplete() [0x563dac84daed]
-#17: std::__1::__function::__func<>::operator()() [0x563dac872989]
-#18: Envoy::Network::DnsResolverImpl::PendingResolution::onAresGetAddrInfoCallback() [0x563dac6c5226]
-#19: end_hquery [0x563daba73ae5]
-#20: next_lookup [0x563daba7396a]
-#21: qcallback [0x563daba77223]
-#22: end_query [0x563daba76405]
-#23: process_answer [0x563daba76dfb]
-#24: processfds [0x563daba75640]
-#25: std::__1::__function::__func<>::operator()() [0x563dac6c79c5]
-#26: std::__1::__function::__func<>::operator()() [0x563dac6c0731]
-#27: Envoy::Event::FileEventImpl::assignEvents()::$_1::__invoke() [0x563dac6c14cc]
-#28: event_process_active_single_queue [0x563dacae9698]
-#29: event_base_loop [0x563dacae806e]
-#30: Envoy::Server::InstanceImpl::run() [0x563dac6a106f]
-#31: Envoy::MainCommonBase::run() [0x563daaee9888]
-#32: Envoy::MainCommon::main() [0x563daaeea087]
-#33: main [0x563daaee845c]
-#34: __libc_start_main [0x7f7ab336ebf7]
+Envoy version: 8fb3cb86082b17144a80402f5367ae65f06083bd/1.16.0/Clean/RELEASE/BoringSSL
+#0: [0x7ff2f02ae3d0]
+#1: Envoy::ThreadLocal::InstanceImpl::runOnAllThreads() [0x557b008d1cd3]
+#2: Envoy::ThreadLocal::InstanceImpl::SlotImpl::runOnAllThreads() [0x557b008d1aff]
+#3: Envoy::Extensions::Clusters::Aggregate::Cluster::refresh() [0x557affce6339]
+#4: Envoy::Extensions::Clusters::Aggregate::Cluster::startPreInit() [0x557affce60cd]
+#5: Envoy::Upstream::ClusterImplBase::initialize() [0x557b00a85585]
+#6: Envoy::Upstream::ClusterManagerInitHelper::initializeSecondaryClusters() [0x557b00937feb]
+#7: Envoy::Upstream::ClusterManagerInitHelper::maybeFinishInitialize() [0x557b009377dc]
+#8: Envoy::Upstream::ClusterManagerInitHelper::removeCluster() [0x557b00936afe]
+#9: Envoy::Upstream::ClusterImplBase::finishInitialization() [0x557b00a85ad7]
+#10: Envoy::Upstream::ClusterImplBase::onInitDone() [0x557b00a85933]
+#11: Envoy::Init::WatcherHandleImpl::ready() [0x557b00cbf74b]
+#12: Envoy::Init::ManagerImpl::initialize() [0x557b00cbc44b]
+#13: Envoy::Upstream::ClusterImplBase::onPreInitComplete() [0x557b00a8580d]
+#14: std::__1::__function::__func<>::operator()() [0x557b00aaa4e9]
+#15: Envoy::Network::DnsResolverImpl::PendingResolution::onAresGetAddrInfoCallback() [0x557b009000d6]
+#16: end_hquery [0x557b006e71d5]
+#17: next_lookup [0x557b006e70b6]
+#18: qcallback [0x557b006ea773]
+#19: end_query [0x557b006e9b15]
+#20: process_answer [0x557b006ea34b]
+#21: processfds [0x557b006e8d50]
+#22: std::__1::__function::__func<>::operator()() [0x557b009028a5]
+#23: Envoy::Event::FileEventImpl::assignEvents()::$_1::__invoke() [0x557b008fc366]
+#24: event_process_active_single_queue [0x557b00d34fe8]
+#25: event_base_loop [0x557b00d339be]
+#26: Envoy::Server::InstanceImpl::run() [0x557b008df79c]
+#27: Envoy::MainCommonBase::run() [0x557affc3d008]
+#28: Envoy::MainCommon::main() [0x557affc3d807]
+#29: main [0x557affc3bbdc]
+#30: __libc_start_main [0x7ff2f00fbc8d]
 ```

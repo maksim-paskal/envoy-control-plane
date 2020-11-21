@@ -1,13 +1,15 @@
-# envoyproxy/envoy:v1.15.2
+# envoyproxy/envoy-alpine-debug:v1.15.2 - works
+# envoyproxy/envoy-alpine-debug:v1.16.0 - not-works
+# envoyproxy/envoy-alpine-debug:v1.16.1 - not-works
 docker run \
   -it \
   --rm \
   -v $(pwd)/config/:/etc/envoy \
   -p 8000:8000 \
   -p 8001:8001 \
-  envoyproxy/envoy-debug-dev:6e08670ac7ff459ef8058427663759acab980175 \
+  envoyproxy/envoy-alpine-debug:v1.16.0 \
   --config-path /etc/envoy/envoy.yaml \
-  --log-level warning \
+  --log-level warn \
   --log-format "%v" \
   --bootstrap-version 3 \
   --service-cluster test \
