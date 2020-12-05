@@ -18,6 +18,7 @@ import (
 	"text/template"
 
 	"github.com/maksim-paskal/utils-go"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -55,14 +56,14 @@ func parseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, 
 	var tpl bytes.Buffer
 	err := templates.ExecuteTemplate(&tpl, path.Base(nodeID), data)
 	if err != nil { //nolint:wsl
-		return ConfigType{}, err
+		return ConfigType{}, errors.Wrap(err, "error in templates.ExecuteTemplate")
 	}
 
 	var config ConfigType
 
 	err = yaml.Unmarshal(tpl.Bytes(), &config)
 	if err != nil {
-		return ConfigType{}, err
+		return ConfigType{}, errors.Wrap(err, "error in yaml.Unmarshal")
 	}
 
 	return config, nil

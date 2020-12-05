@@ -8,6 +8,7 @@ require (
 	github.com/googleapis/gnostic v0.4.0 // indirect
 	github.com/maksim-paskal/utils-go v0.0.5
 	github.com/mitchellh/reflectwalk v1.0.1 // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.7.0
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f // indirect

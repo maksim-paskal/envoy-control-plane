@@ -125,7 +125,9 @@ func main() {
 
 	lis, err := net.Listen("tcp", *appConfig.GrpcAddress)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+
+		return
 	}
 
 	newControlPlane(ctx, grpcServer)

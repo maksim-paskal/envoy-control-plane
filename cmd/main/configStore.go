@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
@@ -372,7 +373,7 @@ func (cs *ConfigStore) getNode(nodeName string) (*v1.Node, error) {
 	if err != nil {
 		cs.log.Error(err)
 
-		return nil, err
+		return nil, errors.Wrap(err, "clientset.CoreV1().Nodes().Get")
 	}
 
 	return nodeInfo, nil

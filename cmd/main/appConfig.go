@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type AppConfig struct {
@@ -44,11 +46,11 @@ func (ac *AppConfig) CheckConfig() error {
 	}
 
 	if _, err := time.ParseDuration(*ac.ConfigDrainPeriod); err != nil {
-		return err
+		return errors.Wrap(err, "ParseDuration="+*ac.ConfigDrainPeriod)
 	}
 
 	if _, err := time.ParseDuration(*ac.EndpointCheckPeriod); err != nil {
-		return err
+		return errors.Wrap(err, "ParseDuration="+*ac.EndpointCheckPeriod)
 	}
 
 	return nil

@@ -22,6 +22,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/maksim-paskal/utils-go"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -64,7 +65,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 	if err != nil {
 		log.Error(err)
 
-		return nil, err
+		return nil, errors.Wrap(err, "error in json.Marshal")
 	}
 
 	var resources []interface{}
@@ -73,7 +74,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 	if err != nil {
 		log.Error(err)
 
-		return nil, err
+		return nil, errors.Wrap(err, "error in json.Unmarshal")
 	}
 
 	results := make([]types.Resource, len(resources))
@@ -83,7 +84,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 		if err != nil {
 			log.Error(err)
 
-			return nil, err
+			return nil, errors.Wrap(err, "error in utils.GetJSONfromYAML")
 		}
 
 		switch outType.(type) {
@@ -94,7 +95,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			if err != nil {
 				log.Errorf("error=%s,json=%s", err, string(resourcesJSON))
 
-				return nil, err
+				return nil, errors.Wrap(err, "error in protojson.Unmarshal")
 			}
 
 			results[k] = &resource
@@ -105,7 +106,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
 
-				return nil, err
+				return nil, errors.Wrap(err, "error in protojson.Unmarshal")
 			}
 
 			results[k] = &resource
@@ -116,7 +117,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
 
-				return nil, err
+				return nil, errors.Wrap(err, "error in protojson.Unmarshal")
 			}
 
 			results[k] = &resource
@@ -127,7 +128,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			if err != nil {
 				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
 
-				return nil, err
+				return nil, errors.Wrap(err, "error in protojson.Unmarshal")
 			}
 
 			results[k] = &resource
