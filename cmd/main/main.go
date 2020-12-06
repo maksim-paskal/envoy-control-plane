@@ -15,7 +15,9 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net"
+	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -33,8 +35,12 @@ const (
 )
 
 func main() {
-	log.Infof("Starting %s...", appConfig.Version)
 	flag.Parse()
+
+	if *appConfig.showVersion {
+		fmt.Println(appConfig.Version)
+		os.Exit(0)
+	}
 
 	err := appConfig.CheckConfig()
 	if err != nil {
@@ -58,6 +64,7 @@ func main() {
 
 	log.SetLevel(logLevel)
 
+	log.Infof("Starting %s...", appConfig.Version)
 	log.Debugf("loaded application config = \n%s", appConfig.String())
 
 	clientset, err := getKubernetesClient()

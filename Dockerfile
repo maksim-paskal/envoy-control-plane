@@ -12,7 +12,11 @@ ENV GOFLAGS="-trimpath"
 RUN cd /usr/src/envoy-control-plane \
   && go mod download \
   && go mod verify \
-  && go build -v -o envoy-control-plane -ldflags "-X main.buildTime=$(date +"%Y%m%d%H%M%S") -X main.gitVersion=`git describe --exact-match --tags $(git log -n1 --pretty='%h')`" ./cmd/main
+  && go build -v -o envoy-control-plane -ldflags \
+  "-X main.buildTime=$(date +"%Y%m%d%H%M%S") -X main.gitVersion=$(git describe --tags `git rev-list --tags --max-count=1`)-$(git log -n1 --pretty='%H')" \
+  ./cmd/main
+
+RUN /usr/src/envoy-control-plane/envoy-control-plane -version
 
 FROM alpine:latest
 
