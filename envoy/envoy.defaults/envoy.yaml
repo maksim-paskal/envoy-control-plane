@@ -52,6 +52,10 @@ static_resources:
     connect_timeout: 1s
     type: STRICT_DNS
     http2_protocol_options: {}
+    upstream_connection_options:
+      # configure a TCP keep-alive to detect and reconnect to the admin
+      # server in the event of a TCP socket half open connection
+      tcp_keepalive: {}
     load_assignment:
       cluster_name: xds_cluster
       endpoints:
