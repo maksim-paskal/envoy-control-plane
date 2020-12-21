@@ -35,12 +35,16 @@ type WebServer struct {
 	clientset   *kubernetes.Clientset
 	configStore map[string]*ConfigStore
 	routes      []WebRoutes
+	log         *log.Entry
 }
 
 func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*ConfigStore) *WebServer {
 	ws := WebServer{
 		clientset:   clientset,
 		configStore: configStore,
+		log: log.WithFields(log.Fields{
+			"type": "ConfigStore",
+		}),
 	}
 	ws.routes = make([]WebRoutes, 0)
 	ws.routes = append(ws.routes, WebRoutes{
@@ -84,7 +88,7 @@ func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*Confi
 			http.HandleFunc(route.path, route.handler)
 		}
 
-		log.Info("http.port=", *appConfig.WebAddress)
+		ws.log.Info("http.port=", *appConfig.WebAddress)
 
 		if err := http.ListenAndServe(*appConfig.WebAddress, nil); err != nil {
 			log.Fatal(err)
@@ -105,21 +109,21 @@ func (ws *WebServer) handlerHelp(w http.ResponseWriter, r *http.Request) {
 
 	_, err := w.Write(result.Bytes())
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 	}
 }
 
 func (ws *WebServer) handlerReady(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte("ready"))
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 	}
 }
 
 func (ws *WebServer) handlerHealthz(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte("LIVE"))
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 	}
 }
 
@@ -140,12 +144,12 @@ func (ws *WebServer) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 	}
 }
 
@@ -187,12 +191,12 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 	}
 }
 
@@ -211,7 +215,7 @@ func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 	for _, nodeID := range statusKeys {
 		sn, err := snapshotCache.GetSnapshot(nodeID)
 		if err != nil {
-			log.Error(err)
+			ws.log.Error(err)
 		}
 
 		results = append(results, StatusResponce{
@@ -228,12 +232,12 @@ func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 	}
 }
 
@@ -242,14 +246,14 @@ func (ws *WebServer) getZone(namespace string, pod string) string {
 
 	podInfo, err := ws.clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod, metav1.GetOptions{})
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 
 		return unknown
 	}
 
 	nodeInfo, err := ws.clientset.CoreV1().Nodes().Get(context.TODO(), podInfo.Spec.NodeName, metav1.GetOptions{})
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 
 		return unknown
 	}
@@ -267,7 +271,7 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Error(err)
+		ws.log.Error(err)
 
 		return
 	}
@@ -279,6 +283,6 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 
 	_, err = w.Write([]byte(zone))
 	if err != nil {
-		log.Error(err)
+		ws.log.Error(err)
 	}
 }

@@ -65,7 +65,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	if log.GetLevel() >= log.DebugLevel {
 		obj, err := yaml.Marshal(config)
 		if err != nil {
-			log.Error(err)
+			cs.log.Error(err)
 		}
 
 		cs.log.Debugf("loaded config: \n%s", string(obj))
@@ -75,12 +75,12 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs.configEndpoints, err = cs.getConfigEndpoints()
 
 	if err != nil {
-		log.Error(err)
+		cs.log.Error(err)
 	}
 
 	pods, err := ep.factory.Core().V1().Pods().Lister().List(labels.Everything())
 	if err != nil {
-		log.Error(err)
+		cs.log.Error(err)
 	}
 
 	for _, pod := range pods {

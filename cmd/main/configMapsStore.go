@@ -129,7 +129,7 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 
 		config, err := parseConfigYaml(nodeID, text, nil)
 		if err != nil {
-			log.Errorf("error parsing %s: %s\n%s", nodeID, err, text)
+			cms.log.Errorf("error parsing %s: %s\n%s", nodeID, err, text)
 		} else {
 			if len(config.ID) == 0 {
 				config.ID = nodeID
