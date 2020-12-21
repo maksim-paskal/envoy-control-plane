@@ -20,5 +20,15 @@ RUN touch /tmp/checksum \
 
 USER 101
 
+# test configuration
+RUN ENVOY_SERVICE_NAME=test-service JAEGER_AGENT_HOST=jaeger /entrypoint.sh \
+/usr/local/bin/envoy \
+-c /etc/envoy/envoy.yaml \
+--service-cluster test \
+--service-node test1-id \
+--bootstrap-version 3 \
+--log-level warn \
+--mode validate
+
 ENTRYPOINT [ "/entrypoint.sh" ]
 CMD ["/usr/local/bin/envoy","-c","/etc/envoy/envoy.yaml"]
