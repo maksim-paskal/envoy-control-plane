@@ -38,3 +38,12 @@ clean:
 	kubectl delete -f ./config/ || true
 	kubectl delete -f ./chart/testPods.yaml || true
 	docker-compose down --remove-orphans
+upgrade:
+	go get -v -u all
+	# downgrade to v0.18.14
+	go get -v -u k8s.io/api@v0.18.14 || true
+	go get -v -u k8s.io/apimachinery@v0.18.14
+	go get -v -u k8s.io/client-go@v0.18.14
+	# downgrade for k8s.io/client-go@v0.18.14
+	go get -v -u github.com/googleapis/gnostic@v0.1.0
+	go mod tidy

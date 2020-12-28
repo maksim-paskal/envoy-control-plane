@@ -2,23 +2,48 @@ module github.com/maksim-paskal/envoy-control-plane
 
 go 1.15
 
+replace (
+	// update Makefile
+	k8s.io/api => k8s.io/api v0.18.14
+	k8s.io/apimachinery => k8s.io/apimachinery v0.18.14
+	k8s.io/client-go => k8s.io/client-go v0.18.14
+)
+
 require (
-	github.com/envoyproxy/go-control-plane v0.9.7
+	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
+	github.com/cncf/udpa/go v0.0.0-20201211205326-cc1b757b3edd // indirect
+	github.com/envoyproxy/go-control-plane v0.9.8
+	github.com/envoyproxy/protoc-gen-validate v0.4.1 // indirect
+	github.com/go-logr/logr v0.3.0 // indirect
+	github.com/golang/protobuf v1.4.3 // indirect
+	github.com/google/go-cmp v0.5.4 // indirect
+	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.1.2
-	github.com/googleapis/gnostic v0.4.0 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/imdario/mergo v0.3.11 // indirect
+	github.com/json-iterator/go v1.1.10 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/maksim-paskal/utils-go v0.0.5
 	github.com/mitchellh/reflectwalk v1.0.1 // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.7.0
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
-	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f // indirect
-	golang.org/x/text v0.3.3 // indirect
-	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	google.golang.org/genproto v0.0.0-20200815001618-f69a88009b70 // indirect
-	google.golang.org/grpc v1.31.0
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
+	golang.org/x/net v0.0.0-20201224014010-6772e930b67b // indirect
+	golang.org/x/oauth2 v0.0.0-20201208152858-08078c50e5b5 // indirect
+	golang.org/x/sys v0.0.0-20201223074533-0d417f636930 // indirect
+	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
+	golang.org/x/text v0.3.4 // indirect
+	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/genproto v0.0.0-20201214200347-8c77b98c765d // indirect
+	google.golang.org/grpc v1.34.0
 	google.golang.org/protobuf v1.25.0
-	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api v0.18.10
-	k8s.io/apimachinery v0.18.10
-	k8s.io/client-go v0.18.10
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+	k8s.io/api v0.18.14
+	k8s.io/apimachinery v0.18.14
+	k8s.io/client-go v0.18.14
+	k8s.io/klog/v2 v2.4.0 // indirect
+	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
 )

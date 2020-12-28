@@ -19,7 +19,7 @@ import (
 
 	"github.com/maksim-paskal/utils-go"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 //nolint:maligned

@@ -14,7 +14,8 @@ RUN cd /usr/src/envoy-control-plane \
   && go mod verify \
   && go build -v -o envoy-control-plane -ldflags \
   "-X main.buildTime=$(date +"%Y%m%d%H%M%S") -X main.gitVersion=$(git describe --tags `git rev-list --tags --max-count=1`)-$(git log -n1 --pretty='%H')" \
-  ./cmd/main
+  ./cmd/main \
+  && ./envoy-control-plane -version
 
 RUN /usr/src/envoy-control-plane/envoy-control-plane -version
 

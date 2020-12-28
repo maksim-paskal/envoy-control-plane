@@ -18,6 +18,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"runtime"
+
+	_ "net/http/pprof"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	log "github.com/sirupsen/logrus"
@@ -81,6 +85,11 @@ func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*Confi
 		path:        "/api/zone",
 		description: "Zone",
 		handler:     ws.handlerZone,
+	})
+	ws.routes = append(ws.routes, WebRoutes{
+		path:        "/api/version",
+		description: "Get version",
+		handler:     ws.handlerVersion,
 	})
 
 	go func() {
@@ -282,6 +291,39 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 	zone := ws.getZone(namespace, pod)
 
 	_, err = w.Write([]byte(zone))
+	if err != nil {
+		ws.log.Error(err)
+	}
+}
+
+type APIVersion struct {
+	Version    string
+	GoVersion  string
+	Goroutines int
+	GOMAXPROCS int
+	GOGC       string
+	GODEBUG    string
+}
+
+func (ws *WebServer) handlerVersion(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	result := APIVersion{
+		Version:    appConfig.Version,
+		GoVersion:  runtime.Version(),
+		Goroutines: runtime.NumGoroutine(),
+		GOMAXPROCS: runtime.GOMAXPROCS(-1),
+		GOGC:       os.Getenv("GOGC"),
+		GODEBUG:    os.Getenv("GODEBUG"),
+	}
+
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		ws.log.Error(err)
+	}
+
+	_, err = w.Write(resultJSON)
+
 	if err != nil {
 		ws.log.Error(err)
 	}
