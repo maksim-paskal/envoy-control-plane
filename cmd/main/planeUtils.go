@@ -30,17 +30,17 @@ import (
 func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Resource) (cache.Snapshot, error) {
 	clusters, err := yamlToResources(config.Clusters, cluster.Cluster{})
 	if err != nil {
-		return cache.Snapshot{}, err
+		return cache.Snapshot{}, errors.Wrap(err, "yamlToResources(config.Clusters, cluster.Cluster{})")
 	}
 
 	routes, err := yamlToResources(config.Routes, route.RouteConfiguration{})
 	if err != nil {
-		return cache.Snapshot{}, err
+		return cache.Snapshot{}, errors.Wrap(err, "yamlToResources(config.Routes, route.RouteConfiguration{})")
 	}
 
 	listiners, err := yamlToResources(config.Listeners, listener.Listener{})
 	if err != nil {
-		return cache.Snapshot{}, err
+		return cache.Snapshot{}, errors.Wrap(err, "yamlToResources(config.Listeners, listener.Listener{})")
 	}
 
 	return cache.NewSnapshot(
@@ -63,8 +63,6 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 
 	jsonObj, err := json.Marshal(yamlObjJSON)
 	if err != nil {
-		log.Error(err)
-
 		return nil, errors.Wrap(err, "error in json.Marshal")
 	}
 
@@ -72,8 +70,6 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 	err = json.Unmarshal(jsonObj, &resources)
 
 	if err != nil {
-		log.Error(err)
-
 		return nil, errors.Wrap(err, "error in json.Unmarshal")
 	}
 
@@ -82,8 +78,6 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 	for k, v := range resources {
 		resourcesJSON, err := utils.GetJSONfromYAML(v)
 		if err != nil {
-			log.Error(err)
-
 			return nil, errors.Wrap(err, "error in utils.GetJSONfromYAML")
 		}
 

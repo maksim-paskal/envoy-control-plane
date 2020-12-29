@@ -65,7 +65,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	if log.GetLevel() >= log.DebugLevel {
 		obj, err := yaml.Marshal(config)
 		if err != nil {
-			cs.log.Error(err)
+			cs.log.Error(errors.Wrap(err, "yaml.Marshal"))
 		}
 
 		cs.log.Debugf("loaded config: \n%s", string(obj))
@@ -75,12 +75,12 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs.configEndpoints, err = cs.getConfigEndpoints()
 
 	if err != nil {
-		cs.log.Error(err)
+		cs.log.Error(errors.Wrap(err, "getConfigEndpoints"))
 	}
 
 	pods, err := ep.factory.Core().V1().Pods().Lister().List(labels.Everything())
 	if err != nil {
-		cs.log.Error(err)
+		cs.log.Error(errors.Wrap(err, "ep.factory.Core().V1().Pods().Lister().List"))
 	}
 
 	for _, pod := range pods {
@@ -128,7 +128,7 @@ func (cs *ConfigStore) push() {
 
 	snap, err := getConfigSnapshot(cs.version, cs.config, cs.lastEndpoints)
 	if err != nil {
-		cs.log.Error(err)
+		cs.log.Error(errors.Wrap(err, "getConfigSnapshot"))
 
 		return
 	}
@@ -136,7 +136,7 @@ func (cs *ConfigStore) push() {
 	err = snapshotCache.SetSnapshot(cs.config.ID, snap)
 
 	if err != nil {
-		cs.log.Error(err)
+		cs.log.Error(errors.Wrap(err, "snapshotCache.SetSnapshot"))
 
 		return
 	}
@@ -162,9 +162,7 @@ func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
 func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEndpoints, error) {
 	endpoints, err := yamlToResources(cs.config.Endpoints, endpoint.ClusterLoadAssignment{})
 	if err != nil {
-		cs.log.Error(err)
-
-		return nil, err
+		return nil, errors.Wrap(err, "yamlToResources")
 	}
 
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
@@ -344,7 +342,9 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					zone := ""
 
 					nodeInfo, err := cs.getNode(pod.Spec.NodeName)
-					if err == nil {
+					if err != nil {
+						log.Error(errors.Wrap(err, "cs.getNode"))
+					} else {
 						zone = nodeInfo.Labels[*appConfig.NodeZoneLabel]
 					}
 
@@ -371,8 +371,6 @@ func (cs *ConfigStore) Stop() {
 func (cs *ConfigStore) getNode(nodeName string) (*v1.Node, error) {
 	nodeInfo, err := cs.ep.clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
-		cs.log.Error(err)
-
 		return nil, errors.Wrap(err, "clientset.CoreV1().Nodes().Get")
 	}
 

@@ -16,12 +16,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -42,14 +45,26 @@ func main() {
 		os.Exit(0)
 	}
 
+	if len(*appConfig.ConfigFile) > 0 {
+		yamlFile, err := ioutil.ReadFile(*appConfig.ConfigFile)
+		if err != nil {
+			log.Fatal(errors.Wrap(err, "yamlFile.Get"))
+		}
+
+		err = yaml.Unmarshal(yamlFile, &appConfig)
+		if err != nil {
+			log.Fatal(errors.Wrap(err, "yaml.Unmarshal"))
+		}
+	}
+
 	err := appConfig.CheckConfig()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(errors.Wrap(err, "appConfig.CheckConfig"))
 	}
 
 	logLevel, err := log.ParseLevel(*appConfig.LogLevel)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(errors.Wrap(err, "log.ParseLevel"))
 	}
 
 	if *appConfig.LogPretty {
@@ -69,7 +84,7 @@ func main() {
 
 	clientset, err := getKubernetesClient()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(errors.Wrap(err, "getKubernetesClient"))
 	}
 
 	var configStore map[string]*ConfigStore = make(map[string]*ConfigStore)
@@ -111,7 +126,7 @@ func main() {
 			drainPeriod, err := time.ParseDuration(*appConfig.ConfigDrainPeriod)
 
 			if err != nil {
-				log.Error(err)
+				log.Error(errors.Wrap(err, "time.ParseDuration"))
 			} else {
 				time.Sleep(drainPeriod)
 			}
@@ -132,7 +147,7 @@ func main() {
 
 	lis, err := net.Listen("tcp", *appConfig.GrpcAddress)
 	if err != nil {
-		log.Error(err)
+		log.Error(errors.Wrap(err, "net.Listen"))
 
 		return
 	}
@@ -144,7 +159,7 @@ func main() {
 
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
-			log.Fatal(err)
+			log.Fatal(errors.Wrap(err, "grpcServer.Serve"))
 		}
 	}()
 
@@ -152,7 +167,7 @@ func main() {
 	go func() {
 		WaitTime, err := time.ParseDuration(*appConfig.EndpointCheckPeriod)
 		if err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 
 		for {

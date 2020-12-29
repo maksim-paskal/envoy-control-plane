@@ -25,18 +25,19 @@ import (
 type AppConfig struct {
 	Version             string
 	showVersion         *bool
-	LogLevel            *string
-	LogPretty           *bool
-	LogAccess           *bool
-	ConfigMapLabels     *string
-	KubeconfigFile      *string
-	WatchNamespaced     *bool
-	Namespace           *string
-	GrpcAddress         *string
-	WebAddress          *string
-	NodeZoneLabel       *string
-	ConfigDrainPeriod   *string
-	EndpointCheckPeriod *string
+	LogLevel            *string `yaml:"LogLevel"`
+	LogPretty           *bool   `yaml:"LogPretty"`
+	LogAccess           *bool   `yaml:"LogAccess"`
+	ConfigFile          *string
+	ConfigMapLabels     *string `yaml:"ConfigMapLabels"`
+	KubeConfigFile      *string `yaml:"KubeConfigFile"`
+	WatchNamespaced     *bool   `yaml:"WatchNamespaced"`
+	Namespace           *string `yaml:"Namespace"`
+	GrpcAddress         *string `yaml:"GrpcAddress"`
+	WebAddress          *string `yaml:"WebAddress"`
+	NodeZoneLabel       *string `yaml:"NodeZoneLabel"`
+	ConfigDrainPeriod   *string `yaml:"ConfigDrainPeriod"`
+	EndpointCheckPeriod *string `yaml:"EndpointCheckPeriod"`
 }
 
 func (ac *AppConfig) CheckConfig() error {
@@ -72,8 +73,9 @@ var appConfig = &AppConfig{
 	LogLevel:            flag.String("log.level", "INFO", "log level"),
 	LogPretty:           flag.Bool("log.pretty", false, "log in pretty format"),
 	LogAccess:           flag.Bool("log.access", false, "access log"),
+	ConfigFile:          flag.String("config.file", "", "load config from file"),
 	ConfigMapLabels:     flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
-	KubeconfigFile:      flag.String("kubeconfig.path", "", "kubeconfig path"),
+	KubeConfigFile:      flag.String("kubeconfig.path", "", "kubeconfig path"),
 	WatchNamespaced:     flag.Bool("namespaced", true, "watch pod in one namespace"),
 	Namespace:           flag.String("namespace", os.Getenv("MY_POD_NAMESPACE"), "watch namespace"),
 	GrpcAddress:         flag.String("grpcAddress", ":18080", "grpc address"),

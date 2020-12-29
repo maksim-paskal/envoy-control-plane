@@ -3,8 +3,8 @@ test:
 	go fmt ./cmd/main
 	go fmt ./cmd/cli
 	go mod tidy
-	go test ./cmd/main
-	go test ./cmd/cli
+	go test -race ./cmd/main
+	go test -race ./cmd/cli
 	golangci-lint run --allow-parallel-runners -v --enable-all --disable nestif,gochecknoglobals,funlen,gocognit,exhaustivestruct --fix
 testChart:
 	helm lint --strict ./chart/envoy-control-plane

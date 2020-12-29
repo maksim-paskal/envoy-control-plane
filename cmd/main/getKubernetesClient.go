@@ -25,10 +25,10 @@ func getKubernetesClient() (*kubernetes.Clientset, error) {
 		err        error
 	)
 
-	if len(*appConfig.KubeconfigFile) > 0 {
-		kubeconfig, err = clientcmd.BuildConfigFromFlags("", *appConfig.KubeconfigFile)
+	if len(*appConfig.KubeConfigFile) > 0 {
+		kubeconfig, err = clientcmd.BuildConfigFromFlags("", *appConfig.KubeConfigFile)
 		if err != nil {
-			return nil, errors.Wrap(err, "error in BuildConfigFromFlags="+*appConfig.KubeconfigFile)
+			return nil, errors.Wrap(err, "error in BuildConfigFromFlags="+*appConfig.KubeConfigFile)
 		}
 	} else {
 		kubeconfig, err = rest.InClusterConfig()
