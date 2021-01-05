@@ -55,15 +55,16 @@ func parseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, 
 
 	var tpl bytes.Buffer
 	err := templates.ExecuteTemplate(&tpl, path.Base(nodeID), data)
-	if err != nil { //nolint:wsl
-		return ConfigType{}, errors.Wrap(err, "error in templates.ExecuteTemplate")
+	//nolint:wsl
+	if err != nil {
+		return ConfigType{}, errors.Wrap(err, "templates.ExecuteTemplate")
 	}
 
 	var config ConfigType
 
 	err = yaml.Unmarshal(tpl.Bytes(), &config)
 	if err != nil {
-		return ConfigType{}, errors.Wrap(err, "error in yaml.Unmarshal")
+		return ConfigType{}, errors.Wrap(err, "yaml.Unmarshal")
 	}
 
 	return config, nil

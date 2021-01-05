@@ -21,7 +21,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/getsentry/sentry-go"
+	sentrylogrushook "github.com/maksim-paskal/sentry-logrus-hook"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
@@ -48,23 +49,23 @@ func main() {
 	if len(*appConfig.ConfigFile) > 0 {
 		yamlFile, err := ioutil.ReadFile(*appConfig.ConfigFile)
 		if err != nil {
-			log.Fatal(errors.Wrap(err, "yamlFile.Get"))
+			log.WithError(err).Fatal()
 		}
 
 		err = yaml.Unmarshal(yamlFile, &appConfig)
 		if err != nil {
-			log.Fatal(errors.Wrap(err, "yaml.Unmarshal"))
+			log.WithError(err).Fatal()
 		}
 	}
 
 	err := appConfig.CheckConfig()
 	if err != nil {
-		log.Fatal(errors.Wrap(err, "appConfig.CheckConfig"))
+		log.WithError(err).Fatal()
 	}
 
 	logLevel, err := log.ParseLevel(*appConfig.LogLevel)
 	if err != nil {
-		log.Fatal(errors.Wrap(err, "log.ParseLevel"))
+		log.WithError(err).Fatal()
 	}
 
 	if *appConfig.LogPretty {
@@ -79,12 +80,19 @@ func main() {
 
 	log.SetLevel(logLevel)
 
+	hook, err := sentrylogrushook.NewHook(*appConfig.SentryDSN, appConfig.Version, nil)
+	if err != nil {
+		log.WithError(err).Error()
+	}
+
+	log.AddHook(hook)
+
 	log.Infof("Starting %s...", appConfig.Version)
 	log.Debugf("loaded application config = \n%s", appConfig.String())
 
 	clientset, err := getKubernetesClient()
 	if err != nil {
-		log.Fatal(errors.Wrap(err, "getKubernetesClient"))
+		log.WithError(err).Fatal()
 	}
 
 	var configStore map[string]*ConfigStore = make(map[string]*ConfigStore)
@@ -126,7 +134,7 @@ func main() {
 			drainPeriod, err := time.ParseDuration(*appConfig.ConfigDrainPeriod)
 
 			if err != nil {
-				log.Error(errors.Wrap(err, "time.ParseDuration"))
+				log.WithError(err).Error()
 			} else {
 				time.Sleep(drainPeriod)
 			}
@@ -147,7 +155,7 @@ func main() {
 
 	lis, err := net.Listen("tcp", *appConfig.GrpcAddress)
 	if err != nil {
-		log.Error(errors.Wrap(err, "net.Listen"))
+		log.WithError(err).Error()
 
 		return
 	}
@@ -159,7 +167,7 @@ func main() {
 
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
-			log.Fatal(errors.Wrap(err, "grpcServer.Serve"))
+			log.WithError(err).Fatal()
 		}
 	}()
 
@@ -167,7 +175,7 @@ func main() {
 	go func() {
 		WaitTime, err := time.ParseDuration(*appConfig.EndpointCheckPeriod)
 		if err != nil {
-			log.Panic(err)
+			log.WithError(err).Fatal()
 		}
 
 		for {
@@ -181,6 +189,9 @@ func main() {
 			}
 		}
 	}()
+
+	defer sentry.Flush(1 * time.Second)
+	defer sentry.Recover()
 
 	<-ctx.Done()
 }

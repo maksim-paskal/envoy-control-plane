@@ -73,7 +73,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 		go es.informer.Run(es.stopCh)
 
 		if !cache.WaitForCacheSync(es.stopCh, es.informer.HasSynced) {
-			log.Fatalf("Timed out waiting for caches to sync")
+			log.WithError(ErrTimeout).Fatal()
 
 			return
 		}

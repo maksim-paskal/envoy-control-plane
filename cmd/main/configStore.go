@@ -65,7 +65,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	if log.GetLevel() >= log.DebugLevel {
 		obj, err := yaml.Marshal(config)
 		if err != nil {
-			cs.log.Error(errors.Wrap(err, "yaml.Marshal"))
+			cs.log.WithError(err).Error()
 		}
 
 		cs.log.Debugf("loaded config: \n%s", string(obj))
@@ -75,12 +75,12 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs.configEndpoints, err = cs.getConfigEndpoints()
 
 	if err != nil {
-		cs.log.Error(errors.Wrap(err, "getConfigEndpoints"))
+		cs.log.WithError(err).Error()
 	}
 
 	pods, err := ep.factory.Core().V1().Pods().Lister().List(labels.Everything())
 	if err != nil {
-		cs.log.Error(errors.Wrap(err, "ep.factory.Core().V1().Pods().Lister().List"))
+		cs.log.WithError(err).Error()
 	}
 
 	for _, pod := range pods {
@@ -128,7 +128,7 @@ func (cs *ConfigStore) push() {
 
 	snap, err := getConfigSnapshot(cs.version, cs.config, cs.lastEndpoints)
 	if err != nil {
-		cs.log.Error(errors.Wrap(err, "getConfigSnapshot"))
+		cs.log.WithError(err).Error()
 
 		return
 	}
@@ -136,7 +136,7 @@ func (cs *ConfigStore) push() {
 	err = snapshotCache.SetSnapshot(cs.config.ID, snap)
 
 	if err != nil {
-		cs.log.Error(errors.Wrap(err, "snapshotCache.SetSnapshot"))
+		cs.log.WithError(err).Error()
 
 		return
 	}
@@ -162,7 +162,7 @@ func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
 func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEndpoints, error) {
 	endpoints, err := yamlToResources(cs.config.Endpoints, endpoint.ClusterLoadAssignment{})
 	if err != nil {
-		return nil, errors.Wrap(err, "yamlToResources")
+		return nil, err
 	}
 
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
@@ -266,7 +266,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	}
 
 	if isInvalidIP {
-		log.Warn("can not push changes, isInvalidIP")
+		log.WithError(ErrInvalidIP).Warn()
 
 		return
 	}
@@ -343,7 +343,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 
 					nodeInfo, err := cs.getNode(pod.Spec.NodeName)
 					if err != nil {
-						log.Error(errors.Wrap(err, "cs.getNode"))
+						log.WithError(err).Error()
 					} else {
 						zone = nodeInfo.Labels[*appConfig.NodeZoneLabel]
 					}
@@ -371,7 +371,7 @@ func (cs *ConfigStore) Stop() {
 func (cs *ConfigStore) getNode(nodeName string) (*v1.Node, error) {
 	nodeInfo, err := cs.ep.clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
-		return nil, errors.Wrap(err, "clientset.CoreV1().Nodes().Get")
+		return nil, errors.Wrap(err, "cs.ep.clientset.CoreV1().Nodes().Get")
 	}
 
 	return nodeInfo, nil
@@ -385,7 +385,7 @@ func (cs *ConfigStore) Sync() {
 	if cs.lastEndpoints != nil {
 		snap, err := snapshotCache.GetSnapshot(cs.config.ID)
 		if err != nil {
-			log.Warn(err)
+			log.WithError(err).Warn()
 		}
 
 		snapVersion := snap.GetVersion(resource.EndpointType)
