@@ -14,7 +14,6 @@ require (
 	github.com/cncf/udpa/go v0.0.0-20201211205326-cc1b757b3edd // indirect
 	github.com/envoyproxy/go-control-plane v0.9.8
 	github.com/envoyproxy/protoc-gen-validate v0.4.1 // indirect
-	github.com/getsentry/sentry-go v0.9.0
 	github.com/go-logr/logr v0.3.0 // indirect
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
@@ -22,7 +21,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
-	github.com/maksim-paskal/sentry-logrus-hook v0.0.2
+	github.com/maksim-paskal/sentry-logrus-hook v0.0.3
 	github.com/maksim-paskal/utils-go v0.0.5
 	github.com/mitchellh/reflectwalk v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1

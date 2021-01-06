@@ -21,7 +21,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/getsentry/sentry-go"
 	sentrylogrushook "github.com/maksim-paskal/sentry-logrus-hook"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -80,7 +79,10 @@ func main() {
 
 	log.SetLevel(logLevel)
 
-	hook, err := sentrylogrushook.NewHook(*appConfig.SentryDSN, appConfig.Version, nil)
+	hook, err := sentrylogrushook.NewHook(sentrylogrushook.SentryLogHookOptions{
+		SentryDSN: *appConfig.SentryDSN,
+		Release:   appConfig.Version,
+	})
 	if err != nil {
 		log.WithError(err).Error()
 	}
@@ -190,8 +192,7 @@ func main() {
 		}
 	}()
 
-	defer sentry.Flush(1 * time.Second)
-	defer sentry.Recover()
+	defer hook.Stop()
 
 	<-ctx.Done()
 }
