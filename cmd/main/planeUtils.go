@@ -30,17 +30,17 @@ import (
 func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Resource) (cache.Snapshot, error) {
 	clusters, err := yamlToResources(config.Clusters, cluster.Cluster{})
 	if err != nil {
-		return cache.Snapshot{}, errors.Wrap(err, "yamlToResources(config.Clusters, cluster.Cluster{})")
+		return cache.Snapshot{}, err
 	}
 
 	routes, err := yamlToResources(config.Routes, route.RouteConfiguration{})
 	if err != nil {
-		return cache.Snapshot{}, errors.Wrap(err, "yamlToResources(config.Routes, route.RouteConfiguration{})")
+		return cache.Snapshot{}, err
 	}
 
 	listiners, err := yamlToResources(config.Listeners, listener.Listener{})
 	if err != nil {
-		return cache.Snapshot{}, errors.Wrap(err, "yamlToResources(config.Listeners, listener.Listener{})")
+		return cache.Snapshot{}, err
 	}
 
 	return cache.NewSnapshot(
@@ -63,14 +63,14 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 
 	jsonObj, err := json.Marshal(yamlObjJSON)
 	if err != nil {
-		return nil, errors.Wrap(err, "error in json.Marshal")
+		return nil, errors.Wrap(err, "json.Marshal(yamlObjJSON)")
 	}
 
 	var resources []interface{}
 	err = json.Unmarshal(jsonObj, &resources)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "error in json.Unmarshal")
+		return nil, errors.Wrap(err, "json.Unmarshal(jsonObj, &resources)")
 	}
 
 	results := make([]types.Resource, len(resources))
@@ -78,7 +78,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 	for k, v := range resources {
 		resourcesJSON, err := utils.GetJSONfromYAML(v)
 		if err != nil {
-			return nil, errors.Wrap(err, "error in utils.GetJSONfromYAML")
+			return nil, errors.Wrap(err, "utils.GetJSONfromYAML(v)")
 		}
 
 		switch outType.(type) {
@@ -87,9 +87,9 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 
 			if err != nil {
-				log.Errorf("error=%s,json=%s", err, string(resourcesJSON))
+				log.WithError(err).Errorf("json=%s", string(resourcesJSON))
 
-				return nil, errors.Wrap(err, "error in protojson.Unmarshal")
+				return nil, errors.Wrap(err, "cluster.Cluster")
 			}
 
 			results[k] = &resource
@@ -98,9 +98,9 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 
 			if err != nil {
-				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
+				log.WithError(err).Errorf("json=\n%s", string(resourcesJSON))
 
-				return nil, errors.Wrap(err, "error in protojson.Unmarshal")
+				return nil, errors.Wrap(err, "route.RouteConfiguration")
 			}
 
 			results[k] = &resource
@@ -109,9 +109,9 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 
 			if err != nil {
-				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
+				log.WithError(err).Errorf("json=\n%s", string(resourcesJSON))
 
-				return nil, errors.Wrap(err, "error in protojson.Unmarshal")
+				return nil, errors.Wrap(err, "endpoint.ClusterLoadAssignment")
 			}
 
 			results[k] = &resource
@@ -120,9 +120,9 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			err = protojson.Unmarshal(resourcesJSON, &resource)
 
 			if err != nil {
-				log.Errorf("error=%s,json=\n%s", err, string(resourcesJSON))
+				log.WithError(err).Errorf("json=\n%s", string(resourcesJSON))
 
-				return nil, errors.Wrap(err, "error in protojson.Unmarshal")
+				return nil, errors.Wrap(err, "listener.Listener")
 			}
 
 			results[k] = &resource

@@ -88,7 +88,7 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 		go cms.informer.Run(cms.stopCh)
 
 		if !cache.WaitForCacheSync(cms.stopCh, cms.informer.HasSynced) {
-			log.Fatalf("Timed out waiting for caches to sync")
+			log.WithError(ErrTimeout).Fatal()
 
 			return
 		}
@@ -129,7 +129,7 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 
 		config, err := parseConfigYaml(nodeID, text, nil)
 		if err != nil {
-			cms.log.Errorf("error parsing %s: %s\n%s", nodeID, err, text)
+			cms.log.WithError(err).Errorf("error parsing %s: %s", nodeID, text)
 		} else {
 			if len(config.ID) == 0 {
 				config.ID = nodeID

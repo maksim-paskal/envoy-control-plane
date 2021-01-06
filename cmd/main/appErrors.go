@@ -15,6 +15,8 @@ package main
 import "errors"
 
 var (
+	ErrInvalidIP    = errors.New("can not push changes, isInvalidIP")
+	ErrTimeout      = errors.New("timed out waiting for caches to sync")
 	ErrUnknownClass = errors.New("unknown class")
 	ErrUseNamespace = errors.New("use namespace name if using namespaced")
 )

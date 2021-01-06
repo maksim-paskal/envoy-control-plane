@@ -38,6 +38,7 @@ type AppConfig struct {
 	NodeZoneLabel       *string `yaml:"NodeZoneLabel"`
 	ConfigDrainPeriod   *string `yaml:"ConfigDrainPeriod"`
 	EndpointCheckPeriod *string `yaml:"EndpointCheckPeriod"`
+	SentryDSN           *string `yaml:"SentryDSN"`
 }
 
 func (ac *AppConfig) CheckConfig() error {
@@ -83,4 +84,5 @@ var appConfig = &AppConfig{
 	NodeZoneLabel:       flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
 	ConfigDrainPeriod:   flag.String("config.drainPeriod", "5s", "drain period"),
 	EndpointCheckPeriod: flag.String("endpoint.checkPeriod", "60s", "check period"),
+	SentryDSN:           flag.String("sentry.dsn", "", "sentry DSN"),
 }

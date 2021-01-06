@@ -25,7 +25,7 @@ import (
 	"runtime"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	"github.com/pkg/errors"
+	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -102,7 +102,7 @@ func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*Confi
 		ws.log.Info("http.port=", *appConfig.WebAddress)
 
 		if err := http.ListenAndServe(*appConfig.WebAddress, nil); err != nil {
-			log.Fatal(errors.Wrap(err, "http.ListenAndServe"))
+			log.WithError(err).Fatal()
 		}
 	}()
 
@@ -120,21 +120,21 @@ func (ws *WebServer) handlerHelp(w http.ResponseWriter, r *http.Request) {
 
 	_, err := w.Write(result.Bytes())
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "w.Write"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 }
 
 func (ws *WebServer) handlerReady(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte("ready"))
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "w.Write"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 }
 
 func (ws *WebServer) handlerHealthz(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte("LIVE"))
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "w.Write"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 }
 
@@ -155,12 +155,12 @@ func (ws *WebServer) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "json.MarshalIndent"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "w.Write"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 }
 
@@ -202,12 +202,12 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "json.MarshalIndent"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "w.Write"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 }
 
@@ -226,7 +226,7 @@ func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 	for _, nodeID := range statusKeys {
 		sn, err := snapshotCache.GetSnapshot(nodeID)
 		if err != nil {
-			ws.log.Error(errors.Wrap(err, "snapshotCache.GetSnapshot"))
+			ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 		}
 
 		results = append(results, StatusResponce{
@@ -243,12 +243,12 @@ func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "json.MarshalIndent"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "w.Write"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 }
 
@@ -257,14 +257,14 @@ func (ws *WebServer) getZone(namespace string, pod string) string {
 
 	podInfo, err := ws.clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod, metav1.GetOptions{})
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "ws.clientset.CoreV1().Pods"))
+		ws.log.WithError(err).Error()
 
 		return unknown
 	}
 
 	nodeInfo, err := ws.clientset.CoreV1().Nodes().Get(context.TODO(), podInfo.Spec.NodeName, metav1.GetOptions{})
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "ws.clientset.CoreV1().Nodes().Get"))
+		ws.log.WithError(err).Error()
 
 		return unknown
 	}
@@ -282,7 +282,7 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		ws.log.Error(errors.Wrap(err, "r.ParseForm"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 
 		return
 	}
@@ -294,7 +294,7 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 
 	_, err = w.Write([]byte(zone))
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "w.Write"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 }
 
@@ -321,12 +321,12 @@ func (ws *WebServer) handlerVersion(w http.ResponseWriter, r *http.Request) {
 
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "json.Marshal"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 
 	_, err = w.Write(resultJSON)
 
 	if err != nil {
-		ws.log.Error(errors.Wrap(err, "w.Write"))
+		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
 	}
 }
