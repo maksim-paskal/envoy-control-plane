@@ -21,7 +21,7 @@ import (
 	"os"
 	"time"
 
-	sentrylogrushook "github.com/maksim-paskal/sentry-logrus-hook"
+	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"gopkg.in/yaml.v3"
@@ -79,7 +79,7 @@ func main() {
 
 	log.SetLevel(logLevel)
 
-	hook, err := sentrylogrushook.NewHook(sentrylogrushook.SentryLogHookOptions{
+	hook, err := logrushooksentry.NewHook(logrushooksentry.Options{
 		SentryDSN: *appConfig.SentryDSN,
 		Release:   appConfig.Version,
 	})
