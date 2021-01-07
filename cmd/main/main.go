@@ -15,7 +15,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -28,10 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-var (
-	gitVersion string = "dev"
-	buildTime  string
-)
+var gitVersion string = "dev"
 
 const (
 	grpcMaxConcurrentStreams = 1000000
@@ -41,7 +37,7 @@ func main() {
 	flag.Parse()
 
 	if *appConfig.showVersion {
-		fmt.Println(appConfig.Version)
+		os.Stdout.WriteString(appConfig.Version)
 		os.Exit(0)
 	}
 

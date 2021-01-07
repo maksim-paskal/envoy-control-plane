@@ -42,13 +42,13 @@ func waitForAPI() {
 	for {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil && *debug {
-			fmt.Println(err)
+			os.Stderr.WriteString(err.Error())
 		}
 
 		resp, err := cli.Do(req)
 
 		if err != nil && *debug {
-			fmt.Println(err)
+			os.Stderr.WriteString(err.Error())
 		}
 
 		if resp != nil && resp.Body != nil {
@@ -60,7 +60,7 @@ func waitForAPI() {
 		}
 
 		if *debug {
-			fmt.Println("Wait for api ready...")
+			os.Stdout.WriteString("Wait for api ready...")
 		}
 
 		time.Sleep(1 * time.Second)
@@ -112,7 +112,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(string(body))
+	os.Stdout.WriteString(string(body))
 
 	if resp.StatusCode != http.StatusOK {
 		panic("result not ok")

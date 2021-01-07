@@ -54,8 +54,8 @@ func parseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, 
 	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).Parse(text))
 
 	var tpl bytes.Buffer
+
 	err := templates.ExecuteTemplate(&tpl, path.Base(nodeID), data)
-	//nolint:wsl
 	if err != nil {
 		return ConfigType{}, errors.Wrap(err, "templates.ExecuteTemplate")
 	}

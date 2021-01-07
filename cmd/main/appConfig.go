@@ -15,7 +15,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"os"
 	"time"
 
@@ -69,7 +68,7 @@ func (ac *AppConfig) String() string {
 }
 
 var appConfig = &AppConfig{
-	Version:             fmt.Sprintf("%s-%s", gitVersion, buildTime),
+	Version:             gitVersion,
 	showVersion:         flag.Bool("version", false, "show version"),
 	LogLevel:            flag.String("log.level", "INFO", "log level"),
 	LogPretty:           flag.Bool("log.pretty", false, "log in pretty format"),
