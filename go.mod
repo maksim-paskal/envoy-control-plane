@@ -21,7 +21,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
-	github.com/maksim-paskal/logrus-hook-sentry v0.0.5
+	github.com/maksim-paskal/logrus-hook-sentry v0.0.6
 	github.com/maksim-paskal/utils-go v0.0.5
 	github.com/mitchellh/reflectwalk v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1
