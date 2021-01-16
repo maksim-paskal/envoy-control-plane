@@ -1,4 +1,3 @@
-name: validate-license
 on:
   push:
     tags:
