@@ -109,6 +109,7 @@ data:
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
                 domain: test
+                enable_x_ratelimit_headers: DRAFT_VERSION_03
                 failure_mode_deny: true
                 rate_limit_service:
                   transport_api_version: V3
