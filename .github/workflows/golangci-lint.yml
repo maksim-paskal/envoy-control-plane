@@ -15,4 +15,4 @@ jobs:
     - name: golangci-lint
       uses: golangci/golangci-lint-action@v2
       with:
-        args: --enable-all --disable nestif,gochecknoglobals,funlen,gocognit,exhaustivestruct --fix
+        args: --timeout 5m --enable-all --disable nestif,gochecknoglobals,funlen,gocognit,exhaustivestruct --fix
