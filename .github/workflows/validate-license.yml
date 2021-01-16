@@ -1,0 +1,16 @@
+name: validate-license
+on:
+  push:
+    # tags:
+    #   - v*
+    # branches:
+    #   - master
+    #   - main
+  pull_request:
+jobs:
+  validate-license:
+    name: validate-license
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check licence in files
+      run: ./scripts/validate-license.sh

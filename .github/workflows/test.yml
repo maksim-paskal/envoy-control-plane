@@ -9,22 +9,12 @@ on:
   pull_request:
 jobs:
   test-main:
-    name: test main
+    name: Test main package
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-go@v2
       with:
         stable: 'false'
-        go-version: '1.15.6'
+        go-version: '1.15'
     - run: go test -race ./cmd/main
-  test-cli:
-    name: test cli
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
-      with:
-        stable: 'false'
-        go-version: '1.15.6'
-    - run: go test -race ./cmd/cli
