@@ -1,11 +1,11 @@
 name: validate-license
 on:
   push:
-    # tags:
-    #   - v*
-    # branches:
-    #   - master
-    #   - main
+    tags:
+    - v*
+    branches:
+    - master
+    - main
   pull_request:
 jobs:
   validate-license:
