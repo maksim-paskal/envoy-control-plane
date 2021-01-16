@@ -47,3 +47,9 @@ upgrade:
 	# downgrade for k8s.io/client-go@v0.18.14
 	go get -v -u github.com/googleapis/gnostic@v0.1.0
 	go mod tidy
+run:
+	@./scripts/test.sh 
+heap:
+	go tool pprof -http=127.0.0.1:8080 http://localhost:18081/debug/pprof/heap
+allocs:
+	go tool pprof -http=127.0.0.1:8080 http://localhost:18081/debug/pprof/heap
