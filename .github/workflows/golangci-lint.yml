@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v2
+    - uses: golangci/golangci-lint-action@v2
       with:
         args: --timeout 5m --enable-all --disable nestif,gochecknoglobals,funlen,gocognit,exhaustivestruct --fix

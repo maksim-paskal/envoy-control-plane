@@ -12,5 +12,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Check licence in files
-      run: ./scripts/validate-license.sh
+    - run: ./scripts/validate-license.sh
