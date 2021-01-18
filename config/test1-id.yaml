@@ -47,6 +47,7 @@ data:
             "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
             stat_prefix: ingress_http
             codec_type: AUTO
+            stream_error_on_invalid_http_message: true
             tracing: {}
             access_log:
             - name: envoy.access_loggers.file
