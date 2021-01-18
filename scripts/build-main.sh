@@ -16,11 +16,9 @@
 
 export CGO_ENABLED=0
 export GOFLAGS="-trimpath"
-export MY_POD_NAMESPACE=default
 
 set -ex
 
 make k8sConfig
-rm -rf main
-go build -o main -v ./cmd/main
-./main -log.pretty -log.level=DEBUG -kubeconfig.path=kubeconfig --config.file=scripts/test.yaml $*
+rm -rf ./main-linux
+GOOS=linux GOARCH=amd64 go build -o main-linux -v ./cmd/main

@@ -51,7 +51,14 @@ static_resources:
   - name: xds_cluster
     connect_timeout: 1s
     type: STRICT_DNS
-    http2_protocol_options: {}
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        explicit_http_config:
+          http2_protocol_options:
+            connection_keepalive:
+              interval: 30s
+              timeout: 5s
     upstream_connection_options:
       # configure a TCP keep-alive to detect and reconnect to the admin
       # server in the event of a TCP socket half open connection
@@ -63,8 +70,6 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                # add /etc/host for develop
-                # <host external ip> envoy-control-plane
                 address: envoy-control-plane
                 port_value: 18080
 

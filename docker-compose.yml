@@ -1,6 +1,18 @@
 version: '3'
 
 services:
+  envoy-control-plane:
+    image: alpine:3.13
+    volumes:
+    - .:/app
+    environment:
+    - MY_POD_NAMESPACE=default
+    ports:
+    - 18081:18081
+    command:
+    - /app/main-linux
+    - -log.level=INFO
+    - -kubeconfig.path=/app/kubeconfig
   statsd:
     image: prom/statsd-exporter:v0.18.0
     ports:
@@ -8,7 +20,7 @@ services:
   redis:
     image: redis:alpine
   ratelimit:
-    image: envoyproxy/ratelimit:v1.4.0
+    image: envoyproxy/ratelimit:6f5de117
     depends_on:
     - redis
     volumes:

@@ -10,19 +10,20 @@ testChart:
 	helm lint --strict ./chart/envoy-control-plane
 	helm template ./chart/envoy-control-plane | kubectl apply --dry-run --validate -f -
 build:
-	docker build . -t paskalmaksim/envoy-control-plane:dev-v3
+	docker build . -t paskalmaksim/envoy-control-plane:dev
 buildEnvoy:
-	docker build ./envoy -t paskalmaksim/envoy-docker-image:dev-v3
+	docker build ./envoy -t paskalmaksim/envoy-docker-image:dev
 build-cli:
 	./scripts/build-cli.sh
 push:
-	docker push paskalmaksim/envoy-control-plane:dev-v3
+	docker push paskalmaksim/envoy-control-plane:dev
 pushEnvoy:
-	docker push paskalmaksim/envoy-docker-image:dev-v3
+	docker push paskalmaksim/envoy-docker-image:dev
 k8sConfig:
 	kubectl apply -f ./chart/testPods.yaml
 	kubectl apply -f ./config/
-runEnvoy:
+run:
+	@./scripts/build-main.sh
 	docker-compose down --remove-orphans && docker-compose up
 installDev:
 	helm delete --purge envoy-control-plane || true
@@ -47,8 +48,6 @@ upgrade:
 	# downgrade for k8s.io/client-go@v0.18.14
 	go get -v -u github.com/googleapis/gnostic@v0.1.0
 	go mod tidy
-run:
-	@./scripts/test.sh 
 heap:
 	go tool pprof -http=127.0.0.1:8080 http://localhost:18081/debug/pprof/heap
 allocs:

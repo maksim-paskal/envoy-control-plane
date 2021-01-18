@@ -47,6 +47,7 @@ data:
             "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
             stat_prefix: ingress_http
             codec_type: AUTO
+            stream_error_on_invalid_http_message: true
             tracing: {}
             access_log:
             - name: envoy.access_loggers.file
@@ -60,7 +61,6 @@ data:
                     response_code: "%RESPONSE_CODE%"
                     response_flags: "%RESPONSE_FLAGS%"
                     x_request_id: "%REQ(X-REQUEST-ID)%"
-                    meta_cookies: "%DYNAMIC_METADATA(envoy.filters.http.lua.cookie)%"
             rds:
               route_config_name: test
               config_source:
@@ -110,8 +110,10 @@ data:
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
                 domain: test
+                enable_x_ratelimit_headers: DRAFT_VERSION_03
                 failure_mode_deny: true
                 rate_limit_service:
+                  transport_api_version: V3
                   grpc_service:
                     envoy_grpc:
                       cluster_name: rate_limit_cluster
@@ -133,13 +135,6 @@ data:
           - request_headers:
               header_name: cf-connecting-ip
               descriptor_key: cf-connecting-ip
-        - actions:
-          - dynamic_metadata:
-              descriptor_key: "cookie-cid"
-              metadata_key:
-                key: envoy.filters.http.lua.cookie
-                path:
-                - key: CID
         routes:
         - match:
             prefix: "/1"
@@ -219,7 +214,11 @@ data:
       connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN
       type: STRICT_DNS
-      http2_protocol_options: {}
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http2_protocol_options: {}
       load_assignment:
         cluster_name: rate_limit_cluster
         endpoints:
