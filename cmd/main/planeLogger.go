@@ -16,8 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Logger struct {
-}
+type Logger struct{}
 
 func (s *Logger) Infof(format string, args ...interface{}) {
 	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {

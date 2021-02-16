@@ -27,8 +27,7 @@ import (
 
 var snapshotCache cache.SnapshotCache = cache.NewSnapshotCache(false, cache.IDHash{}, &Logger{})
 
-type ControlPlane struct {
-}
+type ControlPlane struct{}
 
 func newControlPlane(ctx context.Context, grpcServer *grpc.Server) *ControlPlane {
 	cp := ControlPlane{}
