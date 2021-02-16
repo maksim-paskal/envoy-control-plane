@@ -118,23 +118,21 @@ func (ws *WebServer) handlerHelp(w http.ResponseWriter, r *http.Request) {
 		result.WriteString(fmt.Sprintf(linkFormat, route.path, route.description))
 	}
 
-	_, err := w.Write(result.Bytes())
-	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+	if _, err := w.Write(result.Bytes()); err != nil {
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
 func (ws *WebServer) handlerReady(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte("ready"))
 	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
 func (ws *WebServer) handlerHealthz(w http.ResponseWriter, r *http.Request) {
-	_, err := w.Write([]byte("LIVE"))
-	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+	if _, err := w.Write([]byte("LIVE")); err != nil {
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
@@ -155,12 +153,12 @@ func (ws *WebServer) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
@@ -202,12 +200,12 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
@@ -226,7 +224,7 @@ func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 	for _, nodeID := range statusKeys {
 		sn, err := snapshotCache.GetSnapshot(nodeID)
 		if err != nil {
-			ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+			ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 		}
 
 		results = append(results, StatusResponce{
@@ -243,12 +241,12 @@ func (ws *WebServer) handlerStatus(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
@@ -282,7 +280,7 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 
 		return
 	}
@@ -294,7 +292,7 @@ func (ws *WebServer) handlerZone(w http.ResponseWriter, r *http.Request) {
 
 	_, err = w.Write([]byte(zone))
 	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
@@ -321,12 +319,12 @@ func (ws *WebServer) handlerVersion(w http.ResponseWriter, r *http.Request) {
 
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
 	_, err = w.Write(resultJSON)
 
 	if err != nil {
-		ws.log.WithField(logrushooksentry.RequestKey, r).WithError(err).Error()
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
