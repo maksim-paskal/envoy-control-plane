@@ -193,7 +193,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 				Zone: info.nodeZone,
 			}
 
-			var priority uint32 = 0
+			priority := uint32(0)
 
 			if info.priority > 0 {
 				priority = info.priority

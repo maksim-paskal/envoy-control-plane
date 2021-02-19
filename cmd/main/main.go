@@ -27,7 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-var gitVersion string = "dev"
+var gitVersion = "dev"
 
 const (
 	grpcMaxConcurrentStreams = 1000000
