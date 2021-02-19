@@ -1,6 +1,6 @@
 module github.com/maksim-paskal/envoy-control-plane
 
-go 1.15
+go 1.16
 
 replace (
 	// update Makefile

@@ -1,4 +1,4 @@
-FROM golang:1.15 as build
+FROM golang:1.16 as build
 
 COPY ./cmd /usr/src/envoy-control-plane/cmd
 COPY go.* /usr/src/envoy-control-plane/
