@@ -5,7 +5,7 @@ test:
 	go mod tidy
 	go test -race ./cmd/main
 	go test -race ./cmd/cli
-	golangci-lint run --allow-parallel-runners -v --enable-all --disable nestif,gochecknoglobals,funlen,gocognit,exhaustivestruct,cyclop --fix
+	golangci-lint run -v
 testChart:
 	helm lint --strict ./chart/envoy-control-plane
 	helm template ./chart/envoy-control-plane | kubectl apply --dry-run --validate -f -
