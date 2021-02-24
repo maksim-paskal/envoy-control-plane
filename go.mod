@@ -2,13 +2,6 @@ module github.com/maksim-paskal/envoy-control-plane
 
 go 1.16
 
-replace (
-	// update Makefile
-	k8s.io/api => k8s.io/api v0.18.14
-	k8s.io/apimachinery => k8s.io/apimachinery v0.18.14
-	k8s.io/client-go => k8s.io/client-go v0.18.14
-)
-
 require (
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/cncf/udpa/go v0.0.0-20201211205326-cc1b757b3edd // indirect
@@ -20,7 +13,6 @@ require (
 	github.com/google/uuid v1.1.4
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
-	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/maksim-paskal/logrus-hook-sentry v0.0.8
 	github.com/maksim-paskal/utils-go v0.0.5
 	github.com/mitchellh/reflectwalk v1.0.1 // indirect
@@ -39,9 +31,9 @@ require (
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210105161348-2e78108cf5f8
-	k8s.io/api v0.18.14
-	k8s.io/apimachinery v0.18.14
-	k8s.io/client-go v0.18.14
+	k8s.io/api v0.19.8
+	k8s.io/apimachinery v0.19.8
+	k8s.io/client-go v0.19.8
 	k8s.io/klog/v2 v2.4.0 // indirect
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
 )
