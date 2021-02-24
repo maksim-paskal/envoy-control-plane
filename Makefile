@@ -8,7 +8,7 @@ test:
 	golangci-lint run -v
 testChart:
 	helm lint --strict ./chart/envoy-control-plane
-	helm template ./chart/envoy-control-plane | kubectl apply --dry-run --validate -f -
+	helm template ./chart/envoy-control-plane | kubectl apply --dry-run=client --validate -f -
 build:
 	docker build . -t paskalmaksim/envoy-control-plane:dev
 buildEnvoy:
@@ -40,13 +40,9 @@ clean:
 	kubectl delete -f ./chart/testPods.yaml || true
 	docker-compose down --remove-orphans
 upgrade:
-	go get -v -u all
-	# downgrade to v0.18.14
-	go get -v -u k8s.io/api@v0.18.14 || true
-	go get -v -u k8s.io/apimachinery@v0.18.14
-	go get -v -u k8s.io/client-go@v0.18.14
-	# downgrade for k8s.io/client-go@v0.18.14
-	go get -v -u github.com/googleapis/gnostic@v0.1.0
+	go get -v -u k8s.io/api@v0.19.8 || true
+	go get -v -u k8s.io/apimachinery@v0.19.8
+	go get -v -u k8s.io/client-go@v0.19.8
 	go mod tidy
 heap:
 	go tool pprof -http=127.0.0.1:8080 http://localhost:18081/debug/pprof/heap
