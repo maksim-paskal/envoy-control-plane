@@ -8,7 +8,7 @@ test:
 	golangci-lint run -v
 testChart:
 	helm lint --strict ./chart/envoy-control-plane
-	helm template ./chart/envoy-control-plane | kubectl apply --dry-run --validate -f -
+	helm template ./chart/envoy-control-plane | kubectl apply --dry-run=client --validate -f -
 build:
 	docker build . -t paskalmaksim/envoy-control-plane:dev
 buildEnvoy:
