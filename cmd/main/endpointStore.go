@@ -27,16 +27,20 @@ type EndpointsStore struct {
 	stopCh      chan struct{}
 	onNewPod    func(pod *v1.Pod)
 	onDeletePod func(pod *v1.Pod)
+	log         *log.Entry
 }
 
 func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 	es := EndpointsStore{
 		clientset: clientset,
+		log: log.WithFields(log.Fields{
+			"type": "EndpointsStore",
+		}),
 	}
 
 	go func() {
 		if *appConfig.WatchNamespaced {
-			log.Debugf("start namespaced %s", *appConfig.Namespace)
+			es.log.Debugf("start namespaced %s", *appConfig.Namespace)
 			es.factory = informers.NewSharedInformerFactoryWithOptions(
 				es.clientset, 0,
 				informers.WithNamespace(*appConfig.Namespace),
@@ -54,16 +58,28 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 
 		es.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				pod := obj.(*v1.Pod)
-				go es.onNewPod(pod)
+				pod, ok := obj.(*v1.Pod)
+				if ok {
+					go es.onNewPod(pod)
+				} else {
+					es.log.WithError(ErrAssertion).Warn("obj.(*v1.Pod)")
+				}
 			},
 			UpdateFunc: func(oldObj interface{}, newObj interface{}) {
-				pod := newObj.(*v1.Pod)
-				go es.onNewPod(pod)
+				pod, ok := newObj.(*v1.Pod)
+				if ok {
+					go es.onNewPod(pod)
+				} else {
+					es.log.WithError(ErrAssertion).Warn("obj.(*v1.Pod)")
+				}
 			},
 			DeleteFunc: func(obj interface{}) {
-				pod := obj.(*v1.Pod)
-				go es.onDeletePod(pod)
+				pod, ok := obj.(*v1.Pod)
+				if ok {
+					go es.onDeletePod(pod)
+				} else {
+					es.log.WithError(ErrAssertion).Warn("obj.(*v1.Pod)")
+				}
 			},
 		})
 
@@ -73,7 +89,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 		go es.informer.Run(es.stopCh)
 
 		if !cache.WaitForCacheSync(es.stopCh, es.informer.HasSynced) {
-			log.WithError(ErrTimeout).Fatal()
+			es.log.WithError(ErrTimeout).Fatal()
 
 			return
 		}

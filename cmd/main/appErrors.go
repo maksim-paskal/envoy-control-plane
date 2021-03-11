@@ -19,4 +19,5 @@ var (
 	ErrTimeout      = errors.New("timed out waiting for caches to sync")
 	ErrUnknownClass = errors.New("unknown class")
 	ErrUseNamespace = errors.New("use namespace name if using namespaced")
+	ErrAssertion    = errors.New("assertion error")
 )

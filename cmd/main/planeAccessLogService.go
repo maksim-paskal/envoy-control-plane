@@ -18,6 +18,7 @@ import (
 
 	alf "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
 	accessloggrpc "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v3"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,7 +32,7 @@ func (svc *AccessLogService) StreamAccessLogs(stream accessloggrpc.AccessLogServ
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
-			return nil
+			return errors.Wrap(err, "error in stream.Recv()")
 		}
 
 		if msg.Identifier != nil {

@@ -182,7 +182,12 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 		}
 
 		v.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
-			podInfo := value.(checkPodResult)
+			podInfo, ok := value.(checkPodResult)
+			if !ok {
+				ws.log.WithError(ErrAssertion).Warn("value.(checkPodResult)")
+
+				return false
+			}
 
 			endpoints.PodInfo = append(endpoints.PodInfo, fmt.Sprintf("%+v", podInfo))
 
