@@ -106,6 +106,17 @@ data:
                     end
                   end
 
+            # simple cookie extraction with header_to_metadata filter
+            - name: envoy.filters.http.header_to_metadata
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.header_to_metadata.v3.Config
+                request_rules:
+                - cookie: TESTCOOKIE
+                  on_header_present:
+                    metadata_namespace: request.cookie
+                    key: PHPSESSID
+                    type: STRING 
+
             - name: envoy.filters.http.ratelimit
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
