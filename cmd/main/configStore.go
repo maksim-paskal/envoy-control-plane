@@ -169,12 +169,11 @@ func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEn
 
 	for _, ep := range endpoints {
 		fixed, ok := ep.(*endpoint.ClusterLoadAssignment)
-
-		if ok {
-			lbEndpoints[fixed.GetClusterName()] = append(lbEndpoints[fixed.GetClusterName()], fixed.GetEndpoints()...)
-		} else {
-			cs.log.WithError(ErrAssertion).Warn("ep.(*endpoint.ClusterLoadAssignment)")
+		if !ok {
+			cs.log.WithError(ErrAssertion).Fatal("ep.(*endpoint.ClusterLoadAssignment)")
 		}
+
+		lbEndpoints[fixed.GetClusterName()] = append(lbEndpoints[fixed.GetClusterName()], fixed.GetEndpoints()...)
 	}
 
 	return lbEndpoints, nil
@@ -191,9 +190,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
 		info, ok := value.(checkPodResult)
 		if !ok {
-			cs.log.WithError(ErrAssertion).Warn("value.(checkPodResult)")
-
-			return false
+			cs.log.WithError(ErrAssertion).Fatal("value.(checkPodResult)")
 		}
 
 		// add endpoint only if ready
@@ -344,11 +341,11 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 				ep, ok := cs.kubernetesEndpoints.Load(pod.Name)
 				if ok {
 					saved, ok := ep.(checkPodResult)
-					if ok {
-						result.nodeZone = saved.nodeZone
-					} else {
-						cs.log.WithError(ErrAssertion).Warn("ep.(checkPodResult)")
+					if !ok {
+						cs.log.WithError(ErrAssertion).Fatal("ep.(checkPodResult)")
 					}
+
+					result.nodeZone = saved.nodeZone
 				}
 
 				if len(result.nodeZone) == 0 {

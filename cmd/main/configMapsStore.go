@@ -58,25 +58,21 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 		cms.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				cm, ok := obj.(*v1.ConfigMap)
-				if ok {
-					cms.CheckData(cm)
-				} else {
-					cms.log.WithError(ErrAssertion).Warn("obj.(*v1.ConfigMap)")
+				if !ok {
+					cms.log.WithError(ErrAssertion).Fatal("obj.(*v1.ConfigMap)")
 				}
+
+				cms.CheckData(cm)
 			},
 			UpdateFunc: func(old, cur interface{}) {
 				curConfig, ok := cur.(*v1.ConfigMap)
 				if !ok {
-					cms.log.WithError(ErrAssertion).Warn("cur.(*v1.ConfigMap)")
-
-					return
+					cms.log.WithError(ErrAssertion).Fatal("cur.(*v1.ConfigMap)")
 				}
 
 				oldConfig, ok := old.(*v1.ConfigMap)
 				if !ok {
-					cms.log.WithError(ErrAssertion).Warn("old.(*v1.ConfigMap)")
-
-					return
+					cms.log.WithError(ErrAssertion).Fatal("old.(*v1.ConfigMap)")
 				}
 
 				if reflect.DeepEqual(curConfig.Data, oldConfig.Data) {
@@ -87,11 +83,11 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 			},
 			DeleteFunc: func(obj interface{}) {
 				cm, ok := obj.(*v1.ConfigMap)
-				if ok {
-					cms.deleteUnusedConfig(cm)
-				} else {
-					cms.log.WithError(ErrAssertion).Warn("obj.(*v1.ConfigMap)")
+				if !ok {
+					cms.log.WithError(ErrAssertion).Fatal("obj.(*v1.ConfigMap)")
 				}
+
+				cms.deleteUnusedConfig(cm)
 			},
 		})
 
