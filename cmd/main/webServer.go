@@ -23,6 +23,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"runtime"
+	"sync"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
@@ -39,12 +40,12 @@ type WebRoutes struct {
 
 type WebServer struct {
 	clientset   *kubernetes.Clientset
-	configStore map[string]*ConfigStore
+	configStore *sync.Map
 	routes      []WebRoutes
 	log         *log.Entry
 }
 
-func newWebServer(clientset *kubernetes.Clientset, configStore map[string]*ConfigStore) *WebServer {
+func newWebServer(clientset *kubernetes.Clientset, configStore *sync.Map) *WebServer {
 	ws := WebServer{
 		clientset:   clientset,
 		configStore: configStore,
@@ -141,9 +142,17 @@ func (ws *WebServer) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 
 	results := []*ConfigType{}
 
-	for _, v := range ws.configStore {
-		results = append(results, v.config)
-	}
+	ws.configStore.Range(func(k, v interface{}) bool {
+		cs, ok := v.(*ConfigStore)
+
+		if !ok {
+			ws.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
+		}
+
+		results = append(results, cs.config)
+
+		return true
+	})
 
 	if len(results) == 0 {
 		http.Error(w, "no results", http.StatusInternalServerError)
@@ -174,14 +183,20 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 
 	results := []EndpointsResults{}
 
-	for _, v := range ws.configStore {
-		endpoints := EndpointsResults{
-			Name:      v.config.ID,
-			Version:   v.version,
-			LastSaved: v.lastEndpointsArray,
+	ws.configStore.Range(func(k, v interface{}) bool {
+		cs, ok := v.(*ConfigStore)
+
+		if !ok {
+			ws.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
 		}
 
-		v.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
+		endpoints := EndpointsResults{
+			Name:      cs.config.ID,
+			Version:   cs.version,
+			LastSaved: cs.lastEndpointsArray,
+		}
+
+		cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
 			podInfo, ok := value.(checkPodResult)
 			if !ok {
 				ws.log.WithError(ErrAssertion).Warn("value.(checkPodResult)")
@@ -195,7 +210,9 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 		})
 
 		results = append(results, endpoints)
-	}
+
+		return true
+	})
 
 	if len(results) == 0 {
 		http.Error(w, "no results", http.StatusInternalServerError)

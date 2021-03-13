@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"sync"
 	"time"
 
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
@@ -93,41 +94,70 @@ func main() {
 		log.WithError(err).Fatal()
 	}
 
-	var configStore map[string]*ConfigStore = make(map[string]*ConfigStore)
+	configStore := new(sync.Map)
 
 	ep := newEndpointsStore(clientset)
 
 	ep.onNewPod = func(pod *v1.Pod) {
-		for _, v := range configStore {
-			if v.ConfigStoreState != ConfigStoreStateSTOP {
-				v.NewPod(pod)
+		configStore.Range(func(k, v interface{}) bool {
+			cs, ok := v.(*ConfigStore)
+
+			if !ok {
+				ep.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
 			}
-		}
+
+			if cs.ConfigStoreState != ConfigStoreStateSTOP {
+				cs.NewPod(pod)
+			}
+
+			return true
+		})
 	}
 
 	ep.onDeletePod = func(pod *v1.Pod) {
-		for _, v := range configStore {
-			if v.ConfigStoreState != ConfigStoreStateSTOP {
-				v.DeletePod(pod)
+		configStore.Range(func(k, v interface{}) bool {
+			cs, ok := v.(*ConfigStore)
+
+			if !ok {
+				ep.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
 			}
-		}
+
+			if cs.ConfigStoreState != ConfigStoreStateSTOP {
+				cs.DeletePod(pod)
+			}
+
+			return true
+		})
 	}
 	defer ep.Stop()
 
 	cms := newConfigMapStore(clientset)
 
 	cms.onNewConfig = func(config *ConfigType) {
-		if configStore[config.ID] != nil {
-			configStore[config.ID].Stop()
+		// delete entry in map if exists
+		if v, ok := configStore.Load(config.ID); ok {
+			cs, ok := v.(*ConfigStore)
+
+			if !ok {
+				ep.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
+			}
+
+			cs.Stop()
 		}
 
 		log.Infof("Create configStore %s", config.ID)
-		configStore[config.ID] = newConfigStore(config, ep)
+		configStore.Store(config.ID, newConfigStore(config, ep))
 	}
 
 	cms.onDeleteConfig = func(nodeID string) {
-		if configStore[nodeID] != nil {
-			configStore[nodeID].Stop()
+		if v, ok := configStore.Load(nodeID); ok {
+			cs, ok := v.(*ConfigStore)
+
+			if !ok {
+				ep.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
+			}
+
+			cs.Stop()
 
 			drainPeriod, err := time.ParseDuration(*appConfig.ConfigDrainPeriod)
 
@@ -137,7 +167,7 @@ func main() {
 				time.Sleep(drainPeriod)
 			}
 
-			delete(configStore, nodeID)
+			configStore.Delete(nodeID)
 			snapshotCache.ClearSnapshot(nodeID)
 		}
 	}
@@ -179,12 +209,20 @@ func main() {
 		for {
 			time.Sleep(WaitTime)
 
-			for _, v := range configStore {
-				if v.ConfigStoreState != ConfigStoreStateSTOP {
-					log.Debugf("check endpoints=%s", v.config.ID)
-					v.Sync()
+			configStore.Range(func(k, v interface{}) bool {
+				cs, ok := v.(*ConfigStore)
+
+				if !ok {
+					log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
 				}
-			}
+
+				if cs.ConfigStoreState != ConfigStoreStateSTOP {
+					log.Debugf("check endpoints=%s", cs.config.ID)
+					cs.Sync()
+				}
+
+				return true
+			})
 		}
 	}()
 
