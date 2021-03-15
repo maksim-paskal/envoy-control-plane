@@ -59,27 +59,27 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 		es.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				pod, ok := obj.(*v1.Pod)
-				if ok {
-					go es.onNewPod(pod)
-				} else {
-					es.log.WithError(ErrAssertion).Warn("obj.(*v1.Pod)")
+				if !ok {
+					es.log.WithError(ErrAssertion).Fatal("obj.(*v1.Pod)")
 				}
+
+				go es.onNewPod(pod)
 			},
 			UpdateFunc: func(oldObj interface{}, newObj interface{}) {
 				pod, ok := newObj.(*v1.Pod)
-				if ok {
-					go es.onNewPod(pod)
-				} else {
-					es.log.WithError(ErrAssertion).Warn("obj.(*v1.Pod)")
+				if !ok {
+					es.log.WithError(ErrAssertion).Fatal("obj.(*v1.Pod)")
 				}
+
+				go es.onNewPod(pod)
 			},
 			DeleteFunc: func(obj interface{}) {
 				pod, ok := obj.(*v1.Pod)
-				if ok {
-					go es.onDeletePod(pod)
-				} else {
-					es.log.WithError(ErrAssertion).Warn("obj.(*v1.Pod)")
+				if !ok {
+					es.log.WithError(ErrAssertion).Fatal("obj.(*v1.Pod)")
 				}
+
+				go es.onDeletePod(pod)
 			},
 		})
 
