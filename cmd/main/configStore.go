@@ -141,7 +141,7 @@ func (cs *ConfigStore) push() {
 		return
 	}
 
-	cs.log.Infof("pushed,version=%s", cs.version)
+	cs.log.WithField("version", cs.version).Infof("pushed")
 }
 
 func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
