@@ -26,7 +26,7 @@ run:
 	@./scripts/build-main.sh
 	docker-compose down --remove-orphans && docker-compose up
 runRaceDetection:
-	MY_POD_NAMESPACE=default go run -race ./cmd/main -kubeconfig.path=kubeconfig
+	MY_POD_NAMESPACE=default go run -v -race ./cmd/main -kubeconfig.path=kubeconfig
 installDev:
 	helm delete --purge envoy-control-plane || true
 	helm install --namespace envoy-control-plane --name envoy-control-plane ./chart/envoy-control-plane
