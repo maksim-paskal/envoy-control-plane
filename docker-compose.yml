@@ -52,6 +52,7 @@ services:
     - 18000:18000 # admin
     volumes:
     - ./envoy/envoy.defaults/envoy.yaml:/envoy/envoy.yaml
+    - .:/src
     environment:
     - ENVOY_SERVICE_NAME=test-envoy-service
     - JAEGER_AGENT_HOST=jaeger
@@ -68,6 +69,7 @@ services:
       --bootstrap-version 3 \
       --service-cluster test \
       --service-node test1-id \
+      --drain-time-s 10 \
       --service-zone $$zone
   nginxdemo-a:
     hostname: nginxdemo-a
