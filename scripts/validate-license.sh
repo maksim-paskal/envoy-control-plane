@@ -25,7 +25,7 @@ find_files() {
       -o -wholename '*node_modules*' \
     \) -prune \
   \) \
-  \( -name '*.go' -o -name '*.sh' \)
+  \( -name '*.go' -o -name '*.sh' -o -name 'LICENCE' \)
 }
 
 # Use "|| :" to ignore the error code when grep returns empty
