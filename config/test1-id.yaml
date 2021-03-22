@@ -10,12 +10,12 @@ data:
   test1-id: |-
     kubernetes:
     - cluster_name: local_service1
-      port: 80
+      port: 8001
       selector:
         app: test-001
 
     - cluster_name: test-envoy-service
-      port: 80
+      port: 8001
       selector:
         app: test-002
     endpoints:
@@ -128,6 +128,16 @@ data:
                   grpc_service:
                     envoy_grpc:
                       cluster_name: rate_limit_cluster
+            
+            # set the x-envoy-immediate-health-check-fail header on all responses if the /healthcheck/fail
+            - name: envoy.filters.http.health_check
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                pass_through_mode: false
+                headers:
+                - name: ":path"
+                  exact_match: "/healthz"
+
             - name: envoy.filters.http.router
     routes:
     - name: test
@@ -197,11 +207,11 @@ data:
           max_requests: 10
       health_checks:
       - timeout: 1s
-        interval: 5s
+        interval: 1200s
         unhealthy_threshold: 3
         healthy_threshold: 1
         http_health_check:
-          path: "/ready"
+          path: "/healthz"
       load_assignment:
         cluster_name: local_service2
         endpoints:
@@ -211,16 +221,16 @@ data:
           - endpoint:
               address:
                 socket_address:
-                  address: nginxdemo-a
-                  port_value: 80
+                  address: local-service-a
+                  port_value: 8001
         - locality:
             zone: us-east-1b
           lb_endpoints:
           - endpoint:
               address:
                 socket_address:
-                  address: nginxdemo-b
-                  port_value: 80
+                  address: local-service-b
+                  port_value: 8001
     - name: rate_limit_cluster
       connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN

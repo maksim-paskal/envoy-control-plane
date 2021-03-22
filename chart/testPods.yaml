@@ -1,3 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-pod-config
+data:
+  envoy.yaml: |-
+    admin:
+      access_log_path: "/dev/null"
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 18000
+    static_resources:
+      listeners:
+      - name: listener_0
+        address:
+          socket_address:
+            address: 0.0.0.0
+            port_value: 8001
+        traffic_direction: INBOUND
+        filter_chains:
+        - filters:
+          - name: envoy.filters.network.http_connection_manager
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              stat_prefix: ingress_http
+              codec_type: AUTO
+              route_config:
+                name: ingress
+                virtual_hosts:
+                - name: backend
+                  domains:
+                  - "*"
+                  routes:
+                  - match:
+                      prefix: "/"
+                    direct_response:
+                      status: "200"
+                      body:
+                        inline_string: "Hello World"
+              http_filters:
+              - name: envoy.filters.http.router
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,29 +57,13 @@ spec:
       labels:
         app: test-001
     spec:
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - test-001
-              topologyKey: kubernetes.io/hostname
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - test-001
-              topologyKey: topology.kubernetes.io/zone
-            weight: 100
+      volumes:
+      - name: config
+        configMap:
+          name: test-pod-config
       containers:
       - name: test-001
-        image: nginxdemos/hello:plain-text
+        image: envoyproxy/envoy:v1.17.1
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -52,9 +79,12 @@ spec:
         readinessProbe:
           httpGet:
             path: /ready
-            port: 80
+            port: 8001
           initialDelaySeconds: 3
           periodSeconds: 5
+        volumeMounts:
+        - name: config
+          mountPath: /etc/envoy/
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -72,34 +102,19 @@ spec:
       labels:
         app: test-002
     spec:
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - test-001
-              topologyKey: kubernetes.io/hostname
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - test-001
-              topologyKey: topology.kubernetes.io/zone
-            weight: 100
+      volumes:
+      - name: config
+        configMap:
+          name: test-pod-config
       containers:
       - name: test-002
-        image: nginxdemos/hello:plain-text
+        image: envoyproxy/envoy:v1.17.1
         imagePullPolicy: IfNotPresent
         resources:
           limits:
             cpu: 10m
             memory: 100Mi
+        # stop container after 30 sec
         # lifecycle:
         #   preStop:
         #     exec:
@@ -109,6 +124,9 @@ spec:
         readinessProbe:
           httpGet:
             path: /ready
-            port: 80
+            port: 8001
           initialDelaySeconds: 3
           periodSeconds: 5
+        volumeMounts:
+        - name: config
+          mountPath: /etc/envoy/
