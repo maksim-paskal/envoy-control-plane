@@ -187,6 +187,7 @@ data:
       connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN
       type: EDS
+      ignore_health_on_host_removal: true
       eds_cluster_config:
         eds_config:
           resource_api_version: V3
