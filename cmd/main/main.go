@@ -70,7 +70,7 @@ func main() {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
 
-	if logLevel == log.DebugLevel {
+	if logLevel == log.DebugLevel || *appConfig.LogReportCaller {
 		log.SetReportCaller(true)
 	}
 

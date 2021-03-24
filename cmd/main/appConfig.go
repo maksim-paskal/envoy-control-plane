@@ -27,6 +27,7 @@ type AppConfig struct {
 	LogLevel            *string `yaml:"LogLevel"`
 	LogPretty           *bool   `yaml:"LogPretty"`
 	LogAccess           *bool   `yaml:"LogAccess"`
+	LogReportCaller     *bool   `yaml:"LogReportCaller"`
 	ConfigFile          *string
 	ConfigMapLabels     *string `yaml:"ConfigMapLabels"`
 	KubeConfigFile      *string `yaml:"KubeConfigFile"`
@@ -73,6 +74,7 @@ var appConfig = &AppConfig{
 	LogLevel:            flag.String("log.level", "INFO", "log level"),
 	LogPretty:           flag.Bool("log.pretty", false, "log in pretty format"),
 	LogAccess:           flag.Bool("log.access", false, "access log"),
+	LogReportCaller:     flag.Bool("log.reportCaller", false, "log file name and line number"),
 	ConfigFile:          flag.String("config.file", "", "load config from file"),
 	ConfigMapLabels:     flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
 	KubeConfigFile:      flag.String("kubeconfig.path", "", "kubeconfig path"),
