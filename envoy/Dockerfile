@@ -27,7 +27,7 @@ RUN ENVOY_SERVICE_NAME=test-service JAEGER_AGENT_HOST=jaeger /entrypoint.sh \
 --service-node test1-id \
 --bootstrap-version 3 \
 --log-level warn \
---mode validate
+--mode validate && rm -rf /tmp/*
 
 ENTRYPOINT [ "/entrypoint.sh" ]
 CMD ["/usr/local/bin/envoy","-c","/etc/envoy/envoy.yaml"]
