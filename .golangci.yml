@@ -11,3 +11,5 @@ linters:
   - gocognit
   - exhaustivestruct
   - cyclop
+  # https://github.com/tomarrell/wrapcheck/issues/8
+  - wrapcheck
