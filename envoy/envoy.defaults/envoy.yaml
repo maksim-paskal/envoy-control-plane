@@ -51,6 +51,7 @@ static_resources:
   - name: xds_cluster
     connect_timeout: 1s
     type: STRICT_DNS
+    dns_lookup_family: V4_ONLY
     typed_extension_protocol_options:
       envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
         "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
