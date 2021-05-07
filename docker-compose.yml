@@ -73,7 +73,7 @@ services:
       --service-zone $$zone
   local-service-a:
     hostname: local-service-a
-    image: envoyproxy/envoy:v1.17.1
+    image: envoyproxy/envoy:v1.18.2
     volumes:
     - ./config/mock/:/etc/envoy/
     ports:
@@ -81,7 +81,7 @@ services:
     - 18001:18000 # admin
   local-service-b:
     hostname: local-service-a
-    image: envoyproxy/envoy:v1.17.1
+    image: envoyproxy/envoy:v1.18.2
     volumes:
     - ./config/mock/:/etc/envoy/
     ports:

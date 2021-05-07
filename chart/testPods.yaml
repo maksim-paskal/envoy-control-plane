@@ -5,7 +5,6 @@ metadata:
 data:
   envoy.yaml: |-
     admin:
-      access_log_path: "/dev/null"
       address:
         socket_address:
           address: 0.0.0.0
@@ -63,7 +62,7 @@ spec:
           name: test-pod-config
       containers:
       - name: test-001
-        image: envoyproxy/envoy:v1.17.1
+        image: envoyproxy/envoy:v1.18.2
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -108,7 +107,7 @@ spec:
           name: test-pod-config
       containers:
       - name: test-002
-        image: envoyproxy/envoy:v1.17.1
+        image: envoyproxy/envoy:v1.18.2
         imagePullPolicy: IfNotPresent
         resources:
           limits:
