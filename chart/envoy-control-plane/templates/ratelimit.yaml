@@ -1,3 +1,4 @@
+{{ if .Values.withExamples }}
 {{- if .Values.ratelimit.enabled }}
 apiVersion: v1
 kind: ConfigMap
@@ -31,7 +32,7 @@ spec:
           name: envoy-ratelimit
       containers:
       - name: ratelimit
-        image: envoyproxy/ratelimit:v1.4.0
+        image: envoyproxy/ratelimit:6f5de117
         imagePullPolicy: IfNotPresent
         env:
         - name: "USE_STATSD"
@@ -46,6 +47,8 @@ spec:
           value: "/data"
         - name: "RUNTIME_SUBDIRECTORY"
           value: "ratelimit"
+        - name: "RUNTIME_IGNOREDOTFILES"
+          value: "true"
         command:
         - /bin/sh
         - -c
@@ -94,3 +97,4 @@ spec:
   selector:
     app: envoy-ratelimit
 {{- end }}
+{{ end }}

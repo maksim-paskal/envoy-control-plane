@@ -20,7 +20,7 @@ push:
 pushEnvoy:
 	docker push paskalmaksim/envoy-docker-image:dev
 k8sConfig:
-	kubectl apply -f ./chart/testPods.yaml
+	kubectl apply -f ./chart/envoy-control-plane/templates/testPods.yaml
 	kubectl apply -f ./config/
 run:
 	@./scripts/build-main.sh
@@ -30,7 +30,7 @@ runRaceDetection:
 installDev:
 	helm delete --purge envoy-control-plane || true
 	helm install --namespace envoy-control-plane --name envoy-control-plane ./chart/envoy-control-plane
-	kubectl apply -n envoy-control-plane -f ./chart/testPods.yaml
+	kubectl apply -n envoy-control-plane -f ./chart/envoy-control-plane/templates/testPods.yaml
 	kubectl apply -n envoy-control-plane -f ./chart/ingress.yaml
 	watch kubectl -n envoy-control-plane get pods
 installDevConfig:
@@ -39,7 +39,7 @@ clean:
 	helm delete --purge envoy-control-plane || true
 	kubectl delete ns envoy-control-plane || true
 	kubectl delete -f ./config/ || true
-	kubectl delete -f ./chart/testPods.yaml || true
+	kubectl delete -f ./chart/envoy-control-plane/templates/testPods.yaml || true
 	docker-compose down --remove-orphans
 upgrade:
 	go get -v -u k8s.io/api@v0.19.8 || true
