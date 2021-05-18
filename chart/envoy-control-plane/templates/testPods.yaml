@@ -1,4 +1,4 @@
-{{ if .Values.withExamples }}
+#{{ if .Values.withExamples }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -130,4 +130,4 @@ spec:
         volumeMounts:
         - name: config
           mountPath: /etc/envoy/
-{{ end }}
+#{{ end }}
