@@ -1,10 +1,12 @@
+withExamples: false
+
 registry:
-  image: paskalmaksim/envoy-control-plane:dev-v3
+  image: paskalmaksim/envoy-control-plane:dev
   imagePullPolicy: Always
 
 envoy:
   registry:
-    image: paskalmaksim/envoy-docker-image:dev-v3
+    image: paskalmaksim/envoy-docker-image:dev
     imagePullPolicy: Always
 
 ratelimit:
@@ -32,7 +34,7 @@ ratelimit:
       value: no-cf-connecting-ip
       rate_limit:
         unit: minute
-        requests_per_unit: 2
+        requests_per_unit: 20
     - key: cf-connecting-ip
       rate_limit:
         unit: second

@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	ConfigStoreStateRUN int = iota
-	ConfigStoreStateSTOP
+	configStoreStateRUN int = iota
+	configStoreStateSTOP
 )
 
 type ConfigStore struct {
@@ -55,7 +55,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 	cs := ConfigStore{
 		config:           config,
 		ep:               ep,
-		ConfigStoreState: ConfigStoreStateRUN,
+		ConfigStoreState: configStoreStateRUN,
 		log: log.WithFields(log.Fields{
 			"type":   "ConfigStore",
 			"nodeID": config.ID,
@@ -95,7 +95,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 }
 
 func (cs *ConfigStore) NewPod(pod *v1.Pod) {
-	if cs.ConfigStoreState == ConfigStoreStateSTOP {
+	if cs.ConfigStoreState == configStoreStateSTOP {
 		return
 	}
 
@@ -104,7 +104,7 @@ func (cs *ConfigStore) NewPod(pod *v1.Pod) {
 }
 
 func (cs *ConfigStore) DeletePod(pod *v1.Pod) {
-	if cs.ConfigStoreState == ConfigStoreStateSTOP {
+	if cs.ConfigStoreState == configStoreStateSTOP {
 		return
 	}
 
@@ -170,7 +170,7 @@ func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEn
 	for _, ep := range endpoints {
 		fixed, ok := ep.(*endpoint.ClusterLoadAssignment)
 		if !ok {
-			cs.log.WithError(ErrAssertion).Fatal("ep.(*endpoint.ClusterLoadAssignment)")
+			cs.log.WithError(errAssertion).Fatal("ep.(*endpoint.ClusterLoadAssignment)")
 		}
 
 		lbEndpoints[fixed.GetClusterName()] = append(lbEndpoints[fixed.GetClusterName()], fixed.GetEndpoints()...)
@@ -190,7 +190,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
 		info, ok := value.(checkPodResult)
 		if !ok {
-			cs.log.WithError(ErrAssertion).Fatal("value.(checkPodResult)")
+			cs.log.WithError(errAssertion).Fatal("value.(checkPodResult)")
 		}
 
 		// add endpoint only if ready
@@ -272,7 +272,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	}
 
 	if isInvalidIP {
-		log.WithError(ErrInvalidIP).Warn()
+		log.WithError(errInvalidIP).Warn()
 
 		return
 	}
@@ -342,7 +342,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 				if ok {
 					saved, ok := ep.(checkPodResult)
 					if !ok {
-						cs.log.WithError(ErrAssertion).Fatal("ep.(checkPodResult)")
+						cs.log.WithError(errAssertion).Fatal("ep.(checkPodResult)")
 					}
 
 					result.nodeZone = saved.nodeZone
@@ -375,7 +375,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 
 func (cs *ConfigStore) Stop() {
 	cs.log.Info("stop")
-	cs.ConfigStoreState = ConfigStoreStateSTOP
+	cs.ConfigStoreState = configStoreStateSTOP
 }
 
 func (cs *ConfigStore) getNode(nodeName string) (*v1.Node, error) {
@@ -388,7 +388,7 @@ func (cs *ConfigStore) getNode(nodeName string) (*v1.Node, error) {
 }
 
 func (cs *ConfigStore) Sync() {
-	if cs.ConfigStoreState == ConfigStoreStateSTOP {
+	if cs.ConfigStoreState == configStoreStateSTOP {
 		return
 	}
 

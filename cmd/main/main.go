@@ -103,10 +103,10 @@ func main() {
 			cs, ok := v.(*ConfigStore)
 
 			if !ok {
-				ep.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
+				ep.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 			}
 
-			if cs.ConfigStoreState != ConfigStoreStateSTOP {
+			if cs.ConfigStoreState != configStoreStateSTOP {
 				cs.NewPod(pod)
 			}
 
@@ -119,10 +119,10 @@ func main() {
 			cs, ok := v.(*ConfigStore)
 
 			if !ok {
-				ep.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
+				ep.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 			}
 
-			if cs.ConfigStoreState != ConfigStoreStateSTOP {
+			if cs.ConfigStoreState != configStoreStateSTOP {
 				cs.DeletePod(pod)
 			}
 
@@ -139,7 +139,7 @@ func main() {
 			cs, ok := v.(*ConfigStore)
 
 			if !ok {
-				ep.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
+				ep.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 			}
 
 			cs.Stop()
@@ -154,7 +154,7 @@ func main() {
 			cs, ok := v.(*ConfigStore)
 
 			if !ok {
-				ep.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
+				ep.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 			}
 
 			cs.Stop()
@@ -213,10 +213,10 @@ func main() {
 				cs, ok := v.(*ConfigStore)
 
 				if !ok {
-					log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
+					log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 				}
 
-				if cs.ConfigStoreState != ConfigStoreStateSTOP {
+				if cs.ConfigStoreState != configStoreStateSTOP {
 					log.Debugf("check endpoints=%s", cs.config.ID)
 					cs.Sync()
 				}

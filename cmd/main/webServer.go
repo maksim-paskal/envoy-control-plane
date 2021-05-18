@@ -146,7 +146,7 @@ func (ws *WebServer) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 		cs, ok := v.(*ConfigStore)
 
 		if !ok {
-			ws.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
+			ws.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 		}
 
 		results = append(results, cs.config)
@@ -187,7 +187,7 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 		cs, ok := v.(*ConfigStore)
 
 		if !ok {
-			ws.log.WithError(ErrAssertion).Fatal("v.(*ConfigStore)")
+			ws.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 		}
 
 		endpoints := EndpointsResults{
@@ -199,7 +199,7 @@ func (ws *WebServer) handlerConfigEndpoints(w http.ResponseWriter, r *http.Reque
 		cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
 			podInfo, ok := value.(checkPodResult)
 			if !ok {
-				ws.log.WithError(ErrAssertion).Fatal("value.(checkPodResult)")
+				ws.log.WithError(errAssertion).Fatal("value.(checkPodResult)")
 			}
 
 			endpoints.PodInfo = append(endpoints.PodInfo, fmt.Sprintf("%+v", podInfo))

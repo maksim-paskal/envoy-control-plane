@@ -23,10 +23,10 @@ import (
 )
 
 //nolint:maligned
-type KubernetesType struct {
+type kubernetesType struct {
 	// add version on configmap to selector
 	UseVersionLabel bool              `yaml:"useversionlabel"`
-	ClusterName     string            `yaml:"cluster_name"`
+	ClusterName     string            `yaml:"cluster_name"` //nolint:tagliatelle
 	Namespace       string            `yaml:"namespace"`
 	Port            uint32            `yaml:"port"`
 	HealthCheckPort uint32            `yaml:"healthcheckport"`
@@ -42,7 +42,7 @@ type ConfigType struct {
 	// src configMap
 	ConfigMapName      string
 	ConfigMapNamespace string
-	Kubernetes         []KubernetesType `yaml:"kubernetes"`
+	Kubernetes         []kubernetesType `yaml:"kubernetes"`
 	Endpoints          []interface{}    `yaml:"endpoints"`
 	Routes             []interface{}    `yaml:"routes"`
 	Clusters           []interface{}    `yaml:"clusters"`

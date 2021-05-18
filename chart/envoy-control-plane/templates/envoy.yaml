@@ -1,3 +1,4 @@
+{{ if .Values.withExamples }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -68,9 +69,21 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 18000
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /server_info
+            port: 18000
+          initialDelaySeconds: 60
+          periodSeconds: 10
         ports:
         - containerPort: 8000
-        - containerPort: 8001
+        - containerPort: 18000
 ---
 apiVersion: v1
 kind: Service
@@ -89,3 +102,4 @@ spec:
     protocol: TCP
   selector:
     app: envoy
+{{ end }}

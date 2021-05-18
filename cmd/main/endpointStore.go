@@ -60,7 +60,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 			AddFunc: func(obj interface{}) {
 				pod, ok := obj.(*v1.Pod)
 				if !ok {
-					es.log.WithError(ErrAssertion).Fatal("obj.(*v1.Pod)")
+					es.log.WithError(errAssertion).Fatal("obj.(*v1.Pod)")
 				}
 
 				go es.onNewPod(pod)
@@ -68,7 +68,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 			UpdateFunc: func(oldObj interface{}, newObj interface{}) {
 				pod, ok := newObj.(*v1.Pod)
 				if !ok {
-					es.log.WithError(ErrAssertion).Fatal("obj.(*v1.Pod)")
+					es.log.WithError(errAssertion).Fatal("obj.(*v1.Pod)")
 				}
 
 				go es.onNewPod(pod)
@@ -76,7 +76,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 			DeleteFunc: func(obj interface{}) {
 				pod, ok := obj.(*v1.Pod)
 				if !ok {
-					es.log.WithError(ErrAssertion).Fatal("obj.(*v1.Pod)")
+					es.log.WithError(errAssertion).Fatal("obj.(*v1.Pod)")
 				}
 
 				go es.onDeletePod(pod)
@@ -89,7 +89,7 @@ func newEndpointsStore(clientset *kubernetes.Clientset) *EndpointsStore {
 		go es.informer.Run(es.stopCh)
 
 		if !cache.WaitForCacheSync(es.stopCh, es.informer.HasSynced) {
-			es.log.WithError(ErrTimeout).Fatal()
+			es.log.WithError(errTimeout).Fatal()
 
 			return
 		}

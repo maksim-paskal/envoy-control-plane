@@ -1,3 +1,4 @@
+{{ if .Values.withExamples }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,11 +9,11 @@ data:
   test1-id: |-
     kubernetes:
     - cluster_name: local_service1
-      port: 80
+      port: 8001
       selector:
         app: test-001
     - cluster_name: local_service2
-      port: 80
+      port: 8001
       selector:
         app: test-002
 
@@ -63,8 +64,10 @@ data:
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
                 domain: {{ .Values.ratelimit.domain }}
+                enable_x_ratelimit_headers: DRAFT_VERSION_03
                 failure_mode_deny: false
                 rate_limit_service:
+                  transport_api_version: V3
                   grpc_service:
                     envoy_grpc:
                       cluster_name: rate_limit_cluster
@@ -154,7 +157,11 @@ data:
       connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN
       type: STRICT_DNS
-      http2_protocol_options: {}
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http2_protocol_options: {}
       load_assignment:
         cluster_name: rate_limit_cluster
         endpoints:
@@ -165,3 +172,4 @@ data:
                   address: envoy-ratelimit
                   port_value: 8081
     {{- end }}
+{{ end }}
