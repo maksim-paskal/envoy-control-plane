@@ -59,7 +59,7 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 			AddFunc: func(obj interface{}) {
 				cm, ok := obj.(*v1.ConfigMap)
 				if !ok {
-					cms.log.WithError(ErrAssertion).Fatal("obj.(*v1.ConfigMap)")
+					cms.log.WithError(errAssertion).Fatal("obj.(*v1.ConfigMap)")
 				}
 
 				cms.CheckData(cm)
@@ -67,12 +67,12 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 			UpdateFunc: func(old, cur interface{}) {
 				curConfig, ok := cur.(*v1.ConfigMap)
 				if !ok {
-					cms.log.WithError(ErrAssertion).Fatal("cur.(*v1.ConfigMap)")
+					cms.log.WithError(errAssertion).Fatal("cur.(*v1.ConfigMap)")
 				}
 
 				oldConfig, ok := old.(*v1.ConfigMap)
 				if !ok {
-					cms.log.WithError(ErrAssertion).Fatal("old.(*v1.ConfigMap)")
+					cms.log.WithError(errAssertion).Fatal("old.(*v1.ConfigMap)")
 				}
 
 				if reflect.DeepEqual(curConfig.Data, oldConfig.Data) {
@@ -84,7 +84,7 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 			DeleteFunc: func(obj interface{}) {
 				cm, ok := obj.(*v1.ConfigMap)
 				if !ok {
-					cms.log.WithError(ErrAssertion).Fatal("obj.(*v1.ConfigMap)")
+					cms.log.WithError(errAssertion).Fatal("obj.(*v1.ConfigMap)")
 				}
 
 				cms.deleteUnusedConfig(cm)
@@ -101,7 +101,7 @@ func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
 		go cms.informer.Run(cms.stopCh)
 
 		if !cache.WaitForCacheSync(cms.stopCh, cms.informer.HasSynced) {
-			log.WithError(ErrTimeout).Fatal()
+			log.WithError(errTimeout).Fatal()
 
 			return
 		}

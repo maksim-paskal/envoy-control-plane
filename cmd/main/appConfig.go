@@ -24,27 +24,27 @@ import (
 type AppConfig struct {
 	Version             string
 	showVersion         *bool
-	LogLevel            *string `yaml:"LogLevel"`
-	LogPretty           *bool   `yaml:"LogPretty"`
-	LogAccess           *bool   `yaml:"LogAccess"`
-	LogReportCaller     *bool   `yaml:"LogReportCaller"`
+	LogLevel            *string `yaml:"logLevel"`
+	LogPretty           *bool   `yaml:"logPretty"`
+	LogAccess           *bool   `yaml:"logAccess"`
+	LogReportCaller     *bool   `yaml:"logReportCaller"`
 	ConfigFile          *string
-	ConfigMapLabels     *string `yaml:"ConfigMapLabels"`
-	KubeConfigFile      *string `yaml:"KubeConfigFile"`
-	WatchNamespaced     *bool   `yaml:"WatchNamespaced"`
-	Namespace           *string `yaml:"Namespace"`
-	GrpcAddress         *string `yaml:"GrpcAddress"`
-	WebAddress          *string `yaml:"WebAddress"`
-	NodeZoneLabel       *string `yaml:"NodeZoneLabel"`
-	ConfigDrainPeriod   *string `yaml:"ConfigDrainPeriod"`
-	EndpointCheckPeriod *string `yaml:"EndpointCheckPeriod"`
-	SentryDSN           *string `yaml:"SentryDSN"`
+	ConfigMapLabels     *string `yaml:"configMapLabels"`
+	KubeConfigFile      *string `yaml:"kubeConfigFile"`
+	WatchNamespaced     *bool   `yaml:"watchNamespaced"`
+	Namespace           *string `yaml:"namespace"`
+	GrpcAddress         *string `yaml:"grpcAddress"`
+	WebAddress          *string `yaml:"webAddress"`
+	NodeZoneLabel       *string `yaml:"nodeZoneLabel"`
+	ConfigDrainPeriod   *string `yaml:"configDrainPeriod"`
+	EndpointCheckPeriod *string `yaml:"endpointCheckPeriod"`
+	SentryDSN           *string `yaml:"sentryDsn"`
 }
 
 func (ac *AppConfig) CheckConfig() error {
 	if *ac.WatchNamespaced {
 		if len(*ac.Namespace) == 0 {
-			return ErrUseNamespace
+			return errUseNamespace
 		}
 	}
 
