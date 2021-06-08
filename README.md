@@ -16,7 +16,7 @@ helm uninstall envoy-control-plane -n envoy-control-plane
 ### Add sidecar to your pod
 ```yaml
 - name: envoy
-  image: paskalmaksim/envoy-control-plane:<version>
+  image: paskalmaksim/envoy-docker-image:<version>
   imagePullPolicy: IfNotPresent
   args:
   - /bin/sh
