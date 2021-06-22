@@ -59,7 +59,7 @@ func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 		return nil, nil
 	}
 
-	var yamlObjJSON interface{} = utils.ConvertYAMLtoJSON(yamlObj)
+	yamlObjJSON := utils.ConvertYAMLtoJSON(yamlObj)
 
 	jsonObj, err := json.Marshal(yamlObjJSON)
 	if err != nil {

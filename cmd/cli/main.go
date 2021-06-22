@@ -25,16 +25,21 @@ import (
 	"time"
 )
 
+const (
+	serverPort      = 18081
+	serverAdminPort = 18000
+)
+
 var (
 	action         = flag.String("action", "/api/zone", "api action")
 	namespace      = flag.String("namespace", os.Getenv("MY_POD_NAMESPACE"), "pod namespace")
 	pod            = flag.String("pod", os.Getenv("HOSTNAME"), "pod name")
 	server         = flag.String("server", "envoy-control-plane", "controlplane host")
-	port           = flag.Int("port", 18081, "controlplane port")
+	port           = flag.Int("port", serverPort, "controlplane port")
 	wait           = flag.Bool("wait", true, "wait controlplane")
 	debug          = flag.Bool("debug", false, "debug mode")
 	drainEnvoy     = flag.Bool("drainEnvoy", false, "drain envoy")
-	envoyAdminPort = flag.Int("envoyAdminPort", 18000, "envoy admin port")
+	envoyAdminPort = flag.Int("envoyAdminPort", serverAdminPort, "envoy admin port")
 	logFlags       = flag.Int("logFlags", 0, "log flags")
 )
 
