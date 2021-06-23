@@ -11,6 +11,8 @@ testChart:
 	helm template ./chart/envoy-control-plane | kubectl apply --dry-run=client --validate -f -
 build:
 	docker build . -t paskalmaksim/envoy-control-plane:dev
+build-envoy:
+	docker-compose build envoy-test1
 buildEnvoy:
 	docker build ./envoy -t paskalmaksim/envoy-docker-image:dev
 build-cli:

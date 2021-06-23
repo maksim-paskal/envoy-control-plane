@@ -24,6 +24,7 @@ import (
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 )
@@ -31,6 +32,9 @@ import (
 var gitVersion = "dev"
 
 const (
+	grpcKeepaliveTime        = 30 * time.Second
+	grpcKeepaliveTimeout     = 5 * time.Second
+	grpcKeepaliveMinTime     = 30 * time.Second
 	grpcMaxConcurrentStreams = 1000000
 )
 
@@ -176,7 +180,17 @@ func main() {
 
 	ctx := context.Background()
 	grpcOptions := []grpc.ServerOption{}
-	grpcOptions = append(grpcOptions, grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams))
+	grpcOptions = append(grpcOptions,
+		grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time:    grpcKeepaliveTime,
+			Timeout: grpcKeepaliveTimeout,
+		}),
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             grpcKeepaliveMinTime,
+			PermitWithoutStream: true,
+		}),
+	)
 	grpcServer := grpc.NewServer(grpcOptions...)
 
 	defer grpcServer.GracefulStop()

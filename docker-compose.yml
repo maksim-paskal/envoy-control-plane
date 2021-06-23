@@ -6,6 +6,7 @@ services:
     volumes:
     - .:/app
     environment:
+    #- GODEBUG=http2debug=2
     - MY_POD_NAMESPACE=default
     ports:
     - 18081:18081
