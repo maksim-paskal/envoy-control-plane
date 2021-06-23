@@ -63,6 +63,10 @@ spec:
   replicas: 1
   template:
     metadata:
+      annotations:
+        prometheus.io/path: '/api/metrics'
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '18081'
       labels:
         app: envoy-control-plane
     spec:

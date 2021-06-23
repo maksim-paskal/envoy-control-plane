@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,10 +96,14 @@ func newWebServer(clientset *kubernetes.Clientset, configStore *sync.Map) *WebSe
 		handler:     ws.handlerVersion,
 	})
 
+	m := metrics.NewMetrics()
+
 	go func() {
 		for _, route := range ws.routes {
 			http.HandleFunc(route.path, route.handler)
 		}
+
+		http.Handle("/api/metrics", m.Handler())
 
 		ws.log.Info("http.port=", *appConfig.WebAddress)
 

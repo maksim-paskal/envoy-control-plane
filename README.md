@@ -66,3 +66,22 @@ helm uninstall envoy-control-plane -n envoy-control-plane
 ```
 ### Configurate your envoy sidecars with with ConfigMap
 sample configuration here https://github.com/maksim-paskal/envoy-control-plane/blob/main/chart/envoy-control-plane/templates/envoy-test1-id.yaml
+
+### Prometheus metrics
+envoy-control-plane expose metrics on `/api/metrics` endpoint in web interface - for static configuration use this scrape config:
+```
+scrape_configs:
+- job_name: envoy-control-plane
+  scrape_interval: 1s
+  metrics_path: /api/metrics
+  static_configs:
+  - targets:
+    - <envoy-control-plane-ip>:18081
+```
+or just add pod annotation
+```
+annotations:
+  prometheus.io/path: '/api/metrics'
+  prometheus.io/scrape: 'true'
+  prometheus.io/port: '18081'
+```
