@@ -1,6 +1,7 @@
 FROM golang:1.16 as build
 
 COPY ./cmd /usr/src/envoy-control-plane/cmd
+COPY ./pkg /usr/src/envoy-control-plane/pkg
 COPY go.* /usr/src/envoy-control-plane/
 COPY .git /usr/src/envoy-control-plane/
 
