@@ -73,7 +73,7 @@ services:
       --service-zone $$zone
   local-service-a:
     hostname: local-service-a
-    image: envoyproxy/envoy:v1.18.2
+    image: envoyproxy/envoy:v1.18.3
     command:
     - /usr/local/bin/envoy 
     - --config-path /etc/envoy/envoy.yaml
@@ -85,7 +85,7 @@ services:
     - 18001:18000 # admin
   local-service-b:
     hostname: local-service-a
-    image: envoyproxy/envoy:v1.18.2
+    image: envoyproxy/envoy:v1.18.3
     command:
     - /usr/local/bin/envoy 
     - --config-path /etc/envoy/envoy.yaml

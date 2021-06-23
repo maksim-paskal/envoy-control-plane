@@ -106,3 +106,55 @@ func (cb *callbacks) OnFetchResponse(r *discovery.DiscoveryRequest, w *discovery
 		log.Debugf("DiscoveryResponse=>\n%s\n", string(json))
 	}
 }
+
+func (cb *callbacks) OnStreamDeltaRequest(streamID int64, req *discovery.DeltaDiscoveryRequest) error {
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		log := log.WithField("streamID", streamID)
+
+		json, _ := protojson.Marshal(req)
+		log.Debugf("DeltaDiscoveryRequest=>\n%s\n", string(json))
+	}
+
+	return nil
+}
+
+func (cb *callbacks) OnStreamDeltaResponse(streamID int64, req *discovery.DeltaDiscoveryRequest, resp *discovery.DeltaDiscoveryResponse) { //nolint:lll
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		log := log.WithField("streamID", streamID)
+
+		json, _ := protojson.Marshal(req)
+		log.Debugf("DeltaDiscoveryRequest=>\n%s\n", string(json))
+
+		json, _ = protojson.Marshal(resp)
+		log.Debugf("DeltaDiscoveryResponse=>\n%s\n", string(json))
+	}
+}
+
+func (cb *callbacks) OnStreamDeltaRequestOnStreamDeltaRequest(streamID int64, req *discovery.DeltaDiscoveryRequest) error { //nolint:lll,unparam
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		log := log.WithField("streamID", streamID)
+
+		json, _ := protojson.Marshal(req)
+		log.Debugf("DeltaDiscoveryRequest=>\n%s\n", string(json))
+	}
+
+	return nil
+}
+
+func (cb *callbacks) OnDeltaStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		log := log.WithField("streamID", streamID)
+
+		log.Debugf("typeURL=>\n%s\n", typeURL)
+	}
+
+	return nil
+}
+
+func (cb *callbacks) OnDeltaStreamClosed(streamID int64) {
+	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+		log := log.WithField("streamID", streamID)
+
+		log.Debugf("closed")
+	}
+}
