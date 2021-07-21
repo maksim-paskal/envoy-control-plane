@@ -2,7 +2,7 @@ version: '3'
 
 services:
   envoy:
-    image: envoyproxy/envoy:v1.18.3
+    image: envoyproxy/envoy:v1.19.0
     ports:
     - 8000:8000
     - 8001:8001
@@ -14,6 +14,7 @@ services:
     - |
       /usr/local/bin/envoy \
       --config-path /etc/envoy/envoy.yaml \
+      --bootstrap-version 3 \
       --log-level warn \
       --service-cluster test \
       --service-node test1-id \
