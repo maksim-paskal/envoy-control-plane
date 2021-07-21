@@ -74,9 +74,10 @@ services:
       --service-zone $$zone
   local-service-a:
     hostname: local-service-a
-    image: envoyproxy/envoy:v1.18.3
+    image: envoyproxy/envoy:v1.19.0
     command:
-    - /usr/local/bin/envoy 
+    - /usr/local/bin/envoy
+    - --bootstrap-version 3
     - --config-path /etc/envoy/envoy.yaml
     - --log-level warn
     volumes:
@@ -86,9 +87,10 @@ services:
     - 18001:18000 # admin
   local-service-b:
     hostname: local-service-a
-    image: envoyproxy/envoy:v1.18.3
+    image: envoyproxy/envoy:v1.19.0
     command:
-    - /usr/local/bin/envoy 
+    - /usr/local/bin/envoy
+    - --bootstrap-version 3
     - --config-path /etc/envoy/envoy.yaml
     - --log-level warn
     volumes:

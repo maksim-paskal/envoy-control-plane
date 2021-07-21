@@ -1,0 +1,36 @@
+{{ if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: envoy
+  labels:
+    app: envoy
+spec:
+  tls:
+  - hosts:
+    - {{ .Values.ingress.host }}
+  rules:
+  - host: {{ .Values.ingress.host }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: envoy
+            port:
+              number: 18000
+      - path: /2
+        pathType: Prefix
+        backend:
+          service:
+            name: envoy
+            port:
+              number: 8000
+      - path: /api
+        backend:
+          service:
+            name: envoy-control-plane
+            port:
+              number: 18081
+{{ end }}

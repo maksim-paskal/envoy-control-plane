@@ -1,12 +1,12 @@
 withExamples: false
 
 registry:
-  image: paskalmaksim/envoy-control-plane:dev
+  image: paskalmaksim/envoy-control-plane:latest
   imagePullPolicy: Always
 
 envoy:
   registry:
-    image: paskalmaksim/envoy-docker-image:dev
+    image: paskalmaksim/envoy-docker-image:latest
     imagePullPolicy: Always
 
 ratelimit:
@@ -51,3 +51,7 @@ ratelimit:
       rate_limit:
         unit: second
         requests_per_unit: 50
+
+ingress:
+  enabled: false
+  host: test.dev.com

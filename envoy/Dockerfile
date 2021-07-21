@@ -1,4 +1,4 @@
-FROM envoyproxy/envoy:v1.18.3
+FROM envoyproxy/envoy:v1.19.0
 
 ADD --chown=envoy:envoy https://github.com/maksim-paskal/go-template/releases/download/v0.0.8/go-template-linux-amd64 /usr/local/bin/go-template
 ADD --chown=envoy:envoy https://github.com/maksim-paskal/jaeger-client-cpp/releases/download/v0.5.0/libjaegertracing_plugin.so /usr/local/lib/libjaegertracing_plugin.so
@@ -25,9 +25,8 @@ RUN ENVOY_SERVICE_NAME=test-service JAEGER_AGENT_HOST=jaeger /entrypoint.sh \
 -c /etc/envoy/envoy.yaml \
 --service-cluster test \
 --service-node test1-id \
---bootstrap-version 3 \
 --log-level warn \
 --mode validate && rm -rf /tmp/*
 
 ENTRYPOINT [ "/entrypoint.sh" ]
-CMD ["/usr/local/bin/envoy","-c","/etc/envoy/envoy.yaml","--bootstrap-version","3","--log-level","warn"]
+CMD ["/usr/local/bin/envoy","-c","/etc/envoy/envoy.yaml","--log-level","warn"]

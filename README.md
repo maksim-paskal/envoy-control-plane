@@ -7,17 +7,22 @@ Popular Istio or Linkerd is very complex to do something simple with kubernetes 
 ```bash
 git clone git@github.com:maksim-paskal/envoy-control-plane.git
 
-helm upgrade --install envoy-control-plane --create-namespace -n envoy-control-plane ./chart/envoy-control-plane --set withExamples=true
+helm upgrade --install envoy-control-plane --create-namespace -n envoy-control-plane ./chart/envoy-control-plane --set withExamples=true --set ingress.enabled=true
+
+# test
+curl -k -H "Host: test.dev.com" https://<ingress fqdn or IP>/2
+
 
 # to uninstall
 helm uninstall envoy-control-plane -n envoy-control-plane
+kubectl delete ns envoy-control-plane
 ```
 
 ### Add sidecar to your pod
 ```yaml
 - name: envoy
-  image: paskalmaksim/envoy-docker-image:<version>
-  imagePullPolicy: IfNotPresent
+  image: paskalmaksim/envoy-docker-image:latest
+  imagePullPolicy: Always
   args:
   - /bin/sh
   - -c
