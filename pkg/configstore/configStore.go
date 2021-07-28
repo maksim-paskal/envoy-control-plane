@@ -10,7 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package configstore
 
 import (
 	"context"
@@ -25,6 +25,11 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/google/uuid"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
+	appConfig "github.com/maksim-paskal/envoy-control-plane/pkg/config"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/controlplane"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/endpointstore"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -34,28 +39,32 @@ import (
 )
 
 const (
-	configStoreStateRUN int = iota
-	configStoreStateSTOP
+	ConfigStoreStateRUN int = iota
+	ConfigStoreStateSTOP
 )
 
+var StoreMap = new(sync.Map)
+
 type ConfigStore struct {
-	version             string
-	config              *ConfigType
-	ep                  *EndpointsStore
-	kubernetesEndpoints sync.Map
+	Version             string
+	Config              *appConfig.ConfigType
+	ep                  *endpointstore.EndpointsStore
+	KubernetesEndpoints sync.Map
 	configEndpoints     map[string][]*endpoint.LocalityLbEndpoints
 	lastEndpoints       []types.Resource
-	lastEndpointsArray  []string
+	LastEndpointsArray  []string
 	ConfigStoreState    int
 	log                 *log.Entry
 	mutex               sync.Mutex
+	ctx                 context.Context
 }
 
-func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
+func New(config *appConfig.ConfigType, ep *endpointstore.EndpointsStore) *ConfigStore {
 	cs := ConfigStore{
-		config:           config,
+		Config:           config,
 		ep:               ep,
-		ConfigStoreState: configStoreStateRUN,
+		ctx:              context.Background(),
+		ConfigStoreState: ConfigStoreStateRUN,
 		log: log.WithFields(log.Fields{
 			"type":   "ConfigStore",
 			"nodeID": config.ID,
@@ -78,7 +87,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 		cs.log.WithError(err).Error()
 	}
 
-	pods, err := ep.factory.Core().V1().Pods().Lister().List(labels.Everything())
+	pods, err := ep.Factory.Core().V1().Pods().Lister().List(labels.Everything())
 	if err != nil {
 		cs.log.WithError(err).Error()
 	}
@@ -95,7 +104,7 @@ func newConfigStore(config *ConfigType, ep *EndpointsStore) *ConfigStore {
 }
 
 func (cs *ConfigStore) NewPod(pod *v1.Pod) {
-	if cs.ConfigStoreState == configStoreStateSTOP {
+	if cs.ConfigStoreState == ConfigStoreStateSTOP {
 		return
 	}
 
@@ -104,11 +113,11 @@ func (cs *ConfigStore) NewPod(pod *v1.Pod) {
 }
 
 func (cs *ConfigStore) DeletePod(pod *v1.Pod) {
-	if cs.ConfigStoreState == configStoreStateSTOP {
+	if cs.ConfigStoreState == ConfigStoreStateSTOP {
 		return
 	}
 
-	cs.kubernetesEndpoints.Delete(pod.Name)
+	cs.KubernetesEndpoints.Delete(pod.Name)
 
 	cs.saveLastEndpoints()
 }
@@ -119,21 +128,21 @@ func (cs *ConfigStore) push() {
 
 	for {
 		newVersion := uuid.New().String()
-		if newVersion != cs.version {
-			cs.version = newVersion
+		if newVersion != cs.Version {
+			cs.Version = newVersion
 
 			break
 		}
 	}
 
-	snap, err := getConfigSnapshot(cs.version, cs.config, cs.lastEndpoints)
+	snap, err := utils.GetConfigSnapshot(cs.Version, cs.Config, cs.lastEndpoints)
 	if err != nil {
 		cs.log.WithError(err).Error()
 
 		return
 	}
 
-	err = snapshotCache.SetSnapshot(cs.config.ID, snap)
+	err = controlplane.SnapshotCache.SetSnapshot(cs.Config.ID, snap)
 
 	if err != nil {
 		cs.log.WithError(err).Error()
@@ -141,7 +150,7 @@ func (cs *ConfigStore) push() {
 		return
 	}
 
-	cs.log.WithField("version", cs.version).Infof("pushed")
+	cs.log.WithField("version", cs.Version).Infof("pushed")
 }
 
 func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
@@ -152,15 +161,15 @@ func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
 		cs.log.Debugf("pod=%s,namespace=%s,podInfo=%+v", pod.Name, pod.Namespace, podInfo)
 
 		if pod.DeletionTimestamp != nil {
-			cs.kubernetesEndpoints.Delete(pod.Name)
+			cs.KubernetesEndpoints.Delete(pod.Name)
 		} else if podInfo.check {
-			cs.kubernetesEndpoints.Store(pod.Name, podInfo)
+			cs.KubernetesEndpoints.Store(pod.Name, podInfo)
 		}
 	}
 }
 
 func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEndpoints, error) {
-	endpoints, err := yamlToResources(cs.config.Endpoints, endpoint.ClusterLoadAssignment{})
+	endpoints, err := utils.YamlToResources(cs.Config.Endpoints, endpoint.ClusterLoadAssignment{})
 	if err != nil {
 		return nil, err
 	}
@@ -187,10 +196,10 @@ func (cs *ConfigStore) saveLastEndpoints() {
 		lbEndpoints[key] = value
 	}
 
-	cs.kubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
-		info, ok := value.(checkPodResult)
+	cs.KubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
+		info, ok := value.(CheckPodResult)
 		if !ok {
-			cs.log.WithError(errAssertion).Fatal("value.(checkPodResult)")
+			cs.log.WithError(errAssertion).Fatal("value.(CheckPodResult)")
 		}
 
 		// add endpoint only if ready
@@ -280,9 +289,9 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	// reflect.DeepEqual only on sorted values
 	sort.Strings(publishEpArray)
 
-	if !reflect.DeepEqual(cs.lastEndpointsArray, publishEpArray) {
+	if !reflect.DeepEqual(cs.LastEndpointsArray, publishEpArray) {
 		cs.lastEndpoints = publishEp
-		cs.lastEndpointsArray = publishEpArray
+		cs.LastEndpointsArray = publishEpArray
 		cs.log.Debug("new endpoints")
 		// endpoints changes
 		cs.push()
@@ -290,7 +299,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 }
 
 //nolint:maligned
-type checkPodResult struct {
+type CheckPodResult struct {
 	check           bool
 	clusterName     string
 	podIP           string
@@ -303,8 +312,8 @@ type checkPodResult struct {
 	healthCheckPort uint32
 }
 
-func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
-	for _, config := range cs.config.Kubernetes {
+func (cs *ConfigStore) podInfo(pod *v1.Pod) CheckPodResult {
+	for _, config := range cs.Config.Kubernetes {
 		if config.Namespace == pod.Namespace {
 			labelsFound := 0
 
@@ -325,7 +334,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					}
 				}
 
-				result := checkPodResult{
+				result := CheckPodResult{
 					check:           true,
 					clusterName:     config.ClusterName,
 					podIP:           pod.Status.PodIP,
@@ -338,11 +347,11 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 				}
 
 				// get zone from saved endpoint
-				ep, ok := cs.kubernetesEndpoints.Load(pod.Name)
+				ep, ok := cs.KubernetesEndpoints.Load(pod.Name)
 				if ok {
-					saved, ok := ep.(checkPodResult)
+					saved, ok := ep.(CheckPodResult)
 					if !ok {
-						cs.log.WithError(errAssertion).Fatal("ep.(checkPodResult)")
+						cs.log.WithError(errAssertion).Fatal("ep.(CheckPodResult)")
 					}
 
 					result.nodeZone = saved.nodeZone
@@ -355,7 +364,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 					if err != nil {
 						log.WithError(err).Error()
 					} else {
-						zone = nodeInfo.Labels[*appConfig.NodeZoneLabel]
+						zone = nodeInfo.Labels[*appConfig.Get().NodeZoneLabel]
 					}
 
 					if len(zone) == 0 {
@@ -370,16 +379,16 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) checkPodResult {
 		}
 	}
 
-	return checkPodResult{check: false}
+	return CheckPodResult{check: false}
 }
 
 func (cs *ConfigStore) Stop() {
 	cs.log.Info("stop")
-	cs.ConfigStoreState = configStoreStateSTOP
+	cs.ConfigStoreState = ConfigStoreStateSTOP
 }
 
 func (cs *ConfigStore) getNode(nodeName string) (*v1.Node, error) {
-	nodeInfo, err := cs.ep.clientset.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+	nodeInfo, err := api.Clientset.CoreV1().Nodes().Get(cs.ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "cs.ep.clientset.CoreV1().Nodes().Get")
 	}
@@ -388,23 +397,23 @@ func (cs *ConfigStore) getNode(nodeName string) (*v1.Node, error) {
 }
 
 func (cs *ConfigStore) Sync() {
-	if cs.ConfigStoreState == configStoreStateSTOP {
+	if cs.ConfigStoreState == ConfigStoreStateSTOP {
 		return
 	}
 
 	if cs.lastEndpoints != nil {
-		snap, err := snapshotCache.GetSnapshot(cs.config.ID)
+		snap, err := controlplane.SnapshotCache.GetSnapshot(cs.Config.ID)
 		if err != nil {
 			log.WithError(err).Warn()
 		}
 
 		snapVersion := snap.GetVersion(resource.EndpointType)
 
-		if len(snapVersion) > 0 && snapVersion != cs.version {
-			log.Warnf("nodeID=%s,version not match %s,%s", cs.config.ID, snapVersion, cs.version)
+		if len(snapVersion) > 0 && snapVersion != cs.Version {
+			log.Warnf("nodeID=%s,version not match %s,%s", cs.Config.ID, snapVersion, cs.Version)
 
 			cs.lastEndpoints = nil
-			cs.lastEndpointsArray = nil
+			cs.LastEndpointsArray = nil
 
 			cs.saveLastEndpoints()
 		}

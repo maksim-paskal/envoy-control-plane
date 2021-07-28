@@ -15,21 +15,24 @@ package main
 import (
 	"context"
 	"flag"
-	"io/ioutil"
+	"fmt"
 	"net"
 	"os"
-	"sync"
 	"time"
 
+	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/configmapsstore"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/configstore"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/controlplane"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/endpointstore"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/web"
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
-	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 )
-
-var gitVersion = "dev"
 
 const (
 	grpcKeepaliveTime        = 30 * time.Second
@@ -38,51 +41,48 @@ const (
 	grpcMaxConcurrentStreams = 1000000
 )
 
+var version = flag.Bool("version", false, "version")
+
 func main() {
 	flag.Parse()
 
-	if *appConfig.showVersion {
-		os.Stdout.WriteString(appConfig.Version)
+	if *version {
+		fmt.Println(config.GetVersion()) //nolint:forbidigo
 		os.Exit(0)
 	}
 
-	if len(*appConfig.ConfigFile) > 0 {
-		yamlFile, err := ioutil.ReadFile(*appConfig.ConfigFile)
-		if err != nil {
-			log.WithError(err).Fatal()
-		}
+	var err error
 
-		err = yaml.Unmarshal(yamlFile, &appConfig)
-		if err != nil {
-			log.WithError(err).Fatal()
-		}
+	if err = config.Load(); err != nil {
+		log.Fatal(err)
 	}
 
-	err := appConfig.CheckConfig()
+	logLevel, err := log.ParseLevel(*config.Get().LogLevel)
 	if err != nil {
 		log.WithError(err).Fatal()
 	}
 
-	logLevel, err := log.ParseLevel(*appConfig.LogLevel)
-	if err != nil {
-		log.WithError(err).Fatal()
-	}
+	log.SetLevel(logLevel)
 
-	if *appConfig.LogPretty {
+	log.Debugf("Using config:\n%s", config.String())
+
+	if *config.Get().LogPretty {
 		log.SetFormatter(&log.TextFormatter{})
 	} else {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
 
-	if logLevel == log.DebugLevel || *appConfig.LogReportCaller {
+	if logLevel == log.DebugLevel || *config.Get().LogReportCaller {
 		log.SetReportCaller(true)
 	}
 
-	log.SetLevel(logLevel)
+	if err = config.CheckConfig(); err != nil {
+		log.Fatal(err)
+	}
 
 	hook, err := logrushooksentry.NewHook(logrushooksentry.Options{
-		SentryDSN: *appConfig.SentryDSN,
-		Release:   appConfig.Version,
+		SentryDSN: *config.Get().SentryDSN,
+		Release:   config.GetVersion(),
 	})
 	if err != nil {
 		log.WithError(err).Error()
@@ -90,27 +90,23 @@ func main() {
 
 	log.AddHook(hook)
 
-	log.Infof("Starting %s...", appConfig.Version)
-	log.Debugf("loaded application config = \n%s", appConfig.String())
+	log.Infof("Starting %s...", config.GetVersion())
 
-	clientset, err := getKubernetesClient()
-	if err != nil {
+	if err = api.MakeAuth(); err != nil {
 		log.WithError(err).Fatal()
 	}
 
-	configStore := new(sync.Map)
+	ep := endpointstore.New()
 
-	ep := newEndpointsStore(clientset)
-
-	ep.onNewPod = func(pod *v1.Pod) {
-		configStore.Range(func(k, v interface{}) bool {
-			cs, ok := v.(*ConfigStore)
+	ep.OnNewPod = func(pod *v1.Pod) {
+		configstore.StoreMap.Range(func(k, v interface{}) bool {
+			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
-				ep.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 			}
 
-			if cs.ConfigStoreState != configStoreStateSTOP {
+			if cs.ConfigStoreState != configstore.ConfigStoreStateSTOP {
 				cs.NewPod(pod)
 			}
 
@@ -118,15 +114,15 @@ func main() {
 		})
 	}
 
-	ep.onDeletePod = func(pod *v1.Pod) {
-		configStore.Range(func(k, v interface{}) bool {
-			cs, ok := v.(*ConfigStore)
+	ep.OnDeletePod = func(pod *v1.Pod) {
+		configstore.StoreMap.Range(func(k, v interface{}) bool {
+			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
-				ep.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 			}
 
-			if cs.ConfigStoreState != configStoreStateSTOP {
+			if cs.ConfigStoreState != configstore.ConfigStoreStateSTOP {
 				cs.DeletePod(pod)
 			}
 
@@ -135,35 +131,35 @@ func main() {
 	}
 	defer ep.Stop()
 
-	cms := newConfigMapStore(clientset)
+	cms := configmapsstore.New()
 
-	cms.onNewConfig = func(config *ConfigType) {
+	cms.OnNewConfig = func(config *config.ConfigType) {
 		// delete entry in map if exists
-		if v, ok := configStore.Load(config.ID); ok {
-			cs, ok := v.(*ConfigStore)
+		if v, ok := configstore.StoreMap.Load(config.ID); ok {
+			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
-				ep.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 			}
 
 			cs.Stop()
 		}
 
 		log.Infof("Create configStore %s", config.ID)
-		configStore.Store(config.ID, newConfigStore(config, ep))
+		configstore.StoreMap.Store(config.ID, configstore.New(config, ep))
 	}
 
-	cms.onDeleteConfig = func(nodeID string) {
-		if v, ok := configStore.Load(nodeID); ok {
-			cs, ok := v.(*ConfigStore)
+	cms.OnDeleteConfig = func(nodeID string) {
+		if v, ok := configstore.StoreMap.Load(nodeID); ok {
+			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
-				ep.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 			}
 
 			cs.Stop()
 
-			drainPeriod, err := time.ParseDuration(*appConfig.ConfigDrainPeriod)
+			drainPeriod, err := time.ParseDuration(*config.Get().ConfigDrainPeriod)
 
 			if err != nil {
 				log.WithError(err).Error()
@@ -171,8 +167,8 @@ func main() {
 				time.Sleep(drainPeriod)
 			}
 
-			configStore.Delete(nodeID)
-			snapshotCache.ClearSnapshot(nodeID)
+			configstore.StoreMap.Delete(nodeID)
+			controlplane.SnapshotCache.ClearSnapshot(nodeID)
 		}
 	}
 
@@ -195,52 +191,59 @@ func main() {
 
 	defer grpcServer.GracefulStop()
 
-	lis, err := net.Listen("tcp", *appConfig.GrpcAddress)
+	lis, err := net.Listen("tcp", *config.Get().GrpcAddress)
 	if err != nil {
 		log.WithError(err).Error()
 
 		return
 	}
 
-	newControlPlane(ctx, grpcServer)
-	newWebServer(clientset, configStore)
+	controlplane.New(ctx, grpcServer)
 
-	log.Info("grpc.port=", *appConfig.GrpcAddress)
+	go web.NewServer().Start()
 
-	go func() {
-		if err = grpcServer.Serve(lis); err != nil {
-			log.WithError(err).Fatal()
-		}
-	}()
+	log.Info("grpc.port=", *config.Get().GrpcAddress)
+
+	go startGRPC(grpcServer, lis)
 
 	// sync manual
-	go func() {
-		WaitTime, err := time.ParseDuration(*appConfig.EndpointCheckPeriod)
-		if err != nil {
-			log.WithError(err).Fatal()
-		}
-
-		for {
-			time.Sleep(WaitTime)
-
-			configStore.Range(func(k, v interface{}) bool {
-				cs, ok := v.(*ConfigStore)
-
-				if !ok {
-					log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
-				}
-
-				if cs.ConfigStoreState != configStoreStateSTOP {
-					log.Debugf("check endpoints=%s", cs.config.ID)
-					cs.Sync()
-				}
-
-				return true
-			})
-		}
-	}()
+	go syncManual()
 
 	defer hook.Stop()
 
 	<-ctx.Done()
+}
+
+// starts GRPC server.
+func startGRPC(grpcServer *grpc.Server, lis net.Listener) {
+	if err := grpcServer.Serve(lis); err != nil {
+		log.WithError(err).Fatal()
+	}
+}
+
+// sync all endpoints in configs with endpointstore.
+func syncManual() {
+	WaitTime, err := time.ParseDuration(*config.Get().EndpointCheckPeriod)
+	if err != nil {
+		log.WithError(err).Fatal()
+	}
+
+	for {
+		time.Sleep(WaitTime)
+
+		configstore.StoreMap.Range(func(k, v interface{}) bool {
+			cs, ok := v.(*configstore.ConfigStore)
+
+			if !ok {
+				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+			}
+
+			if cs.ConfigStoreState != configstore.ConfigStoreStateSTOP {
+				log.Debugf("check endpoints=%s", cs.Config.ID)
+				cs.Sync()
+			}
+
+			return true
+		})
+	}
 }

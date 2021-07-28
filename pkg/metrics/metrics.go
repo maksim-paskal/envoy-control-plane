@@ -69,12 +69,6 @@ var (
 	})
 )
 
-func NewMetrics() *Metrics {
-	m := Metrics{}
-
-	return &m
-}
-
-func (m *Metrics) Handler() http.Handler {
+func GetHandler() http.Handler {
 	return promhttp.Handler()
 }

@@ -15,4 +15,4 @@ jobs:
       with:
         stable: 'false'
         go-version: '1.16'
-    - run: go test -race ./cmd/main
+    - run: ./scripts/test-pkg.sh

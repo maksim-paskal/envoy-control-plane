@@ -13,7 +13,6 @@ data:
       port: 8001
       selector:
         app: test-001
-
     - cluster_name: test-envoy-service
       port: 8001
       selector:

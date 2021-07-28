@@ -10,14 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package config
 
 import "errors"
 
-var (
-	errInvalidIP    = errors.New("can not push changes, isInvalidIP")
-	errTimeout      = errors.New("timed out waiting for caches to sync")
-	errUnknownClass = errors.New("unknown class")
-	errUseNamespace = errors.New("use namespace name if using namespaced")
-	errAssertion    = errors.New("assertion error")
-)
+var errUseNamespace = errors.New("use namespace name if using namespaced")

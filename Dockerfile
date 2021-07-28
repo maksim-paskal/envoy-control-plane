@@ -14,7 +14,7 @@ RUN cd /usr/src/envoy-control-plane \
   && go mod download \
   && go mod verify \
   && go build -v -o envoy-control-plane -ldflags \
-  "-X main.gitVersion=$(git describe --tags `git rev-list --tags --max-count=1`)-$(date +%Y%m%d%H%M%S)-$(git log -n1 --pretty='%h')" \
+  "-X github.com/maksim-paskal/envoy-control-plane/pkg/config.gitVersion=$(git describe --tags `git rev-list --tags --max-count=1`)-$(date +%Y%m%d%H%M%S)-$(git log -n1 --pretty='%h')" \
   ./cmd/main \
   && ./envoy-control-plane -version
 

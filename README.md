@@ -7,10 +7,16 @@ Popular Istio or Linkerd is very complex to do something simple with kubernetes 
 ```bash
 git clone git@github.com:maksim-paskal/envoy-control-plane.git
 
-helm upgrade --install envoy-control-plane --create-namespace -n envoy-control-plane ./chart/envoy-control-plane --set withExamples=true --set ingress.enabled=true
+helm upgrade envoy-control-plane \
+  --install \
+  --create-namespace \
+  --namespace envoy-control-plane \
+  ./chart/envoy-control-plane \
+  --set withExamples=true \
+  --set ingress.enabled=true
 
 # test
-curl -k -H "Host: test.dev.com" https://<ingress fqdn or IP>/2
+curl -k -H "Host: test.dev.com" https://<IngressAddress>/2
 
 
 # to uninstall

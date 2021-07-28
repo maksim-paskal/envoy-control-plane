@@ -10,7 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package utils
 
 import (
 	"encoding/json"
@@ -21,24 +21,25 @@ import (
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/utils-go"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Resource) (cache.Snapshot, error) {
-	clusters, err := yamlToResources(config.Clusters, cluster.Cluster{})
+func GetConfigSnapshot(version string, config *config.ConfigType, endpoints []types.Resource) (cache.Snapshot, error) { //nolint: lll
+	clusters, err := YamlToResources(config.Clusters, cluster.Cluster{})
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
 
-	routes, err := yamlToResources(config.Routes, route.RouteConfiguration{})
+	routes, err := YamlToResources(config.Routes, route.RouteConfiguration{})
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
 
-	listiners, err := yamlToResources(config.Listeners, listener.Listener{})
+	listiners, err := YamlToResources(config.Listeners, listener.Listener{})
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
@@ -54,7 +55,7 @@ func getConfigSnapshot(version string, config *ConfigType, endpoints []types.Res
 	), nil
 }
 
-func yamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resource, error) {
+func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resource, error) {
 	if len(yamlObj) == 0 {
 		return nil, nil
 	}

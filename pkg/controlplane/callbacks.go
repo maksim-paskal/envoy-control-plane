@@ -10,13 +10,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package controlplane
 
 import (
 	"context"
 	"sync"
 
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -33,7 +34,7 @@ func (cb *callbacks) Report() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log.WithFields(log.Fields{"fetches": cb.fetches, "requests": cb.requests}).Info("cb.Report()  callbacks")
 	}
 }
@@ -41,7 +42,7 @@ func (cb *callbacks) Report() {
 func (cb *callbacks) OnStreamOpen(ctx context.Context, id int64, typ string) error {
 	metrics.GrpcOnStreamOpen.Inc()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log.Debugf("OnStreamOpen %d open for %s", id, typ)
 	}
 
@@ -51,7 +52,7 @@ func (cb *callbacks) OnStreamOpen(ctx context.Context, id int64, typ string) err
 func (cb *callbacks) OnStreamClosed(id int64) {
 	metrics.GrpcOnStreamClosed.Inc()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log.Debugf("OnStreamClosed %d closed", id)
 	}
 }
@@ -59,7 +60,7 @@ func (cb *callbacks) OnStreamClosed(id int64) {
 func (cb *callbacks) OnStreamRequest(id int64, r *discovery.DiscoveryRequest) error {
 	metrics.GrpcOnStreamRequest.Inc()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log.Debugf("OnStreamRequest")
 	}
 
@@ -78,7 +79,7 @@ func (cb *callbacks) OnStreamRequest(id int64, r *discovery.DiscoveryRequest) er
 func (cb *callbacks) OnStreamResponse(id int64, r *discovery.DiscoveryRequest, w *discovery.DiscoveryResponse) {
 	metrics.GrpcOnStreamResponse.Inc()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		json, _ := protojson.Marshal(r)
 		log.Debugf("DiscoveryRequest=>\n%s\n", string(json))
 
@@ -92,7 +93,7 @@ func (cb *callbacks) OnStreamResponse(id int64, r *discovery.DiscoveryRequest, w
 func (cb *callbacks) OnFetchRequest(ctx context.Context, req *discovery.DiscoveryRequest) error {
 	metrics.GrpcOnFetchRequest.Inc()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log.Debugf("OnFetchRequest...")
 	}
 
@@ -111,7 +112,7 @@ func (cb *callbacks) OnFetchRequest(ctx context.Context, req *discovery.Discover
 func (cb *callbacks) OnFetchResponse(r *discovery.DiscoveryRequest, w *discovery.DiscoveryResponse) {
 	metrics.GrpcOnFetchResponse.Inc()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		json, _ := protojson.Marshal(r)
 		log.Debugf("DiscoveryRequest=>\n%s\n", string(json))
 
@@ -123,7 +124,7 @@ func (cb *callbacks) OnFetchResponse(r *discovery.DiscoveryRequest, w *discovery
 func (cb *callbacks) OnStreamDeltaRequest(streamID int64, req *discovery.DeltaDiscoveryRequest) error {
 	metrics.GrpcOnStreamDeltaRequest.Inc()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log := log.WithField("streamID", streamID)
 
 		json, _ := protojson.Marshal(req)
@@ -136,7 +137,7 @@ func (cb *callbacks) OnStreamDeltaRequest(streamID int64, req *discovery.DeltaDi
 func (cb *callbacks) OnStreamDeltaResponse(streamID int64, req *discovery.DeltaDiscoveryRequest, resp *discovery.DeltaDiscoveryResponse) { //nolint:lll
 	metrics.GrpcOnStreamDeltaResponse.Inc()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log := log.WithField("streamID", streamID)
 
 		json, _ := protojson.Marshal(req)
@@ -147,10 +148,10 @@ func (cb *callbacks) OnStreamDeltaResponse(streamID int64, req *discovery.DeltaD
 	}
 }
 
-func (cb *callbacks) OnStreamDeltaRequestOnStreamDeltaRequest(streamID int64, req *discovery.DeltaDiscoveryRequest) error { //nolint:lll,unparam
+func (cb *callbacks) OnStreamDeltaRequestOnStreamDeltaRequest(streamID int64, req *discovery.DeltaDiscoveryRequest) error { //nolint: lll
 	metrics.GrpcOnStreamDeltaRequestOnStreamDeltaRequest.Inc()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log := log.WithField("streamID", streamID)
 
 		json, _ := protojson.Marshal(req)
@@ -163,7 +164,7 @@ func (cb *callbacks) OnStreamDeltaRequestOnStreamDeltaRequest(streamID int64, re
 func (cb *callbacks) OnDeltaStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
 	metrics.GrpcOnDeltaStreamOpen.Inc()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log := log.WithField("streamID", streamID)
 
 		log.Debugf("typeURL=>\n%s\n", typeURL)
@@ -175,7 +176,7 @@ func (cb *callbacks) OnDeltaStreamOpen(ctx context.Context, streamID int64, type
 func (cb *callbacks) OnDeltaStreamClosed(streamID int64) {
 	metrics.GrpcOnDeltaStreamClosed.Inc()
 
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log := log.WithField("streamID", streamID)
 
 		log.Debugf("closed")
