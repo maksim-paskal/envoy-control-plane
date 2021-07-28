@@ -28,6 +28,7 @@ spec:
             port:
               number: 8000
       - path: /api
+        pathType: Prefix
         backend:
           service:
             name: envoy-control-plane

@@ -10,34 +10,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package controlplane
 
 import (
+	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	log "github.com/sirupsen/logrus"
 )
 
 type Logger struct{}
 
 func (s *Logger) Infof(format string, args ...interface{}) {
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log.Infof(format, args...)
 	}
 }
 
 func (s *Logger) Debugf(format string, args ...interface{}) {
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log.Debugf(format, args...)
 	}
 }
 
 func (s *Logger) Warnf(format string, args ...interface{}) {
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log.Warnf(format, args...)
 	}
 }
 
 func (s *Logger) Errorf(format string, args ...interface{}) {
-	if log.GetLevel() >= log.DebugLevel || *appConfig.LogAccess {
+	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log.Errorf(format, args...)
 	}
 }

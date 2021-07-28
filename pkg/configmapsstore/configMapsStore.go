@@ -10,110 +10,113 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package configmapsstore
 
 import (
 	"fmt"
 	"reflect"
 	"strings"
 
+	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
 
 type ConfigMapStore struct {
 	stopCh         chan struct{}
-	onNewConfig    func(*ConfigType)
-	onDeleteConfig func(string)
+	OnNewConfig    func(*config.ConfigType)
+	OnDeleteConfig func(string)
 	log            *log.Entry
 	factory        informers.SharedInformerFactory
 	informer       cache.SharedIndexInformer
 }
 
-func newConfigMapStore(clientset kubernetes.Interface) *ConfigMapStore {
+func New() *ConfigMapStore {
 	cms := ConfigMapStore{
 		log: log.WithFields(log.Fields{
 			"type": "ConfigMapStore",
 		}),
 	}
 
-	go func() {
-		if *appConfig.WatchNamespaced {
-			cms.log.Debugf("start namespaced %s", *appConfig.Namespace)
-			cms.factory = informers.NewSharedInformerFactoryWithOptions(
-				clientset, 0,
-				informers.WithNamespace(*appConfig.Namespace),
-			)
-		} else {
-			cms.factory = informers.NewSharedInformerFactoryWithOptions(
-				clientset, 0,
-			)
-		}
-
-		cms.informer = cms.factory.Core().V1().ConfigMaps().Informer()
-
-		cms.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				cm, ok := obj.(*v1.ConfigMap)
-				if !ok {
-					cms.log.WithError(errAssertion).Fatal("obj.(*v1.ConfigMap)")
-				}
-
-				cms.CheckData(cm)
-			},
-			UpdateFunc: func(old, cur interface{}) {
-				curConfig, ok := cur.(*v1.ConfigMap)
-				if !ok {
-					cms.log.WithError(errAssertion).Fatal("cur.(*v1.ConfigMap)")
-				}
-
-				oldConfig, ok := old.(*v1.ConfigMap)
-				if !ok {
-					cms.log.WithError(errAssertion).Fatal("old.(*v1.ConfigMap)")
-				}
-
-				if reflect.DeepEqual(curConfig.Data, oldConfig.Data) {
-					return
-				}
-
-				cms.CheckData(curConfig)
-			},
-			DeleteFunc: func(obj interface{}) {
-				cm, ok := obj.(*v1.ConfigMap)
-				if !ok {
-					cms.log.WithError(errAssertion).Fatal("obj.(*v1.ConfigMap)")
-				}
-
-				cms.deleteUnusedConfig(cm)
-			},
-		})
-
-		cms.stopCh = make(chan struct{})
-
-		defer close(cms.stopCh)
-
-		cms.factory.Start(cms.stopCh)
-		cms.factory.WaitForCacheSync(cms.stopCh)
-
-		go cms.informer.Run(cms.stopCh)
-
-		if !cache.WaitForCacheSync(cms.stopCh, cms.informer.HasSynced) {
-			log.WithError(errTimeout).Fatal()
-
-			return
-		}
-
-		<-cms.stopCh
-	}()
+	go cms.init()
 
 	return &cms
 }
 
+func (cms *ConfigMapStore) init() {
+	if *config.Get().WatchNamespaced {
+		cms.log.Infof("start namespaced, namespace=%s", *config.Get().Namespace)
+		cms.factory = informers.NewSharedInformerFactoryWithOptions(
+			api.Clientset, 0,
+			informers.WithNamespace(*config.Get().Namespace),
+		)
+	} else {
+		cms.factory = informers.NewSharedInformerFactoryWithOptions(
+			api.Clientset, 0,
+		)
+	}
+
+	cms.informer = cms.factory.Core().V1().ConfigMaps().Informer()
+
+	cms.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			cm, ok := obj.(*v1.ConfigMap)
+			if !ok {
+				cms.log.WithError(errAssertion).Fatal("obj.(*v1.ConfigMap)")
+			}
+
+			cms.CheckData(cm)
+		},
+		UpdateFunc: func(old, cur interface{}) {
+			curConfig, ok := cur.(*v1.ConfigMap)
+			if !ok {
+				cms.log.WithError(errAssertion).Fatal("cur.(*v1.ConfigMap)")
+			}
+
+			oldConfig, ok := old.(*v1.ConfigMap)
+			if !ok {
+				cms.log.WithError(errAssertion).Fatal("old.(*v1.ConfigMap)")
+			}
+
+			if reflect.DeepEqual(curConfig.Data, oldConfig.Data) {
+				return
+			}
+
+			cms.CheckData(curConfig)
+		},
+		DeleteFunc: func(obj interface{}) {
+			cm, ok := obj.(*v1.ConfigMap)
+			if !ok {
+				cms.log.WithError(errAssertion).Fatal("obj.(*v1.ConfigMap)")
+			}
+
+			cms.deleteUnusedConfig(cm)
+		},
+	})
+
+	cms.stopCh = make(chan struct{})
+
+	defer close(cms.stopCh)
+
+	cms.factory.Start(cms.stopCh)
+	cms.factory.WaitForCacheSync(cms.stopCh)
+
+	go cms.informer.Run(cms.stopCh)
+
+	if !cache.WaitForCacheSync(cms.stopCh, cms.informer.HasSynced) {
+		log.WithError(errTimeout).Fatal()
+
+		return
+	}
+
+	<-cms.stopCh
+}
+
 func (cms *ConfigMapStore) CheckConfigMapLabels(cm *v1.ConfigMap) bool {
-	label := strings.Split(*appConfig.ConfigMapLabels, "=")
+	label := strings.Split(*config.Get().ConfigMapLabels, "=")
 
 	return (cm.Labels[label[0]] == label[1])
 }
@@ -124,7 +127,7 @@ func (cms *ConfigMapStore) deleteUnusedConfig(cm *v1.ConfigMap) {
 	}
 
 	for nodeID := range cm.Data {
-		go cms.onDeleteConfig(nodeID)
+		go cms.OnDeleteConfig(nodeID)
 	}
 }
 
@@ -140,7 +143,7 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 			"nodeID":             nodeID,
 		})
 
-		config, err := parseConfigYaml(nodeID, text, nil)
+		config, err := config.ParseConfigYaml(nodeID, text, nil)
 		if err != nil {
 			cms.log.WithError(err).Errorf("error parsing %s: %s", nodeID, text)
 		} else {
@@ -166,7 +169,7 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 					config.Kubernetes[i].Selector["version"] = config.VersionLabel
 				}
 			}
-			go cms.onNewConfig(&config)
+			go cms.OnNewConfig(&config)
 		}
 	}
 }

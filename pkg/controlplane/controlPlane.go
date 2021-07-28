@@ -10,7 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package controlplane
 
 import (
 	"context"
@@ -25,11 +25,11 @@ import (
 	"google.golang.org/grpc"
 )
 
-var snapshotCache cache.SnapshotCache = cache.NewSnapshotCache(false, cache.IDHash{}, &Logger{})
+var SnapshotCache cache.SnapshotCache = cache.NewSnapshotCache(false, cache.IDHash{}, &Logger{})
 
 type ControlPlane struct{}
 
-func newControlPlane(ctx context.Context, grpcServer *grpc.Server) *ControlPlane {
+func New(ctx context.Context, grpcServer *grpc.Server) *ControlPlane {
 	cp := ControlPlane{}
 
 	signal := make(chan struct{})
@@ -41,7 +41,7 @@ func newControlPlane(ctx context.Context, grpcServer *grpc.Server) *ControlPlane
 
 	als := &AccessLogService{}
 
-	server := xds.NewServer(ctx, snapshotCache, cb)
+	server := xds.NewServer(ctx, SnapshotCache, cb)
 
 	accesslog.RegisterAccessLogServiceServer(grpcServer, als)
 	endpointservice.RegisterEndpointDiscoveryServiceServer(grpcServer, server)

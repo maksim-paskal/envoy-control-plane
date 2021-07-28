@@ -1,10 +1,11 @@
+KUBECONFIG=$(HOME)/.kube/example-kubeconfig
+
 test:
 	./scripts/validate-license.sh
-	go fmt ./cmd/main
-	go fmt ./cmd/cli
+	go fmt ./cmd/...
+	go fmt ./pkg/...
 	go mod tidy
-	go test -race ./cmd/main
-	go test -race ./cmd/cli
+	./scripts/test-pkg.sh
 	golangci-lint run -v
 testChart:
 	helm lint --strict ./chart/envoy-control-plane
@@ -28,16 +29,22 @@ run:
 	@./scripts/build-main.sh
 	docker-compose down --remove-orphans && docker-compose up
 runRaceDetection:
-	MY_POD_NAMESPACE=default go run -v -race ./cmd/main -kubeconfig.path=kubeconfig
+	go run -v -race ./cmd/main -log.level=DEBUG -kubeconfig.path=$(KUBECONFIG)
 installDev:
-	helm delete --purge envoy-control-plane || true
-	helm install --namespace envoy-control-plane --name envoy-control-plane ./chart/envoy-control-plane
+	helm uninstall envoy-control-plane --namespace envoy-control-plane || true
+	helm upgrade envoy-control-plane \
+  --install \
+  --create-namespace \
+  --namespace envoy-control-plane \
+  ./chart/envoy-control-plane \
+  --set withExamples=true \
+  --set ingress.enabled=true
 	kubectl apply -n envoy-control-plane -f ./chart/envoy-control-plane/templates/testPods.yaml
 	watch kubectl -n envoy-control-plane get pods
 installDevConfig:
 	kubectl -n envoy-control-plane apply -f ./chart/envoy-control-plane/templates/envoy-test1-id.yaml
 clean:
-	helm delete --purge envoy-control-plane || true
+	helm uninstall envoy-control-plane --namespace envoy-control-plane || true
 	kubectl delete ns envoy-control-plane || true
 	kubectl delete -f ./config/ || true
 	kubectl delete -f ./chart/envoy-control-plane/templates/testPods.yaml || true

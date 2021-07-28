@@ -10,7 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package config
 
 import (
 	"bytes"
@@ -34,7 +34,7 @@ type kubernetesType struct {
 	Selector        map[string]string `yaml:"selector"`
 }
 
-type ConfigType struct {
+type ConfigType struct { //nolint: golint,revive
 	ID string `yaml:"id"`
 	// add version to node name
 	UseVersionLabel bool `yaml:"useversionlabel"`
@@ -49,7 +49,7 @@ type ConfigType struct {
 	Listeners          []interface{}    `yaml:"listeners"`
 }
 
-func parseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, error) {
+func ParseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, error) {
 	t := template.New(nodeID)
 	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).Parse(text))
 
