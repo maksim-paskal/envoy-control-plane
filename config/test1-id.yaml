@@ -142,6 +142,17 @@ data:
     - name: test
       virtual_hosts:
       - name: test
+        retry_policy:
+          retry_on: "cancelled,connect-failure,gateway-error,refused-stream,reset,resource-exhausted,unavailable"
+          num_retries: 1
+          retry_host_predicate:
+          - name: envoy.retry_host_predicates.previous_hosts
+          host_selection_retry_max_attempts: 3
+          retry_priority:
+            name: envoy.retry_priorities.previous_priorities
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.retry.priority.previous_priorities.v3.PreviousPrioritiesConfig
+              update_frequency: 2
         domains:
         - "*"
         rate_limits:
