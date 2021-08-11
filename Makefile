@@ -12,6 +12,11 @@ testChart:
 	helm template ./chart/envoy-control-plane | kubectl apply --dry-run=client --validate -f -
 build:
 	docker build --pull . -t paskalmaksim/envoy-control-plane:dev
+security-scan:
+	trivy fs --ignore-unfixed .
+security-check:
+	# https://github.com/aquasecurity/trivy
+	trivy --ignore-unfixed paskalmaksim/envoy-control-plane:dev
 build-envoy:
 	docker-compose build envoy-test1
 buildEnvoy:
