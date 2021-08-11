@@ -18,7 +18,7 @@ RUN cd /usr/src/envoy-control-plane \
   ./cmd/main \
   && ./envoy-control-plane -version
 
-FROM alpine:3.13
+FROM alpine:3.14
 
 COPY --from=build /usr/src/envoy-control-plane/envoy-control-plane /app/envoy-control-plane
 

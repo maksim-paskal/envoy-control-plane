@@ -2,7 +2,7 @@ version: '3'
 
 services:
   envoy-control-plane:
-    image: alpine:3.13
+    image: alpine:3.14
     volumes:
     - .:/app
     environment:
