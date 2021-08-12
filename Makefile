@@ -7,10 +7,14 @@ test:
 	go mod tidy
 	./scripts/test-pkg.sh
 	golangci-lint run -v
+test-release:
+	goreleaser release --snapshot --skip-publish --rm-dist
 testChart:
 	helm lint --strict ./chart/envoy-control-plane
 	helm template ./chart/envoy-control-plane | kubectl apply --dry-run=client --validate -f -
 build:
+	goreleaser build --rm-dist --skip-validate
+	mv ./dist/envoy-control-plane_linux_amd64/envoy-control-plane envoy-control-plane
 	docker build --pull . -t paskalmaksim/envoy-control-plane:dev
 security-scan:
 	trivy fs --ignore-unfixed .
@@ -20,9 +24,7 @@ security-check:
 build-envoy:
 	docker-compose build envoy-test1
 buildEnvoy:
-	docker build --pull ./envoy -t paskalmaksim/envoy-docker-image:dev
-build-cli:
-	./scripts/build-cli.sh
+	docker build --pull . -f ./envoy/Dockerfile -t paskalmaksim/envoy-docker-image:dev
 push:
 	docker push paskalmaksim/envoy-control-plane:dev
 pushEnvoy:
@@ -31,7 +33,8 @@ k8sConfig:
 	kubectl apply -f ./chart/envoy-control-plane/templates/testPods.yaml
 	kubectl apply -f ./config/
 run:
-	@./scripts/build-main.sh
+	goreleaser build --rm-dist --skip-validate
+	mv ./dist/envoy-control-plane_linux_amd64/envoy-control-plane ./envoy-control-plane
 	docker-compose down --remove-orphans && docker-compose up
 runRaceDetection:
 	go run -v -race ./cmd/main -log.level=DEBUG -kubeconfig.path=$(KUBECONFIG)
