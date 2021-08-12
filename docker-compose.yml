@@ -2,7 +2,8 @@ version: '3'
 
 services:
   envoy-control-plane:
-    image: alpine:3.14
+    build:
+      context: .
     volumes:
     - .:/app
     environment:
@@ -11,7 +12,7 @@ services:
     ports:
     - 18081:18081
     command:
-    - /app/main-linux
+    - /app/envoy-control-plane
     - -log.level=INFO
     - -kubeconfig.path=/app/kubeconfig
   statsd:
@@ -47,7 +48,8 @@ services:
       ratelimit
   envoy-test1:
     build:
-      context: ./envoy
+      dockerfile: ./envoy/Dockerfile
+      context: .
     ports:
     - 8000:8000   # inbound
     - 18000:18000 # admin

@@ -1,0 +1,47 @@
+dockers:
+- goos: linux
+  goarch: amd64
+  image_templates:
+  - paskalmaksim/envoy-control-plane:latest
+  - paskalmaksim/envoy-control-plane:{{ .Tag }}
+- dockerfile: ./envoy/Dockerfile
+  goos: linux
+  goarch: amd64
+  image_templates:
+  - paskalmaksim/envoy-docker-image:latest
+  - paskalmaksim/envoy-docker-image:{{ .Tag }}
+  extra_files:
+  - envoy/
+builds:
+- dir: ./cmd/cli
+  id: cli
+  binary: cli
+  env:
+  - CGO_ENABLED=0
+  flags:
+  - -trimpath
+  goos:
+  - linux
+  goarch:
+  - amd64
+- dir: ./cmd/main
+  env:
+  - CGO_ENABLED=0
+  flags:
+  - -trimpath
+  ldflags:
+  - -X github.com/maksim-paskal/envoy-control-plane/pkg/config.gitVersion={{.Version}}-{{.ShortCommit}}-{{.Timestamp}}
+  goos:
+  - linux
+  goarch:
+  - amd64
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
