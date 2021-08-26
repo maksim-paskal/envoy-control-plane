@@ -31,6 +31,62 @@ data:
               socket_address:
                 address: 127.0.0.2
                 port_value: 18000
+    secrets:
+    - name: server_cert
+      tls_certificate:
+        certificate_chain:
+          inline_string: |
+            -----BEGIN CERTIFICATE-----
+            MIIDYjCCAkoCCQDArpUA7DFQcDANBgkqhkiG9w0BAQsFADBzMQswCQYDVQQGEwJH
+            QjEPMA0GA1UECAwGTG9uZG9uMQ8wDQYDVQQHDAZMb25kb24xGDAWBgNVBAoMD0ds
+            b2JhbCBTZWN1cml0eTEWMBQGA1UECwwNSVQgRGVwYXJ0bWVudDEQMA4GA1UEAwwH
+            Ki5sb2NhbDAeFw0yMTA4MjUxNTQyMDNaFw0zMTA4MjMxNTQyMDNaMHMxCzAJBgNV
+            BAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE
+            CgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRAwDgYD
+            VQQDDAcqLmxvY2FsMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA5W7n
+            xqdzIyBIhosaAemJkqlkuRS5juSHBw0volwu/SKwnksDbB5QAKjC4Ga41MtuR0VN
+            ae/yCv4XH+391zaZnyVSuKjxYyzoccbdHWz3JiGJzQnmNViV+McXoe//Kv4b5LD8
+            +/2qmei+G/Ulq3dZ58TENVqBy3SumB/i7wq/p//e2yzt3W89e1AwxF9/pWLTmqnB
+            /TPoXCinKCli17zIRzwyVrSwd/DWKK2a26A3MTZGfGB5g7Fai38vc9RO2plB09gZ
+            vzV+yYgZyvC7Zc6SFtUHWRLKbqgQ0A9osDXBJ+4ChrLDx9NfF+3qvCRXGlOYT8bR
+            HndVzPQQHPMKhsYtYQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQBRwuiv51GxEVHb
+            aSmHt/yBlM19FUEg+3z78NkL+gHMssIj+ANcSEzvXglaihMTAIKxYiRK7Vh88SW4
+            F3XNzlEmQOfOfvg3uyz+eQZjr+XkGSzYNoK2dmgS6JjH70SCsCu4qe5MeBPv24MK
+            ILbudQijVmCLph34W/v5VtkAC+OrcRZwNA6p1osJxU0kbj/Yg9H2JkvNG/QZM3Lb
+            rW9Hi6c57L6tTGUKc/7onu/0SnFcuJKESVG/sKiL5K4pMTm5gfDxGh69awFK9oCk
+            a0RHlVTdZsFAwOi9yIQaKwvEtOniPw5V5b1opVVKPhg/fHH4wK00VLdLsagaxr/e
+            BcdcEHDp
+            -----END CERTIFICATE-----
+        private_key:
+          inline_string: |
+            -----BEGIN PRIVATE KEY-----
+            MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDlbufGp3MjIEiG
+            ixoB6YmSqWS5FLmO5IcHDS+iXC79IrCeSwNsHlAAqMLgZrjUy25HRU1p7/IK/hcf
+            7f3XNpmfJVK4qPFjLOhxxt0dbPcmIYnNCeY1WJX4xxeh7/8q/hvksPz7/aqZ6L4b
+            9SWrd1nnxMQ1WoHLdK6YH+LvCr+n/97bLO3dbz17UDDEX3+lYtOaqcH9M+hcKKco
+            KWLXvMhHPDJWtLB38NYorZrboDcxNkZ8YHmDsVqLfy9z1E7amUHT2Bm/NX7JiBnK
+            8LtlzpIW1QdZEspuqBDQD2iwNcEn7gKGssPH018X7eq8JFcaU5hPxtEed1XM9BAc
+            8wqGxi1hAgMBAAECggEAPGZPBCAvEm88SJc0GI7HleGcT5EiLHkDBxs0kBSelitc
+            vb9Xvk3Yl+PVsce5HuQTOxYGhD4TxUsRAWng6phIJvpnZY+sRISdCN7mdQmrotEv
+            etgBT8fra1vWX95TmZjd9P2XDCvCjtQTwD5wVUyNUZOeZ8FU7B/ims/CKVX2EJ6u
+            9zLIGs3QcGa/wbTR3oIo4IJtZLWMWEVI2rBhD9XC25RoSysDH8Il1tt2DOwTsh0/
+            utLMkVyeZagUcv8DhbxHlNQnobpUA6AklkKa47aBc6zESxkcrRH7YF/KiusMjIJK
+            Fmb3DR2iNvfWvcqUSsA0hWRYdbfdquBvnz43GtSvwQKBgQD7Y5s9W+bIjnepJqjF
+            PhoHdzUsydKuZbP/yQd0iHOGJ/kxcI4qs64xLBwcnaSVZkIEdxA9w/Uz5wAHfuIJ
+            yc3smE0q2MucHRPChNMc+m4/JIzUfniO8LM7Y7XFe92Ik/DD6fDZdbS7VfRS4oB3
+            JmCp5u7ByPkRpTbTfDMPGaBXmQKBgQDppDSe/Qu1x2RUvqF4ucDnwcW362qWoPMl
+            WLvg+2UN7ott/ooj+Qj5oyZsan67PLP7ZAvTDLY0WUpnyeyUQn1aw/tl/dfpvLq6
+            rriCrrhXL/mlkYi94rnvXp9czW8u7NOlEsNoP+sLBXFLrWc+2hQ1eYYcoLtdBwyv
+            2YmQ51eBCQKBgQDLh4V0VCexUMdIx+f0aachTD5dGLneQLFO8i97Bc6iW1LB2GMB
+            55+saA4KjQdnffcNLmiT2Ud40hmP+AaB7kUuvNAdVJDkwBXzcx6JY6hGrwzmLc7l
+            y7MQ7lWIohRmM4DG3W0GYuoEkj7RrFheH1A7vqCnfFNLGfwdlXyxSQosYQKBgH94
+            o20KylTHEKpbx2VCk0jeo60Qt/qunXoGy5qYDi5ns5KziVLPEGKC7PfBspsdJ2VE
+            1F61VMOC4+F0far2C8Z1nreqox5XZdlsciZ6hQCsoBwBJwXSqXc7vN65BqwnceFi
+            N1KtbON6eLG9TdMw0E3Mm6sK1q6OphFbMn7oeQlhAoGBAMi/Hg9uKC0DWZ20gccD
+            NLjPD+ROCb8r9Rx3Jy2WrLFdT3NDg21rA4Zd9sQwZr+oTBNeehCwR/QwyWif3FDX
+            zZOiDMuLsbLgOnesOBqc0l2LST5rCEoCjfjf8L9Qzr7llAdaFE6Bzg3bzcO7CNK/
+            D/b3snxxt5ZnU4Y1HKAtKrEv
+            -----END PRIVATE KEY-----
     listeners:
     - name: listener_0
       address:
@@ -296,6 +352,17 @@ data:
         name: envoy.transport_sockets.tls
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          common_tls_context:
+            tls_certificate_sds_secret_configs:
+            - name: server_cert
+              sds_config:
+                resource_api_version: V3
+                api_config_source:
+                  api_type: GRPC
+                  transport_api_version: V3
+                  grpc_services:
+                  - envoy_grpc:
+                      cluster_name: xds_cluster
       load_assignment:
         cluster_name: tls-cluster-example
         endpoints:

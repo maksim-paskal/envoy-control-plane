@@ -47,6 +47,7 @@ type ConfigType struct { //nolint: golint,revive
 	Routes             []interface{}    `yaml:"routes"`
 	Clusters           []interface{}    `yaml:"clusters"`
 	Listeners          []interface{}    `yaml:"listeners"`
+	Secrets            []interface{}    `yaml:"secrets"`
 }
 
 func ParseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, error) {

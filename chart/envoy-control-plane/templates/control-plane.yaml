@@ -71,6 +71,28 @@ spec:
         app: envoy-control-plane
     spec:
       serviceAccountName: envoy-control-plane
+      volumes:
+      - name: certs
+        emptyDir:
+          medium: Memory
+      initContainers:
+      # generate new certicate on pod init
+      - name: init
+        image: {{ .Values.registry.image | quote }}
+        imagePullPolicy: {{ .Values.registry.imagePullPolicy | quote }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -ex
+
+          /usr/bin/openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+          -keyout /certs/server.key \
+          -out /certs/server.crt \
+          -subj "/C=GB/ST=London/L=London/O=Global Security/OU=DEVOPS/CN=*.local"
+        volumeMounts:
+        - name: certs
+          mountPath: /certs
       containers:
       - name: envoy-control-plane
         image: {{ .Values.registry.image | quote }}
@@ -83,6 +105,8 @@ spec:
               fieldPath: metadata.namespace
         command:
         - /app/envoy-control-plane
+        - -ssl.crt=/certs/server.crt
+        - -ssl.key=/certs/server.key
         resources:
           requests:
             cpu: 10m
@@ -102,6 +126,9 @@ spec:
         ports:
         - containerPort: 18080
         - containerPort: 18081
+        volumeMounts:
+        - name: certs
+          mountPath: /certs
 ---
 apiVersion: v1
 kind: Service
