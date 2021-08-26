@@ -14,6 +14,7 @@ services:
     command:
     - /app/envoy-control-plane
     - -log.level=INFO
+    - -log.pretty
     - -kubeconfig.path=/app/kubeconfig
   statsd:
     image: prom/statsd-exporter:v0.18.0
