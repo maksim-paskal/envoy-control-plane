@@ -14,11 +14,14 @@ package utils
 
 import (
 	"encoding/json"
+	"io/ioutil"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
@@ -28,21 +31,28 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func GetConfigSnapshot(version string, config *config.ConfigType, endpoints []types.Resource) (cache.Snapshot, error) { //nolint: lll
-	clusters, err := YamlToResources(config.Clusters, cluster.Cluster{})
+func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints []types.Resource) (cache.Snapshot, error) { //nolint: lll
+	clusters, err := YamlToResources(configType.Clusters, cluster.Cluster{})
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
 
-	routes, err := YamlToResources(config.Routes, route.RouteConfiguration{})
+	routes, err := YamlToResources(configType.Routes, route.RouteConfiguration{})
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
 
-	listiners, err := YamlToResources(config.Listeners, listener.Listener{})
+	listiners, err := YamlToResources(configType.Listeners, listener.Listener{})
 	if err != nil {
 		return cache.Snapshot{}, err
 	}
+
+	secrets, err := YamlToResources(configType.Secrets, tls.Secret{})
+	if err != nil {
+		return cache.Snapshot{}, err
+	}
+
+	secrets = append(secrets, &commonSecret)
 
 	return cache.NewSnapshot(
 		version,
@@ -51,7 +61,7 @@ func GetConfigSnapshot(version string, config *config.ConfigType, endpoints []ty
 		routes,
 		listiners,
 		nil,
-		nil,
+		secrets,
 	), nil
 }
 
@@ -127,10 +137,60 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			}
 
 			results[k] = &resource
+		case tls.Secret:
+			resource := tls.Secret{}
+			err = protojson.Unmarshal(resourcesJSON, &resource)
+
+			if err != nil {
+				log.WithError(err).Errorf("json=%s", string(resourcesJSON))
+
+				return nil, errors.Wrap(err, "tls.Secret")
+			}
+
+			results[k] = &resource
 		default:
 			return nil, errUnknownClass
 		}
 	}
 
 	return results, nil
+}
+
+var commonSecret = tls.Secret{}
+
+// Load certificate from files on control-plane and appends to all SDS requests.
+func LoadCommonSecrets() error {
+	if len(*config.Get().SSLCrt) == 0 || len(*config.Get().SSLKey) == 0 {
+		log.Debug("no ssl keys defined")
+
+		return nil
+	}
+
+	serverCert, err := ioutil.ReadFile(*config.Get().SSLCrt)
+	if err != nil {
+		return err
+	}
+
+	serverKey, err := ioutil.ReadFile(*config.Get().SSLKey)
+	if err != nil {
+		return err
+	}
+
+	commonSecret = tls.Secret{
+		Name: *config.Get().SSLName,
+		Type: &tls.Secret_TlsCertificate{
+			TlsCertificate: &tls.TlsCertificate{
+				CertificateChain: &core.DataSource{
+					Specifier: &core.DataSource_InlineBytes{InlineBytes: serverCert},
+				},
+				PrivateKey: &core.DataSource{
+					Specifier: &core.DataSource_InlineBytes{InlineBytes: serverKey},
+				},
+			},
+		},
+	}
+
+	log.Infof("loaded common certificate %s", *config.Get().SSLName)
+
+	return nil
 }

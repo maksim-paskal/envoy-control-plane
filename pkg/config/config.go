@@ -40,6 +40,9 @@ type Type struct {
 	ConfigDrainPeriod   *string `yaml:"configDrainPeriod"`
 	EndpointCheckPeriod *string `yaml:"endpointCheckPeriod"`
 	SentryDSN           *string `yaml:"sentryDsn"`
+	SSLName             *string `yaml:"sslName"`
+	SSLCrt              *string `yaml:"sslCrt"`
+	SSLKey              *string `yaml:"sslKey"`
 }
 
 var config = Type{
@@ -58,6 +61,9 @@ var config = Type{
 	ConfigDrainPeriod:   flag.String("config.drainPeriod", "5s", "drain period"),
 	EndpointCheckPeriod: flag.String("endpoint.checkPeriod", "60s", "check period"),
 	SentryDSN:           flag.String("sentry.dsn", "", "sentry DSN"),
+	SSLName:             flag.String("ssl.name", "envoy_control_plane_default", "name of certificate"),
+	SSLCrt:              flag.String("ssl.crt", "", "path to ssl cert"),
+	SSLKey:              flag.String("ssl.key", "", "path to ssl key"),
 }
 
 func Load() error {
@@ -102,6 +108,18 @@ func CheckConfig() error {
 
 	if _, err := time.ParseDuration(*config.EndpointCheckPeriod); err != nil {
 		return errors.Wrap(err, "ParseDuration="+*config.EndpointCheckPeriod)
+	}
+
+	if len(*config.SSLCrt) > 0 {
+		if _, err := os.Stat(*config.SSLCrt); os.IsNotExist(err) {
+			return errors.Wrap(err, "ssl certificate error")
+		}
+	}
+
+	if len(*config.SSLKey) > 0 {
+		if _, err := os.Stat(*config.SSLKey); os.IsNotExist(err) {
+			return errors.Wrap(err, "ssl key error")
+		}
 	}
 
 	return nil

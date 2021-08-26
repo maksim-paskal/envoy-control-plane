@@ -5,7 +5,8 @@ COPY ./envoy-control-plane /app/envoy-control-plane
 WORKDIR /app
 
 RUN addgroup -g 101 -S app \
-&& adduser -u 101 -D -S -G app app
+&& adduser -u 101 -D -S -G app app \
+&& apk add --no-cache openssl
 
 USER 101
 

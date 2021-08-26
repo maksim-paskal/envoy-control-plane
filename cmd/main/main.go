@@ -26,6 +26,7 @@ import (
 	"github.com/maksim-paskal/envoy-control-plane/pkg/configstore"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/controlplane"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/endpointstore"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/utils"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/web"
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	log "github.com/sirupsen/logrus"
@@ -94,6 +95,10 @@ func main() {
 
 	if err = api.MakeAuth(); err != nil {
 		log.WithError(err).Fatal()
+	}
+
+	if err = utils.LoadCommonSecrets(); err != nil {
+		log.Fatal(err)
 	}
 
 	ep := endpointstore.New()
