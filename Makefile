@@ -12,19 +12,22 @@ test-release:
 testChart:
 	helm lint --strict ./chart/envoy-control-plane
 	helm template ./chart/envoy-control-plane | kubectl apply --dry-run=client --validate -f -
-build:
-	goreleaser build --rm-dist --skip-validate
+build-goreleaser:
+	goreleaser build --rm-dist --snapshot
 	mv ./dist/envoy-control-plane_linux_amd64/envoy-control-plane envoy-control-plane
+	mv ./dist/cli_linux_amd64/cli cli
+build:
+	make build-goreleaser
 	docker build --pull . -t paskalmaksim/envoy-control-plane:dev
+	docker build --pull . -f ./envoy/Dockerfile -t paskalmaksim/envoy-docker-image:dev
 security-scan:
 	trivy fs --ignore-unfixed .
 security-check:
 	# https://github.com/aquasecurity/trivy
 	trivy --ignore-unfixed paskalmaksim/envoy-control-plane:dev
 build-envoy:
+	make build-goreleaser
 	docker-compose build envoy-test1
-buildEnvoy:
-	docker build --pull . -f ./envoy/Dockerfile -t paskalmaksim/envoy-docker-image:dev
 push:
 	docker push paskalmaksim/envoy-control-plane:dev
 pushEnvoy:
@@ -33,11 +36,11 @@ k8sConfig:
 	kubectl apply -f ./chart/envoy-control-plane/templates/testPods.yaml
 	kubectl apply -f ./config/
 run:
-	goreleaser build --rm-dist --skip-validate
-	mv ./dist/envoy-control-plane_linux_amd64/envoy-control-plane ./envoy-control-plane
+	make k8sConfig
+	make build-goreleaser
 	docker-compose down --remove-orphans && docker-compose up
 runRaceDetection:
-	go run -v -race ./cmd/main -log.level=DEBUG -kubeconfig.path=$(KUBECONFIG)
+	go run -v -race ./cmd/main -log.level=DEBUG -log.pretty -kubeconfig.path=$(KUBECONFIG) -ssl.crt=certs/server.crt -ssl.key=certs/server.key
 installDev:
 	helm uninstall envoy-control-plane --namespace envoy-control-plane || true
 	helm upgrade envoy-control-plane \
@@ -68,3 +71,10 @@ allocs:
 	go tool pprof -http=127.0.0.1:8080 http://localhost:18081/debug/pprof/heap
 git-prune-gc:
 	curl -sSL https://get.paskal-dev.com/git-prune-gc | sh
+sslInit:
+	rm -rf ./certs
+	mkdir -p ./certs
+	openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+	-keyout certs/server.key \
+	-out certs/server.crt \
+	-subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=*.local"

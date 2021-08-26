@@ -2,6 +2,8 @@ vendor
 kubeconfig
 dist
 /envoy-control-plane
+/cli
 /examples/stress-test/logs
 /examples/stress-test/tank*
 __debug_bin
+certs
