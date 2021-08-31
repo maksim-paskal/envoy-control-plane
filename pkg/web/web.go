@@ -98,7 +98,7 @@ func NewServer() *Server {
 }
 
 func (ws *Server) Start() {
-	ws.log.Info("http.port=", *config.Get().WebAddress)
+	ws.log.Info("http.address=", *config.Get().WebAddress)
 
 	if err := http.ListenAndServe(*config.Get().WebAddress, ws.GetHandler()); err != nil {
 		log.WithError(err).Fatal()
@@ -156,6 +156,10 @@ func (ws *Server) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 
 	results := []*config.ConfigType{}
 
+	_ = r.ParseForm()
+
+	id := r.Form.Get("id")
+
 	configstore.StoreMap.Range(func(k, v interface{}) bool {
 		cs, ok := v.(*configstore.ConfigStore)
 
@@ -163,7 +167,9 @@ func (ws *Server) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 			ws.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 		}
 
-		results = append(results, cs.Config)
+		if len(id) == 0 || cs.Config.ID == id {
+			results = append(results, cs.Config)
+		}
 
 		return true
 	})
@@ -255,16 +261,22 @@ func (ws *Server) handlerStatus(w http.ResponseWriter, r *http.Request) {
 
 	results := []StatusResponce{}
 
+	_ = r.ParseForm()
+
+	id := r.Form.Get("id")
+
 	for _, nodeID := range statusKeys {
 		sn, err := controlplane.SnapshotCache.GetSnapshot(nodeID)
 		if err != nil {
 			ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 		}
 
-		results = append(results, StatusResponce{
-			NodeID:   nodeID,
-			Snapshot: sn,
-		})
+		if len(id) == 0 || id == nodeID {
+			results = append(results, StatusResponce{
+				NodeID:   nodeID,
+				Snapshot: sn,
+			})
+		}
 	}
 
 	if len(results) == 0 {

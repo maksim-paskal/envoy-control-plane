@@ -6,6 +6,7 @@ ADD --chown=envoy:envoy https://github.com/maksim-paskal/jaeger-client-cpp/relea
 COPY ./cli /usr/local/bin/cli
 COPY ./envoy/entrypoint.sh /entrypoint.sh
 COPY ./envoy/envoy.defaults /envoy.defaults/
+COPY ./envoy/certs /certs/
 
 RUN touch /tmp/checksum \
 && echo "473ce4db569c2adfb6fc52a35582310c66164a241b7d7c5cc514d334757b682a /usr/local/lib/libjaegertracing_plugin.so" >> /tmp/checksum \

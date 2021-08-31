@@ -150,6 +150,9 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 			if len(config.ID) == 0 {
 				config.ID = nodeID
 			}
+			if len(config.Name) == 0 {
+				config.Name = config.ID
+			}
 			config.ConfigMapName = cm.Name
 			config.ConfigMapNamespace = cm.Namespace
 

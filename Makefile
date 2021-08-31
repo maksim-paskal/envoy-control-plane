@@ -20,36 +20,45 @@ build:
 	make build-goreleaser
 	docker build --pull . -t paskalmaksim/envoy-control-plane:dev
 	docker build --pull . -f ./envoy/Dockerfile -t paskalmaksim/envoy-docker-image:dev
+	docker-compose build
 security-scan:
 	trivy fs --ignore-unfixed .
 security-check:
 	# https://github.com/aquasecurity/trivy
 	trivy --ignore-unfixed paskalmaksim/envoy-control-plane:dev
-build-envoy:
-	make build-goreleaser
-	docker-compose build envoy-test1
 push:
 	docker push paskalmaksim/envoy-control-plane:dev
-pushEnvoy:
 	docker push paskalmaksim/envoy-docker-image:dev
 k8sConfig:
 	kubectl apply -f ./chart/envoy-control-plane/templates/testPods.yaml
 	kubectl apply -f ./config/
 run:
+	kubectl -n default delete cm -lapp=envoy-control-plane || true
 	make k8sConfig
 	make build-goreleaser
 	docker-compose down --remove-orphans && docker-compose up
 runRaceDetection:
-	go run -v -race ./cmd/main -log.level=DEBUG -log.pretty -kubeconfig.path=$(KUBECONFIG) -ssl.crt=certs/server.crt -ssl.key=certs/server.key
+	go run -v -race ./cmd/main \
+	-log.level=DEBUG \
+	-log.pretty -kubeconfig.path=$(KUBECONFIG) \
+	-ssl.crt=certs/CA.crt \
+	-ssl.key=certs/CA.key
 installDev:
 	helm uninstall envoy-control-plane --namespace envoy-control-plane || true
 	helm upgrade envoy-control-plane \
-  --install \
-  --create-namespace \
-  --namespace envoy-control-plane \
-  ./chart/envoy-control-plane \
-  --set withExamples=true \
-  --set ingress.enabled=true
+	--install \
+	--create-namespace \
+	--namespace envoy-control-plane \
+	./chart/envoy-control-plane \
+	--set withExamples=true \
+	--set ingress.enabled=true \
+	--set registry.image=paskalmaksim/envoy-control-plane:dev \
+	--set envoy.registry.image=paskalmaksim/envoy-docker-image:dev \
+	--set-file certificates.caKey=./certs/CA.key \
+	--set-file certificates.caCrt=./certs/CA.crt \
+	--set-file certificates.envoyKey=./certs/envoy.key \
+	--set-file certificates.envoyCrt=./certs/envoy.crt
+
 	kubectl apply -n envoy-control-plane -f ./chart/envoy-control-plane/templates/testPods.yaml
 	watch kubectl -n envoy-control-plane get pods
 installDevConfig:
@@ -57,6 +66,7 @@ installDevConfig:
 clean:
 	helm uninstall envoy-control-plane --namespace envoy-control-plane || true
 	kubectl delete ns envoy-control-plane || true
+	kubectl -n default delete cm -lapp=envoy-control-plane || true
 	kubectl delete -f ./config/ || true
 	kubectl delete -f ./chart/envoy-control-plane/templates/testPods.yaml || true
 	docker-compose down --remove-orphans
@@ -72,9 +82,26 @@ allocs:
 git-prune-gc:
 	curl -sSL https://get.paskal-dev.com/git-prune-gc | sh
 sslInit:
-	rm -rf ./certs
-	mkdir -p ./certs
-	openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-	-keyout certs/server.key \
-	-out certs/server.crt \
-	-subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=*.local"
+	rm -rf ./certs/
+	mkdir -p ./certs/
+
+	go run ./cmd/gencerts -cert.path=certs
+sslTest:
+	openssl rsa -in ./certs/CA.key -check -noout
+	openssl rsa -in ./certs/server.key -check -noout
+	openssl verify -CAfile ./certs/CA.crt ./certs/server.crt
+	openssl verify -CAfile ./certs/CA.crt ./certs/envoy.crt
+
+	openssl x509 -in ./certs/server.crt -text
+	openssl x509 -in ./certs/envoy.crt -text
+
+	openssl x509 -pubkey -in ./certs/CA.crt -noout | openssl md5
+	openssl pkey -pubout -in ./certs/CA.key | openssl md5
+
+	openssl x509 -pubkey -in ./certs/server.crt -noout | openssl md5
+	openssl pkey -pubout -in ./certs/server.key | openssl md5
+sslTestClient:
+	curl -v --cacert ./certs/CA.crt --resolve "test2-id:8001:127.0.0.1" --key ./certs/server.key --cert ./certs/server.crt https://test2-id:8001
+	curl -v --cacert ./certs/CA.crt --resolve "test3-id:8002:127.0.0.1" --key ./certs/server.key --cert ./certs/server.crt https://test3-id:8002
+sslTestControlPlane:
+	curl -vk --http2 --cacert ./certs/CA.crt --resolve "envoy-control-plane:18080:127.0.0.1" --key ./certs/server.key --cert ./certs/server.crt https://envoy-control-plane:18080

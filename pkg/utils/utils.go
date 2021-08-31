@@ -14,7 +14,6 @@ package utils
 
 import (
 	"encoding/json"
-	"io/ioutil"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -24,6 +23,7 @@ import (
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/certs"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/utils-go"
 	"github.com/pkg/errors"
@@ -31,7 +31,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints []types.Resource) (cache.Snapshot, error) { //nolint: lll
+func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints []types.Resource, commonSecrets []tls.Secret) (cache.Snapshot, error) { //nolint: lll
 	clusters, err := YamlToResources(configType.Clusters, cluster.Cluster{})
 	if err != nil {
 		return cache.Snapshot{}, err
@@ -52,7 +52,9 @@ func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints 
 		return cache.Snapshot{}, err
 	}
 
-	secrets = append(secrets, &commonSecret)
+	for i := range commonSecrets {
+		secrets = append(secrets, &commonSecrets[i])
+	}
 
 	return cache.NewSnapshot(
 		version,
@@ -156,41 +158,56 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 	return results, nil
 }
 
-var commonSecret = tls.Secret{}
-
-// Load certificate from files on control-plane and appends to all SDS requests.
-func LoadCommonSecrets() error {
-	if len(*config.Get().SSLCrt) == 0 || len(*config.Get().SSLKey) == 0 {
-		log.Debug("no ssl keys defined")
-
-		return nil
-	}
-
-	serverCert, err := ioutil.ReadFile(*config.Get().SSLCrt)
+func NewSecrets(dnsName string, validation interface{}) ([]tls.Secret, error) {
+	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate(dnsName, certs.CertValidity)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	serverKey, err := ioutil.ReadFile(*config.Get().SSLKey)
-	if err != nil {
-		return err
-	}
+	// https://www.envoyproxy.io/docs/envoy/latest/configuration/security/secret
+	commonSecrets := make([]tls.Secret, 0)
 
-	commonSecret = tls.Secret{
+	commonSecrets = append(commonSecrets, tls.Secret{
 		Name: *config.Get().SSLName,
 		Type: &tls.Secret_TlsCertificate{
 			TlsCertificate: &tls.TlsCertificate{
 				CertificateChain: &core.DataSource{
-					Specifier: &core.DataSource_InlineBytes{InlineBytes: serverCert},
+					Specifier: &core.DataSource_InlineBytes{InlineBytes: serverCertBytes},
 				},
 				PrivateKey: &core.DataSource{
-					Specifier: &core.DataSource_InlineBytes{InlineBytes: serverKey},
+					Specifier: &core.DataSource_InlineBytes{InlineBytes: serverKeyBytes},
 				},
 			},
 		},
+	})
+
+	// convert interface to tls.CertificateValidationContext
+	if validation != nil {
+		yamlObjJSON := utils.ConvertYAMLtoJSON(validation)
+
+		jsonObj, err := json.Marshal(yamlObjJSON)
+		if err != nil {
+			return nil, errors.Wrap(err, "json.Marshal(yamlObjJSON)")
+		}
+
+		validatationContext := tls.CertificateValidationContext{}
+
+		err = protojson.Unmarshal(jsonObj, &validatationContext)
+		if err != nil {
+			return nil, errors.Wrap(err, "protojson.Unmarshal(jsonObj)")
+		}
+
+		validatationContext.TrustedCa = &core.DataSource{
+			Specifier: &core.DataSource_InlineBytes{InlineBytes: certs.GetLoadedRootCertBytes()},
+		}
+
+		commonSecrets = append(commonSecrets, tls.Secret{
+			Name: "validation",
+			Type: &tls.Secret_ValidationContext{
+				ValidationContext: &validatationContext,
+			},
+		})
 	}
 
-	log.Infof("loaded common certificate %s", *config.Get().SSLName)
-
-	return nil
+	return commonSecrets, nil
 }

@@ -6,4 +6,4 @@ dist
 /examples/stress-test/logs
 /examples/stress-test/tank*
 __debug_bin
-certs
+/certs

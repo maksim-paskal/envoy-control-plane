@@ -64,6 +64,19 @@ static_resources:
       # configure a TCP keep-alive to detect and reconnect to the admin
       # server in the event of a TCP socket half open connection
       tcp_keepalive: {}
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        common_tls_context:
+          validation_context:
+            trusted_ca:
+              filename: /certs/CA.crt
+          tls_certificates:
+          - certificate_chain:
+              filename: /certs/envoy.crt
+            private_key:
+              filename: /certs/envoy.key
     load_assignment:
       cluster_name: xds_cluster
       endpoints:
