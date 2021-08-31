@@ -2,10 +2,11 @@ version: '3'
 
 services:
   envoy-control-plane:
+    hostname: envoy-control-plane
     build:
       context: .
     volumes:
-    - .:/app
+    - .:/app:ro
     environment:
     #- GODEBUG=http2debug=2
     - MY_POD_NAMESPACE=default
@@ -16,6 +17,8 @@ services:
     - -log.level=INFO
     - -log.pretty
     - -kubeconfig.path=/app/kubeconfig
+    - -ssl.crt=certs/CA.crt
+    - -ssl.key=certs/CA.key
   statsd:
     image: prom/statsd-exporter:v0.18.0
     ports:
@@ -27,7 +30,7 @@ services:
     depends_on:
     - redis
     volumes:
-    - ./config:/data
+    - ./config:/data:ro
     environment:
     - USE_STATSD=true
     - STATSD_HOST=statsd
@@ -55,10 +58,10 @@ services:
     - 8000:8000   # inbound
     - 18000:18000 # admin
     volumes:
-    - ./envoy/envoy.defaults/envoy.yaml:/envoy/envoy.yaml
-    - .:/src
+    - ./envoy/envoy.defaults/envoy.yaml:/envoy/envoy.yaml:ro
+    - ./certs/:/certs:ro
     environment:
-    - ENVOY_SERVICE_NAME=test-envoy-service
+    - ENVOY_SERVICE_NAME=test1-id
     - JAEGER_AGENT_HOST=jaeger
     command:
     - /bin/sh
@@ -77,27 +80,43 @@ services:
       --service-zone $$zone
   local-service-a:
     hostname: local-service-a
-    image: envoyproxy/envoy:v1.19.1
+    build:
+      dockerfile: ./envoy/Dockerfile
+      context: .
+    environment:
+    - ENVOY_SERVICE_NAME=test2-id
+    - JAEGER_AGENT_HOST=jaeger
     command:
     - /usr/local/bin/envoy
     - --bootstrap-version 3
     - --config-path /etc/envoy/envoy.yaml
+    - --service-cluster test
+    - --service-node test2-id
     - --log-level warn
     volumes:
-    - ./config/mock/:/etc/envoy/
+    - ./envoy/envoy.defaults/envoy.yaml:/envoy/envoy.yaml:ro
+    - ./certs/:/certs:ro
     ports:
     - 8001:8001 # service
     - 18001:18000 # admin
   local-service-b:
     hostname: local-service-a
-    image: envoyproxy/envoy:v1.19.1
+    build:
+      dockerfile: ./envoy/Dockerfile
+      context: .
+    environment:
+    - ENVOY_SERVICE_NAME=test2-id
+    - JAEGER_AGENT_HOST=jaeger
     command:
     - /usr/local/bin/envoy
     - --bootstrap-version 3
     - --config-path /etc/envoy/envoy.yaml
+    - --service-cluster test
+    - --service-node test3-id
     - --log-level warn
     volumes:
-    - ./config/mock/:/etc/envoy/
+    - ./envoy/envoy.defaults/envoy.yaml:/envoy/envoy.yaml:ro
+    - ./certs/:/certs:ro
     ports:
     - 8002:8001 # service
     - 18002:18000 # admin

@@ -13,10 +13,10 @@ limitations under the License.
 package utils_test
 
 import (
-	"log"
 	"testing"
 
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/google/uuid"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
@@ -28,6 +28,7 @@ func TestGetConfigSnapshot(t *testing.T) {
 
 	c := config.ConfigType{}
 	r := []types.Resource{}
+	s := []tls.Secret{}
 
 	r = append(r, &endpoint.ClusterLoadAssignment{
 		ClusterName: "clusterName",
@@ -35,9 +36,9 @@ func TestGetConfigSnapshot(t *testing.T) {
 
 	version := uuid.New().String()
 
-	snapshot, err := utils.GetConfigSnapshot(version, &c, r)
+	snapshot, err := utils.GetConfigSnapshot(version, &c, r, s)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	t.Log(snapshot)

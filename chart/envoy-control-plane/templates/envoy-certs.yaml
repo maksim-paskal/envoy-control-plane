@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-certs
+data:
+  CA.crt: |
+{{- .Values.certificates.caCrt | nindent 5 }}
+  envoy.crt: |
+{{- .Values.certificates.envoyCrt | nindent 5 }}
+  envoy.key: |
+{{- .Values.certificates.envoyKey | nindent 5 }}

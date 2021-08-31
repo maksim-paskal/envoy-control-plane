@@ -36,18 +36,29 @@ type kubernetesType struct {
 
 type ConfigType struct { //nolint: golint,revive
 	ID string `yaml:"id"`
+	// used in certificate section common name
+	Name string `yaml:"name"`
 	// add version to node name
 	UseVersionLabel bool `yaml:"useversionlabel"`
-	VersionLabel    string
-	// src configMap
-	ConfigMapName      string
+	// version value
+	VersionLabel string
+	// source configmap name
+	ConfigMapName string
+	// source configmap namespace
 	ConfigMapNamespace string
 	Kubernetes         []kubernetesType `yaml:"kubernetes"`
-	Endpoints          []interface{}    `yaml:"endpoints"`
-	Routes             []interface{}    `yaml:"routes"`
-	Clusters           []interface{}    `yaml:"clusters"`
-	Listeners          []interface{}    `yaml:"listeners"`
-	Secrets            []interface{}    `yaml:"secrets"`
+	// config.endpoint.v3.ClusterLoadAssignment
+	Endpoints []interface{} `yaml:"endpoints"`
+	// config.route.v3.RouteConfiguration
+	Routes []interface{} `yaml:"routes"`
+	// config.cluster.v3.Cluster
+	Clusters []interface{} `yaml:"clusters"`
+	// config.listener.v3.Listener
+	Listeners []interface{} `yaml:"listeners"`
+	// extensions.transport_sockets.tls.v3.Secret
+	Secrets []interface{} `yaml:"secrets"`
+	// extensions.transport_sockets.tls.v3.CertificateValidationContext
+	Validation interface{} `yaml:"validation"`
 }
 
 func ParseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, error) {

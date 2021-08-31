@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: test-envoy
+  name: test1-id
   namespace: default
   labels:
     app: envoy-control-plane
@@ -230,7 +230,12 @@ data:
         - match:
             prefix: "/2"
           route:
-            cluster: local_service2
+            weighted_clusters:
+              clusters:
+              - name: local_service1
+                weight: 50
+              - name: local_service2
+                weight: 50
         - match:
             prefix: "/no-ratelimits"
           route:
@@ -250,12 +255,7 @@ data:
         - match:
             prefix: "/"
           route:
-            weighted_clusters:
-              clusters:
-              - name: local_service1
-                weight: 50
-              - name: local_service2
-                weight: 50
+            cluster: local_service2
     clusters:
     - name: local_service1
       connect_timeout: 0.25s
@@ -287,6 +287,21 @@ data:
         healthy_threshold: 1
         http_health_check:
           path: "/healthz"
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          common_tls_context:
+            tls_certificate_sds_secret_configs:
+            - name: envoy_control_plane_default
+              sds_config:
+                resource_api_version: V3
+                api_config_source:
+                  api_type: GRPC
+                  transport_api_version: V3
+                  grpc_services:
+                  - envoy_grpc:
+                      cluster_name: xds_cluster
       load_assignment:
         cluster_name: local_service2
         endpoints:
@@ -348,21 +363,6 @@ data:
         http_health_check:
           host: "some.com"
           path: "/status.php"
-      transport_socket:
-        name: envoy.transport_sockets.tls
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-          common_tls_context:
-            tls_certificate_sds_secret_configs:
-            - name: server_cert
-              sds_config:
-                resource_api_version: V3
-                api_config_source:
-                  api_type: GRPC
-                  transport_api_version: V3
-                  grpc_services:
-                  - envoy_grpc:
-                      cluster_name: xds_cluster
       load_assignment:
         cluster_name: tls-cluster-example
         endpoints:

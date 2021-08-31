@@ -35,8 +35,17 @@ spec:
                   - envoy
               topologyKey: topology.kubernetes.io/zone
             weight: 100
+      volumes:
+      - name: certs
+        configMap:
+          name: envoy-certs
       containers:
       - name: envoy
+        lifecycle:
+          preStop:
+            exec:
+              # gracefully drain all connection
+              command: ["/bin/sh", "-c", "cli -drainEnvoy; sleep 5s; pkill -SIGTERM envoy"]
         image: {{ .Values.envoy.registry.image | quote }}
         imagePullPolicy: {{ .Values.envoy.registry.imagePullPolicy | quote }}
         args:
@@ -84,6 +93,9 @@ spec:
         ports:
         - containerPort: 8000
         - containerPort: 18000
+        volumeMounts:
+        - name: certs
+          mountPath: /certs
 ---
 apiVersion: v1
 kind: Service

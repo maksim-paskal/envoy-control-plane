@@ -22,6 +22,7 @@ import (
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/google/uuid"
@@ -57,9 +58,10 @@ type ConfigStore struct {
 	log                 *log.Entry
 	mutex               sync.Mutex
 	ctx                 context.Context
+	secrets             []tls.Secret
 }
 
-func New(config *appConfig.ConfigType, ep *endpointstore.EndpointsStore) *ConfigStore {
+func New(config *appConfig.ConfigType, ep *endpointstore.EndpointsStore) (*ConfigStore, error) {
 	cs := ConfigStore{
 		Config:           config,
 		ep:               ep,
@@ -98,9 +100,13 @@ func New(config *appConfig.ConfigType, ep *endpointstore.EndpointsStore) *Config
 
 	cs.saveLastEndpoints()
 
-	cs.push()
+	if err = cs.LoadNewSecrets(); err != nil {
+		return nil, errors.Wrap(err, "error in LoadNewSecrets")
+	}
 
-	return &cs
+	cs.Push()
+
+	return &cs, nil
 }
 
 func (cs *ConfigStore) NewPod(pod *v1.Pod) {
@@ -122,7 +128,7 @@ func (cs *ConfigStore) DeletePod(pod *v1.Pod) {
 	cs.saveLastEndpoints()
 }
 
-func (cs *ConfigStore) push() {
+func (cs *ConfigStore) Push() {
 	cs.mutex.Lock()
 	defer cs.mutex.Unlock()
 
@@ -135,7 +141,7 @@ func (cs *ConfigStore) push() {
 		}
 	}
 
-	snap, err := utils.GetConfigSnapshot(cs.Version, cs.Config, cs.lastEndpoints)
+	snap, err := utils.GetConfigSnapshot(cs.Version, cs.Config, cs.lastEndpoints, cs.secrets)
 	if err != nil {
 		cs.log.WithError(err).Error()
 
@@ -186,6 +192,18 @@ func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEn
 	}
 
 	return lbEndpoints, nil
+}
+
+// create new secrets.
+func (cs *ConfigStore) LoadNewSecrets() error {
+	secrets, err := utils.NewSecrets(cs.Config.Name, cs.Config.Validation)
+	if err != nil {
+		return errors.Wrap(err, "can not create secrets")
+	}
+
+	cs.secrets = secrets
+
+	return nil
 }
 
 // save endpoints.
@@ -294,7 +312,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 		cs.LastEndpointsArray = publishEpArray
 		cs.log.Debug("new endpoints")
 		// endpoints changes
-		cs.push()
+		cs.Push()
 	}
 }
 

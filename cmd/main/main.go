@@ -14,6 +14,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"net"
@@ -21,16 +23,17 @@ import (
 	"time"
 
 	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/certs"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/configmapsstore"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/configstore"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/controlplane"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/endpointstore"
-	"github.com/maksim-paskal/envoy-control-plane/pkg/utils"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/web"
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 	v1 "k8s.io/api/core/v1"
 )
@@ -97,9 +100,11 @@ func main() {
 		log.WithError(err).Fatal()
 	}
 
-	if err = utils.LoadCommonSecrets(); err != nil {
-		log.Fatal(err)
+	if err = certs.Init(); err != nil {
+		log.WithError(err).Fatal()
 	}
+
+	go rotateCertificates()
 
 	ep := endpointstore.New()
 
@@ -151,7 +156,13 @@ func main() {
 		}
 
 		log.Infof("Create configStore %s", config.ID)
-		configstore.StoreMap.Store(config.ID, configstore.New(config, ep))
+
+		newConfigStore, err := configstore.New(config, ep)
+		if err != nil {
+			log.WithError(err).Error("error in creating configstore")
+		}
+
+		configstore.StoreMap.Store(config.ID, newConfigStore)
 	}
 
 	cms.OnDeleteConfig = func(nodeID string) {
@@ -179,9 +190,30 @@ func main() {
 
 	defer cms.Stop()
 
+	serverCert, _, serverKey, _, err := certs.NewCertificate("envoy-control-plane", certs.MaxCertValidity)
+	if err != nil {
+		log.WithError(err).Fatal("failed to NewCertificate")
+	}
+
+	certPool := x509.NewCertPool()
+	certPool.AddCert(certs.GetLoadedRootCert())
+
+	grpcCred := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		Certificates: []tls.Certificate{{
+			Certificate: [][]byte{serverCert.Raw},
+			Leaf:        serverCert,
+			PrivateKey:  serverKey,
+		}},
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  certPool,
+		RootCAs:    certPool,
+	}
+
 	ctx := context.Background()
 	grpcOptions := []grpc.ServerOption{}
 	grpcOptions = append(grpcOptions,
+		grpc.Creds(credentials.NewTLS(grpcCred)),
 		grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Time:    grpcKeepaliveTime,
@@ -207,7 +239,7 @@ func main() {
 
 	go web.NewServer().Start()
 
-	log.Info("grpc.port=", *config.Get().GrpcAddress)
+	log.Info("grpc.address=", *config.Get().GrpcAddress)
 
 	go startGRPC(grpcServer, lis)
 
@@ -246,6 +278,32 @@ func syncManual() {
 			if cs.ConfigStoreState != configstore.ConfigStoreStateSTOP {
 				log.Debugf("check endpoints=%s", cs.Config.ID)
 				cs.Sync()
+			}
+
+			return true
+		})
+	}
+}
+
+func rotateCertificates() {
+	log.Infof("rotate certificates every %s", *config.Get().SSLRotationPeriod)
+
+	for {
+		time.Sleep(*config.Get().SSLRotationPeriod)
+
+		log.Debug("Start rotating certificates")
+
+		configstore.StoreMap.Range(func(k, v interface{}) bool {
+			cs, ok := v.(*configstore.ConfigStore)
+
+			if !ok {
+				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+			}
+
+			if err := cs.LoadNewSecrets(); err != nil {
+				log.WithError(err).Error("error in LoadNewSecrets")
+			} else {
+				cs.Push()
 			}
 
 			return true
