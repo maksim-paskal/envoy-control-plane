@@ -13,10 +13,13 @@ limitations under the License.
 package endpointstore
 
 import (
+	"time"
+
 	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
@@ -62,6 +65,7 @@ func (es *EndpointsStore) init() {
 
 	es.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
+			log.Debug("AddFunc")
 			pod, ok := obj.(*v1.Pod)
 			if !ok {
 				es.log.WithError(errAssertion).Fatal("obj.(*v1.Pod)")
@@ -70,6 +74,7 @@ func (es *EndpointsStore) init() {
 			go es.OnNewPod(pod)
 		},
 		UpdateFunc: func(oldObj interface{}, newObj interface{}) {
+			log.Debug("UpdateFunc")
 			pod, ok := newObj.(*v1.Pod)
 			if !ok {
 				es.log.WithError(errAssertion).Fatal("obj.(*v1.Pod)")
@@ -78,6 +83,7 @@ func (es *EndpointsStore) init() {
 			go es.OnNewPod(pod)
 		},
 		DeleteFunc: func(obj interface{}) {
+			log.Debug("DeleteFunc")
 			pod, ok := obj.(*v1.Pod)
 			if !ok {
 				es.log.WithError(errAssertion).Fatal("obj.(*v1.Pod)")
@@ -96,6 +102,22 @@ func (es *EndpointsStore) init() {
 		es.log.WithError(errTimeout).Fatal()
 
 		return
+	}
+
+	if *config.Get().EndpointstoreWaitForPod {
+		for {
+			pods, err := es.Factory.Core().V1().Pods().Lister().List(labels.Everything())
+			if err != nil {
+				es.log.WithError(err).Error("error listing pods")
+			}
+
+			if len(pods) > 0 {
+				break
+			}
+
+			log.Info("waiting for pods...")
+			time.Sleep(time.Second)
+		}
 	}
 
 	<-es.stopCh
