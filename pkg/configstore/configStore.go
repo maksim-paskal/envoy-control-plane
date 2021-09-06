@@ -36,7 +36,6 @@ import (
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 const (
@@ -89,13 +88,21 @@ func New(config *appConfig.ConfigType, ep *endpointstore.EndpointsStore) (*Confi
 		cs.log.WithError(err).Error()
 	}
 
-	pods, err := ep.Factory.Core().V1().Pods().Lister().List(labels.Everything())
+	namespaceSearch := ""
+
+	if *appConfig.Get().WatchNamespaced {
+		namespaceSearch = *appConfig.Get().Namespace
+	}
+
+	pods, err := api.Clientset.CoreV1().Pods(namespaceSearch).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		cs.log.WithError(err).Error()
 	}
 
-	for _, pod := range pods {
-		cs.loadEndpoint(pod)
+	log.Infof("Found %d pods", len(pods.Items))
+
+	for i := range pods.Items {
+		cs.loadEndpoint(&pods.Items[i])
 	}
 
 	cs.saveLastEndpoints()
@@ -171,6 +178,8 @@ func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
 		} else if podInfo.check {
 			cs.KubernetesEndpoints.Store(pod.Name, podInfo)
 		}
+	} else {
+		log.Warnf("pod %s not valid", pod.Name)
 	}
 }
 

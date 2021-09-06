@@ -27,47 +27,49 @@ import (
 const sslRotationPeriodDefault = 1 * time.Hour
 
 type Type struct {
-	LogLevel            *string `yaml:"logLevel"`
-	LogPretty           *bool   `yaml:"logPretty"`
-	LogAccess           *bool   `yaml:"logAccess"`
-	LogReportCaller     *bool   `yaml:"logReportCaller"`
-	ConfigFile          *string
-	ConfigMapLabels     *string        `yaml:"configMapLabels"`
-	KubeConfigFile      *string        `yaml:"kubeConfigFile"`
-	WatchNamespaced     *bool          `yaml:"watchNamespaced"`
-	Namespace           *string        `yaml:"namespace"`
-	GrpcAddress         *string        `yaml:"grpcAddress"`
-	WebAddress          *string        `yaml:"webAddress"`
-	NodeZoneLabel       *string        `yaml:"nodeZoneLabel"`
-	ConfigDrainPeriod   *string        `yaml:"configDrainPeriod"`
-	EndpointCheckPeriod *string        `yaml:"endpointCheckPeriod"`
-	SentryDSN           *string        `yaml:"sentryDsn"`
-	SSLName             *string        `yaml:"sslName"`
-	SSLCrt              *string        `yaml:"sslCrt"`
-	SSLKey              *string        `yaml:"sslKey"`
-	SSLRotationPeriod   *time.Duration `yaml:"sslRotationPeriod"`
+	LogLevel                *string `yaml:"logLevel"`
+	LogPretty               *bool   `yaml:"logPretty"`
+	LogAccess               *bool   `yaml:"logAccess"`
+	LogReportCaller         *bool   `yaml:"logReportCaller"`
+	ConfigFile              *string
+	ConfigMapLabels         *string        `yaml:"configMapLabels"`
+	KubeConfigFile          *string        `yaml:"kubeConfigFile"`
+	WatchNamespaced         *bool          `yaml:"watchNamespaced"`
+	Namespace               *string        `yaml:"namespace"`
+	GrpcAddress             *string        `yaml:"grpcAddress"`
+	WebAddress              *string        `yaml:"webAddress"`
+	NodeZoneLabel           *string        `yaml:"nodeZoneLabel"`
+	ConfigDrainPeriod       *string        `yaml:"configDrainPeriod"`
+	EndpointCheckPeriod     *string        `yaml:"endpointCheckPeriod"`
+	SentryDSN               *string        `yaml:"sentryDsn"`
+	SSLName                 *string        `yaml:"sslName"`
+	SSLCrt                  *string        `yaml:"sslCrt"`
+	SSLKey                  *string        `yaml:"sslKey"`
+	SSLRotationPeriod       *time.Duration `yaml:"sslRotationPeriod"`
+	EndpointstoreWaitForPod *bool          `yaml:"waitForPod"`
 }
 
 var config = Type{
-	LogLevel:            flag.String("log.level", "INFO", "log level"),
-	LogPretty:           flag.Bool("log.pretty", false, "log in pretty format"),
-	LogAccess:           flag.Bool("log.access", false, "access log"),
-	LogReportCaller:     flag.Bool("log.reportCaller", true, "log file name and line number"),
-	ConfigFile:          flag.String("config", getEnvDefault("CONFIG", "config.yaml"), "load config from file"),
-	ConfigMapLabels:     flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
-	KubeConfigFile:      flag.String("kubeconfig.path", "", "kubeconfig path"),
-	WatchNamespaced:     flag.Bool("namespaced", true, "watch pod in one namespace"),
-	Namespace:           flag.String("namespace", getEnvDefault("MY_POD_NAMESPACE", "default"), "watch namespace"),
-	GrpcAddress:         flag.String("grpc.address", ":18080", "grpc address"),
-	WebAddress:          flag.String("web.address", ":18081", "web address"),
-	NodeZoneLabel:       flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
-	ConfigDrainPeriod:   flag.String("config.drainPeriod", "5s", "drain period"),
-	EndpointCheckPeriod: flag.String("endpoint.checkPeriod", "60s", "check period"),
-	SentryDSN:           flag.String("sentry.dsn", "", "sentry DSN"),
-	SSLName:             flag.String("ssl.name", "envoy_control_plane_default", "name of certificate in envoy secrets"),
-	SSLCrt:              flag.String("ssl.crt", "", "path to CA cert"),
-	SSLKey:              flag.String("ssl.key", "", "path to CA key"),
-	SSLRotationPeriod:   flag.Duration("ssl.rotation", sslRotationPeriodDefault, "period of certificate rotation"),
+	LogLevel:                flag.String("log.level", "INFO", "log level"),
+	LogPretty:               flag.Bool("log.pretty", false, "log in pretty format"),
+	LogAccess:               flag.Bool("log.access", false, "access log"),
+	LogReportCaller:         flag.Bool("log.reportCaller", true, "log file name and line number"),
+	ConfigFile:              flag.String("config", getEnvDefault("CONFIG", "config.yaml"), "load config from file"),
+	ConfigMapLabels:         flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
+	KubeConfigFile:          flag.String("kubeconfig.path", "", "kubeconfig path"),
+	WatchNamespaced:         flag.Bool("namespaced", true, "watch pod in one namespace"),
+	Namespace:               flag.String("namespace", getEnvDefault("MY_POD_NAMESPACE", "default"), "watch namespace"),
+	GrpcAddress:             flag.String("grpc.address", ":18080", "grpc address"),
+	WebAddress:              flag.String("web.address", ":18081", "web address"),
+	NodeZoneLabel:           flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
+	ConfigDrainPeriod:       flag.String("config.drainPeriod", "5s", "drain period"),
+	EndpointCheckPeriod:     flag.String("endpoint.checkPeriod", "60s", "check period"),
+	SentryDSN:               flag.String("sentry.dsn", "", "sentry DSN"),
+	SSLName:                 flag.String("ssl.name", "envoy_control_plane_default", "name of certificate in envoy secrets"), //nolint:lll
+	SSLCrt:                  flag.String("ssl.crt", "", "path to CA cert"),
+	SSLKey:                  flag.String("ssl.key", "", "path to CA key"),
+	SSLRotationPeriod:       flag.Duration("ssl.rotation", sslRotationPeriodDefault, "period of certificate rotation"),
+	EndpointstoreWaitForPod: flag.Bool("endpointstore.waitforpod", true, "wait for pods in namespace"),
 }
 
 func Load() error {
