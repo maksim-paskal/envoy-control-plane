@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	k8sMetrics "k8s.io/client-go/tools/metrics"
 )
 
 var (
@@ -27,6 +28,11 @@ var (
 
 func MakeAuth() error {
 	var err error
+
+	k8sMetrics.Register(k8sMetrics.RegisterOpts{
+		RequestResult:  &requestResult{},
+		RequestLatency: &requestLatency{},
+	})
 
 	if len(*config.Get().KubeConfigFile) > 0 {
 		Restconfig, err = clientcmd.BuildConfigFromFlags("", *config.Get().KubeConfigFile)

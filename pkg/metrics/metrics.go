@@ -20,52 +20,74 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-type Metrics struct{}
+const namespace = "envoy_control_plane"
 
 var (
 	GrpcOnStreamOpen = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "envoy_control_plane_on_stream_open_total",
-		Help: "The total number of OnStreamOpen events",
+		Namespace: namespace,
+		Name:      "on_stream_open_total",
+		Help:      "The total number of OnStreamOpen events",
 	})
 	GrpcOnStreamClosed = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "envoy_control_plane_on_stream_closed_total",
-		Help: "The total number of OnStreamClosed events",
+		Namespace: namespace,
+		Name:      "on_stream_closed_total",
+		Help:      "The total number of OnStreamClosed events",
 	})
 	GrpcOnStreamRequest = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "envoy_control_plane_on_stream_request_total",
-		Help: "The total number of OnStreamRequest events",
+		Namespace: namespace,
+		Name:      "on_stream_request_total",
+		Help:      "The total number of OnStreamRequest events",
 	})
 	GrpcOnStreamResponse = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "envoy_control_plane_on_stream_response_total",
-		Help: "The total number of OnStreamResponse events",
+		Namespace: namespace,
+		Name:      "on_stream_response_total",
+		Help:      "The total number of OnStreamResponse events",
 	})
 	GrpcOnFetchRequest = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "envoy_control_plane_on_fetch_request_total",
-		Help: "The total number of OnFetchRequest events",
+		Namespace: namespace,
+		Name:      "on_fetch_request_total",
+		Help:      "The total number of OnFetchRequest events",
 	})
 	GrpcOnFetchResponse = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "envoy_control_plane_on_fetch_response_total",
-		Help: "The total number of OnFetchResponse events",
+		Namespace: namespace,
+		Name:      "on_fetch_response_total",
+		Help:      "The total number of OnFetchResponse events",
 	})
 	GrpcOnStreamDeltaRequest = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "envoy_control_plane_on_stream_delta_request_total",
-		Help: "The total number of OnStreamDeltaRequest events",
+		Namespace: namespace,
+		Name:      "on_stream_delta_request_total",
+		Help:      "The total number of OnStreamDeltaRequest events",
 	})
 	GrpcOnStreamDeltaResponse = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "envoy_control_plane_on_stream_delta_response_total",
-		Help: "The total number of OnStreamDeltaResponse events",
+		Namespace: namespace,
+		Name:      "on_stream_delta_response_total",
+		Help:      "The total number of OnStreamDeltaResponse events",
 	})
 	GrpcOnStreamDeltaRequestOnStreamDeltaRequest = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "envoy_control_plane_on_stream_delta_request_on_stream_delta_request_total",
-		Help: "The total number of OnStreamDeltaRequestOnStreamDeltaRequest events",
+		Namespace: namespace,
+		Name:      "on_stream_delta_request_on_stream_delta_request_total",
+		Help:      "The total number of OnStreamDeltaRequestOnStreamDeltaRequest events",
 	})
 	GrpcOnDeltaStreamOpen = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "envoy_control_plane_on_delta_stream_open_total",
-		Help: "The total number of OnDeltaStreamOpen events",
+		Namespace: namespace,
+		Name:      "on_delta_stream_open_total",
+		Help:      "The total number of OnDeltaStreamOpen events",
 	})
 	GrpcOnDeltaStreamClosed = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "envoy_control_plane_on_delta_stream_closed_total",
-		Help: "The total number of OnDeltaStreamClosed events",
+		Namespace: namespace,
+		Name:      "on_delta_stream_closed_total",
+		Help:      "The total number of OnDeltaStreamClosed events",
+	})
+	KubernetesAPIRequest = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "apiserver_request_total",
+		Help:      "The total number of kunernetes API requests",
+	}, []string{"code"})
+
+	KubernetesAPIRequestDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Namespace: namespace,
+		Name:      "apiserver_request_duration",
+		Help:      "The duration in seconds of kunernetes API requests",
 	})
 )
 

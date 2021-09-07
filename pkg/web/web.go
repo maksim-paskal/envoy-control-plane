@@ -36,7 +36,8 @@ import (
 type Routes struct {
 	path        string
 	description string
-	handler     func(w http.ResponseWriter, r *http.Request)
+	handlerFunc func(w http.ResponseWriter, r *http.Request)
+	handler     http.Handler
 }
 
 type Server struct {
@@ -56,42 +57,47 @@ func NewServer() *Server {
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/help",
 		description: "Help",
-		handler:     ws.handlerHelp,
+		handlerFunc: ws.handlerHelp,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/ready",
 		description: "Rediness probe",
-		handler:     ws.handlerReady,
+		handlerFunc: ws.handlerReady,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/healthz",
 		description: "Health probe",
-		handler:     ws.handlerHealthz,
+		handlerFunc: ws.handlerHealthz,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/status",
 		description: "Status",
-		handler:     ws.handlerStatus,
+		handlerFunc: ws.handlerStatus,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/config_dump",
 		description: "Config Dump",
-		handler:     ws.handlerConfigDump,
+		handlerFunc: ws.handlerConfigDump,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/config_endpoints",
 		description: "Config Endpoints",
-		handler:     ws.handlerConfigEndpoints,
+		handlerFunc: ws.handlerConfigEndpoints,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/zone",
 		description: "Zone",
-		handler:     ws.handlerZone,
+		handlerFunc: ws.handlerZone,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/version",
 		description: "Get version",
-		handler:     ws.handlerVersion,
+		handlerFunc: ws.handlerVersion,
+	})
+	ws.routes = append(ws.routes, Routes{
+		path:        "/api/metrics",
+		description: "Get metrics",
+		handler:     metrics.GetHandler(),
 	})
 
 	return &ws
@@ -109,10 +115,12 @@ func (ws *Server) GetHandler() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	for _, route := range ws.routes {
-		mux.HandleFunc(route.path, route.handler)
+		if route.handler != nil {
+			mux.Handle(route.path, route.handler)
+		} else {
+			mux.HandleFunc(route.path, route.handlerFunc)
+		}
 	}
-
-	mux.Handle("/api/metrics", metrics.GetHandler())
 
 	// pprof
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
