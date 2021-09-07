@@ -44,6 +44,8 @@ func TestMetricsInc(t *testing.T) {
 	metrics.GrpcOnStreamDeltaRequestOnStreamDeltaRequest.Inc()
 	metrics.GrpcOnDeltaStreamOpen.Inc()
 	metrics.GrpcOnDeltaStreamClosed.Inc()
+	metrics.KubernetesAPIRequest.WithLabelValues("200").Inc()
+	metrics.KubernetesAPIRequestDuration.Observe(1)
 }
 
 func TestMetricsHandler(t *testing.T) {
