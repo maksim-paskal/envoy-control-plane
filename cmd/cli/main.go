@@ -51,13 +51,13 @@ func waitForAPI() {
 	for {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil && *debug {
-			os.Stderr.WriteString(err.Error())
+			log.Println(err.Error())
 		}
 
 		resp, err := cli.Do(req)
 
 		if err != nil && *debug {
-			os.Stderr.WriteString(err.Error())
+			log.Println(err.Error())
 		}
 
 		if resp != nil && resp.Body != nil {
@@ -69,7 +69,7 @@ func waitForAPI() {
 		}
 
 		if *debug {
-			os.Stdout.WriteString("Wait for api ready...")
+			log.Println("Wait for api ready...")
 		}
 
 		time.Sleep(1 * time.Second)
