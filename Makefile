@@ -88,20 +88,20 @@ sslInit:
 	go run ./cmd/gencerts -cert.path=certs
 sslTest:
 	openssl rsa -in ./certs/CA.key -check -noout
-	openssl rsa -in ./certs/server.key -check -noout
-	openssl verify -CAfile ./certs/CA.crt ./certs/server.crt
+	openssl rsa -in ./certs/test.key -check -noout
+	openssl verify -CAfile ./certs/CA.crt ./certs/test.crt
 	openssl verify -CAfile ./certs/CA.crt ./certs/envoy.crt
 
-	openssl x509 -in ./certs/server.crt -text
+	openssl x509 -in ./certs/test.crt -text
 	openssl x509 -in ./certs/envoy.crt -text
 
 	openssl x509 -pubkey -in ./certs/CA.crt -noout | openssl md5
 	openssl pkey -pubout -in ./certs/CA.key | openssl md5
 
-	openssl x509 -pubkey -in ./certs/server.crt -noout | openssl md5
-	openssl pkey -pubout -in ./certs/server.key | openssl md5
+	openssl x509 -pubkey -in ./certs/test.crt -noout | openssl md5
+	openssl pkey -pubout -in ./certs/test.key | openssl md5
 sslTestClient:
-	curl -v --cacert ./certs/CA.crt --resolve "test2-id:8001:127.0.0.1" --key ./certs/server.key --cert ./certs/server.crt https://test2-id:8001
-	curl -v --cacert ./certs/CA.crt --resolve "test3-id:8002:127.0.0.1" --key ./certs/server.key --cert ./certs/server.crt https://test3-id:8002
+	curl -v --cacert ./certs/CA.crt --resolve "test2-id:8001:127.0.0.1" --key ./certs/test.key --cert ./certs/test.crt https://test2-id:8001
+	curl -v --cacert ./certs/CA.crt --resolve "test3-id:8002:127.0.0.1" --key ./certs/test.key --cert ./certs/test.crt https://test3-id:8002
 sslTestControlPlane:
-	curl -vk --http2 --cacert ./certs/CA.crt --resolve "envoy-control-plane:18080:127.0.0.1" --key ./certs/server.key --cert ./certs/server.crt https://envoy-control-plane:18080
+	curl -vk --http2 --cacert ./certs/CA.crt --resolve "envoy-control-plane:18080:127.0.0.1" --key ./certs/test.key --cert ./certs/test.crt https://envoy-control-plane:18080
