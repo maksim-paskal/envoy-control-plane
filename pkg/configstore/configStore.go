@@ -179,7 +179,7 @@ func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
 			cs.KubernetesEndpoints.Store(pod.Name, podInfo)
 		}
 	} else {
-		log.Warnf("pod %s not valid", pod.Name)
+		log.Debugf("pod %s not valid", pod.Name)
 	}
 }
 

@@ -15,15 +15,19 @@ package web
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/certs"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/configstore"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/controlplane"
@@ -33,11 +37,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	basicRealm  = "envoy-control-plane"
+	adminPrefix = "/api/admin"
+)
+
 type Routes struct {
 	path        string
 	description string
 	handlerFunc func(w http.ResponseWriter, r *http.Request)
 	handler     http.Handler
+	httpShema   bool
 }
 
 type Server struct {
@@ -70,12 +80,12 @@ func NewServer() *Server {
 		handlerFunc: ws.handlerHealthz,
 	})
 	ws.routes = append(ws.routes, Routes{
-		path:        "/api/status",
+		path:        "/api/admin/status",
 		description: "Status",
 		handlerFunc: ws.handlerStatus,
 	})
 	ws.routes = append(ws.routes, Routes{
-		path:        "/api/config_dump",
+		path:        "/api/admin/config_dump",
 		description: "Config Dump",
 		handlerFunc: ws.handlerConfigDump,
 	})
@@ -96,40 +106,124 @@ func NewServer() *Server {
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/metrics",
+		httpShema:   true,
 		description: "Get metrics",
 		handler:     metrics.GetHandler(),
+	})
+	ws.routes = append(ws.routes, Routes{
+		path:        "/api/admin/certs",
+		description: "Generate cert",
+		handlerFunc: ws.handlerCerts,
+	})
+
+	// pprof
+	ws.routes = append(ws.routes, Routes{
+		path:        "/debug/pprof/",
+		handlerFunc: pprof.Index,
+	})
+	ws.routes = append(ws.routes, Routes{
+		path:        "/debug/pprof/cmdline",
+		handlerFunc: pprof.Cmdline,
+	})
+	ws.routes = append(ws.routes, Routes{
+		path:        "/debug/pprof/profile",
+		handlerFunc: pprof.Profile,
+	})
+	ws.routes = append(ws.routes, Routes{
+		path:        "/debug/pprof/symbol",
+		handlerFunc: pprof.Symbol,
+	})
+	ws.routes = append(ws.routes, Routes{
+		path:        "/debug/pprof/trace",
+		handlerFunc: pprof.Trace,
 	})
 
 	return &ws
 }
 
 func (ws *Server) Start() {
-	ws.log.Info("http.address=", *config.Get().WebAddress)
+	ws.log.Info("http.address=", *config.Get().WebHTTPAddress)
 
-	if err := http.ListenAndServe(*config.Get().WebAddress, ws.GetHandler()); err != nil {
+	if err := http.ListenAndServe(*config.Get().WebHTTPAddress, auth(ws.GetHandler(true))); err != nil {
 		log.WithError(err).Fatal()
 	}
 }
 
-func (ws *Server) GetHandler() *http.ServeMux {
+func (ws *Server) StartTLS() {
+	ws.log.Info("https.address=", *config.Get().WebHTTPSAddress)
+
+	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate("envoy-control-plane", certs.MaxCertValidity)
+	if err != nil {
+		log.WithError(err).Fatal("failed to NewCertificate")
+	}
+
+	cert, err := tls.X509KeyPair(serverCertBytes, serverKeyBytes)
+	if err != nil {
+		log.WithError(err).Fatal("failed to NewCertificate")
+	}
+
+	tlsConfig := &tls.Config{
+		MinVersion:   tls.VersionTLS12,
+		Certificates: []tls.Certificate{cert},
+	}
+
+	server := http.Server{
+		Addr:      *config.Get().WebHTTPSAddress,
+		TLSConfig: tlsConfig,
+		Handler:   auth(ws.GetHandler(false)),
+	}
+
+	if err := server.ListenAndServeTLS("", ""); err != nil {
+		log.WithError(err).Fatal()
+	}
+}
+
+func (ws *Server) GetHandler(onlyHTTPShema bool) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	for _, route := range ws.routes {
-		if route.handler != nil {
-			mux.Handle(route.path, route.handler)
-		} else {
-			mux.HandleFunc(route.path, route.handlerFunc)
+		// add only routes with httpShema if onlyHttpShema
+		if !onlyHTTPShema || route.httpShema == onlyHTTPShema {
+			if route.handler != nil {
+				mux.Handle(route.path, route.handler)
+			} else {
+				mux.HandleFunc(route.path, route.handlerFunc)
+			}
 		}
 	}
 
-	// pprof
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-
 	return mux
+}
+
+func auth(mux http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, adminPrefix) {
+			user, pass, ok := r.BasicAuth()
+
+			if !ok || subtle.ConstantTimeCompare([]byte(user), []byte(*config.Get().WebAdminUser)) != 1 || subtle.ConstantTimeCompare([]byte(pass), []byte(*config.Get().WebAdminPassword)) != 1 { //nolint:lll
+				w.Header().Set("WWW-Authenticate", `Basic realm="`+basicRealm+`"`)
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte("Unauthorised"))
+
+				return
+			}
+		}
+
+		log := log.WithFields(
+			log.Fields{
+				"RemoteAddr": r.RemoteAddr,
+				"Method":     r.Method,
+			},
+		)
+
+		if r.URL.Path == "/api/ready" || r.URL.Path == "/api/healthz" || r.URL.Path == "/api/metrics" {
+			log.Debug(r.URL)
+		} else {
+			log.Info(r.URL)
+		}
+
+		mux.ServeHTTP(w, r)
+	})
 }
 
 func (ws *Server) handlerHelp(w http.ResponseWriter, r *http.Request) {
@@ -138,7 +232,9 @@ func (ws *Server) handlerHelp(w http.ResponseWriter, r *http.Request) {
 	linkFormat := "<div style=\"padding:5x\"><a href=\"%s\">%s</a></div><br/>"
 
 	for _, route := range ws.routes {
-		result.WriteString(fmt.Sprintf(linkFormat, route.path, route.description))
+		if len(route.description) > 0 {
+			result.WriteString(fmt.Sprintf(linkFormat, route.path, route.description))
+		}
 	}
 
 	if _, err := w.Write(result.Bytes()); err != nil {
@@ -381,4 +477,28 @@ func (ws *Server) handlerVersion(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
+}
+
+func (ws *Server) handlerCerts(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+
+	if err := r.ParseForm(); err != nil {
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+	}
+
+	name := r.Form.Get("name")
+
+	if len(name) == 0 {
+		http.Error(w, "no name", http.StatusBadRequest)
+
+		return
+	}
+
+	_, crtBytes, _, keyBytes, err := certs.NewCertificate(name, certs.CertValidity)
+	if err != nil {
+		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+	}
+
+	_, _ = w.Write(crtBytes)
+	_, _ = w.Write(keyBytes)
 }

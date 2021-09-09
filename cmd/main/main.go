@@ -237,7 +237,10 @@ func main() {
 
 	controlplane.New(ctx, grpcServer)
 
-	go web.NewServer().Start()
+	webServer := web.NewServer()
+
+	go webServer.Start()
+	go webServer.StartTLS()
 
 	log.Info("grpc.address=", *config.Get().GrpcAddress)
 

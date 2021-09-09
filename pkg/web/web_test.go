@@ -27,7 +27,7 @@ import (
 var (
 	client    = &http.Client{}
 	webServer = web.NewServer()
-	ts        = httptest.NewServer(webServer.GetHandler())
+	ts        = httptest.NewServer(webServer.GetHandler(false))
 	ctx       = context.Background()
 )
 
