@@ -43,6 +43,12 @@ runRaceDetection:
 	-log.pretty -kubeconfig.path=$(KUBECONFIG) \
 	-ssl.crt=certs/CA.crt \
 	-ssl.key=certs/CA.key
+runCli:
+	go run ./cmd/cli -debug -namespace=1 -pod=2 \
+	-tls.CA=certs/CA.crt \
+	-tls.Crt=certs/envoy.crt \
+	-tls.Key=certs/envoy.key
+
 installDev:
 	helm uninstall envoy-control-plane --namespace envoy-control-plane || true
 	helm upgrade envoy-control-plane \
@@ -76,9 +82,9 @@ upgrade:
 	go get -v -u k8s.io/client-go@v0.20.9
 	go mod tidy
 heap:
-	go tool pprof -http=127.0.0.1:8080 http://localhost:18081/debug/pprof/heap
+	go tool pprof -http=127.0.0.1:8080 https+insecure://localhost:18081/debug/pprof/heap
 allocs:
-	go tool pprof -http=127.0.0.1:8080 http://localhost:18081/debug/pprof/heap
+	go tool pprof -http=127.0.0.1:8080 https+insecure://localhost:18081/debug/pprof/heap
 git-prune-gc:
 	curl -sSL https://get.paskal-dev.com/git-prune-gc | sh
 sslInit:

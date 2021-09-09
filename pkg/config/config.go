@@ -37,7 +37,8 @@ type Type struct {
 	WatchNamespaced         *bool          `yaml:"watchNamespaced"`
 	Namespace               *string        `yaml:"namespace"`
 	GrpcAddress             *string        `yaml:"grpcAddress"`
-	WebAddress              *string        `yaml:"webAddress"`
+	WebHTTPAddress          *string        `yaml:"webHttpAddress"`
+	WebHTTPSAddress         *string        `yaml:"webHttpsAddress"`
 	NodeZoneLabel           *string        `yaml:"nodeZoneLabel"`
 	ConfigDrainPeriod       *string        `yaml:"configDrainPeriod"`
 	EndpointCheckPeriod     *string        `yaml:"endpointCheckPeriod"`
@@ -47,6 +48,8 @@ type Type struct {
 	SSLKey                  *string        `yaml:"sslKey"`
 	SSLRotationPeriod       *time.Duration `yaml:"sslRotationPeriod"`
 	EndpointstoreWaitForPod *bool          `yaml:"waitForPod"`
+	WebAdminUser            *string        `yaml:"webAdminUser"`
+	WebAdminPassword        *string        `yaml:"webAdminPassword"`
 }
 
 var config = Type{
@@ -60,7 +63,8 @@ var config = Type{
 	WatchNamespaced:         flag.Bool("namespaced", true, "watch pod in one namespace"),
 	Namespace:               flag.String("namespace", getEnvDefault("MY_POD_NAMESPACE", "default"), "watch namespace"),
 	GrpcAddress:             flag.String("grpc.address", ":18080", "grpc address"),
-	WebAddress:              flag.String("web.address", ":18081", "web address"),
+	WebHTTPSAddress:         flag.String("web.https.address", ":18081", "https web address"),
+	WebHTTPAddress:          flag.String("web.http.address", ":18082", "http web address"),
 	NodeZoneLabel:           flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
 	ConfigDrainPeriod:       flag.String("config.drainPeriod", "5s", "drain period"),
 	EndpointCheckPeriod:     flag.String("endpoint.checkPeriod", "60s", "check period"),
@@ -70,6 +74,8 @@ var config = Type{
 	SSLKey:                  flag.String("ssl.key", "", "path to CA key"),
 	SSLRotationPeriod:       flag.Duration("ssl.rotation", sslRotationPeriodDefault, "period of certificate rotation"),
 	EndpointstoreWaitForPod: flag.Bool("endpointstore.waitforpod", true, "wait for pods in namespace"),
+	WebAdminUser:            flag.String("web.adminUser", "admin", "basic auth user for admin endpoints"),
+	WebAdminPassword:        flag.String("web.adminPassword", GetVersion(), "basic auth password for admin endpoints"),
 }
 
 func Load() error {

@@ -14,6 +14,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -31,6 +33,8 @@ const (
 )
 
 var (
+	cli            = &http.Client{}
+	ctx            = context.Background()
 	action         = flag.String("action", "/api/zone", "api action")
 	namespace      = flag.String("namespace", os.Getenv("MY_POD_NAMESPACE"), "pod namespace")
 	pod            = flag.String("pod", os.Getenv("HOSTNAME"), "pod name")
@@ -41,14 +45,20 @@ var (
 	drainEnvoy     = flag.Bool("drainEnvoy", false, "drain envoy")
 	envoyAdminPort = flag.Int("envoyAdminPort", serverAdminPort, "envoy admin port")
 	logFlags       = flag.Int("logFlags", 0, "log flags")
+	tlsInsecure    = flag.Bool("tls.insecure", false, "use insecure TLS")
+	tlsCA          = flag.String("tls.CA", "/certs/CA.crt", "CA certificate")
+	tlsClientCrt   = flag.String("tls.Crt", "/certs/envoy.crt", "tls client certificate")
+	tlsClientKey   = flag.String("tls.Key", "/certs/envoy.key", "tls client certificate key")
 )
 
 func waitForAPI() {
-	cli := &http.Client{}
-	ctx := context.Background()
-	url := fmt.Sprintf("http://%s:%d/api/ready", *server, *port)
+	url := fmt.Sprintf("https://%s:%d/api/ready", *server, *port)
 
 	for {
+		if *debug {
+			log.Println("Connecting to", url)
+		}
+
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil && *debug {
 			log.Println(err.Error())
@@ -77,8 +87,6 @@ func waitForAPI() {
 }
 
 func requestEnvoyAdmin(method string, path string) {
-	cli := &http.Client{}
-	ctx := context.Background()
 	url := fmt.Sprintf("http://127.0.0.1:%d%s", *envoyAdminPort, path)
 
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
@@ -106,6 +114,38 @@ func main() {
 
 	log.SetFlags(*logFlags)
 
+	caCertPool := x509.NewCertPool()
+	cliCerts := []tls.Certificate{}
+
+	if !*tlsInsecure && len(*tlsClientCrt) > 0 && len(*tlsCA) > 0 {
+		cert, err := tls.LoadX509KeyPair(*tlsClientCrt, *tlsClientKey)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cliCerts = []tls.Certificate{cert}
+	}
+
+	if !*tlsInsecure && len(*tlsCA) > 0 {
+		caCert, err := ioutil.ReadFile(*tlsCA)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		caCertPool.AppendCertsFromPEM(caCert)
+	}
+
+	cli = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				MinVersion:         tls.VersionTLS12,
+				Certificates:       cliCerts,
+				RootCAs:            caCertPool,
+				InsecureSkipVerify: *tlsInsecure, //nolint:gosec
+			},
+		},
+	}
+
 	if *drainEnvoy {
 		requestEnvoyAdmin(http.MethodPost, "/drain_listeners?graceful")
 		requestEnvoyAdmin(http.MethodPost, "/healthcheck/fail")
@@ -125,9 +165,7 @@ func main() {
 		waitForAPI()
 	}
 
-	cli := &http.Client{}
-	ctx := context.Background()
-	requestURL := fmt.Sprintf("http://%s:%d%s", *server, *port, *action)
+	requestURL := fmt.Sprintf("https://%s:%d%s", *server, *port, *action)
 
 	data := url.Values{
 		"namespace": {*namespace},
