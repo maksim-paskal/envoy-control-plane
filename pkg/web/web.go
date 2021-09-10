@@ -71,32 +71,32 @@ func NewServer() *Server {
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/ready",
-		description: "Rediness probe",
+		description: "Route for application rediness probe",
 		handlerFunc: ws.handlerReady,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/healthz",
-		description: "Health probe",
+		description: "Route for application health probe",
 		handlerFunc: ws.handlerHealthz,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/admin/status",
-		description: "Status",
+		description: "Status all nodes in SnapshotCache ",
 		handlerFunc: ws.handlerStatus,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/admin/config_dump",
-		description: "Config Dump",
+		description: "All dumps of configs that loaded to control-plane",
 		handlerFunc: ws.handlerConfigDump,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/config_endpoints",
-		description: "Config Endpoints",
+		description: "All endpoints in configs",
 		handlerFunc: ws.handlerConfigEndpoints,
 	})
 	ws.routes = append(ws.routes, Routes{
 		path:        "/api/zone",
-		description: "Zone",
+		description: "Get pod zone",
 		handlerFunc: ws.handlerZone,
 	})
 	ws.routes = append(ws.routes, Routes{
@@ -152,7 +152,7 @@ func (ws *Server) Start() {
 func (ws *Server) StartTLS() {
 	ws.log.Info("https.address=", *config.Get().WebHTTPSAddress)
 
-	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate("envoy-control-plane", certs.MaxCertValidity)
+	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate("envoy-control-plane", certs.YearCertValidity)
 	if err != nil {
 		log.WithError(err).Fatal("failed to NewCertificate")
 	}
@@ -227,15 +227,21 @@ func auth(mux http.Handler) http.Handler {
 }
 
 func (ws *Server) handlerHelp(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+
 	var result bytes.Buffer
 
-	linkFormat := "<div style=\"padding:5x\"><a href=\"%s\">%s</a></div><br/>"
+	linkFormat := "<tr><td>%s</td><td><a href='%s'>%s</a></td></tr>"
+
+	result.WriteString("<table border='1' cellpadding='8'>")
 
 	for _, route := range ws.routes {
 		if len(route.description) > 0 {
-			result.WriteString(fmt.Sprintf(linkFormat, route.path, route.description))
+			result.WriteString(fmt.Sprintf(linkFormat, route.description, route.path, route.path))
 		}
 	}
+
+	result.WriteString("</table>")
 
 	if _, err := w.Write(result.Bytes()); err != nil {
 		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
