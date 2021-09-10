@@ -28,10 +28,11 @@ import (
 )
 
 const (
-	keyBits         = 2048
-	CertValidity    = 7 * 24 * time.Hour
-	MaxCertValidity = 3000 * 24 * time.Hour
-	sslMaxPathLen   = 2
+	keyBits          = 2048
+	CertValidity     = 7 * 24 * time.Hour
+	YearCertValidity = 300 * 24 * time.Hour
+	MaxCertValidity  = 3000 * 24 * time.Hour
+	sslMaxPathLen    = 2
 )
 
 var (
