@@ -47,7 +47,7 @@ func main() {
 	files["test.crt"] = serverCrtBytes
 	files["test.key"] = serverKeyBytes
 
-	_, envoyCrtBytes, _, envoyKeyBytes, err := certs.GenServerCert("envoy", rootCrt, rootKey, certs.MaxCertValidity)
+	_, envoyCrtBytes, _, envoyKeyBytes, err := certs.GenServerCert("envoy", rootCrt, rootKey, certs.CertValidityMax)
 	if err != nil {
 		log.Fatal(err)
 	}

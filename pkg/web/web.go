@@ -24,6 +24,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
@@ -33,6 +34,7 @@ import (
 	"github.com/maksim-paskal/envoy-control-plane/pkg/controlplane"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -152,7 +154,7 @@ func (ws *Server) Start() {
 func (ws *Server) StartTLS() {
 	ws.log.Info("https.address=", *config.Get().WebHTTPSAddress)
 
-	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate("envoy-control-plane", certs.YearCertValidity)
+	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate("envoy-control-plane", certs.CertValidityYear)
 	if err != nil {
 		log.WithError(err).Fatal("failed to NewCertificate")
 	}
@@ -492,7 +494,10 @@ func (ws *Server) handlerCerts(w http.ResponseWriter, r *http.Request) {
 		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
+	certDuration := certs.CertValidity
+
 	name := r.Form.Get("name")
+	duration := r.Form.Get("duration")
 
 	if len(name) == 0 {
 		http.Error(w, "no name", http.StatusBadRequest)
@@ -500,7 +505,24 @@ func (ws *Server) handlerCerts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, crtBytes, _, keyBytes, err := certs.NewCertificate(name, certs.CertValidity)
+	if len(duration) == 0 {
+		http.Error(w, "no duration", http.StatusBadRequest)
+
+		return
+	}
+
+	if len(duration) > 0 {
+		parsedDuration, err := time.ParseDuration(duration)
+		if err != nil {
+			http.Error(w, errors.Wrap(err, "error in parsing duration").Error(), http.StatusBadRequest)
+
+			return
+		}
+
+		certDuration = parsedDuration
+	}
+
+	_, crtBytes, _, keyBytes, err := certs.NewCertificate(name, certDuration)
 	if err != nil {
 		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}

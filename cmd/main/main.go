@@ -190,7 +190,7 @@ func main() {
 
 	defer cms.Stop()
 
-	serverCert, _, serverKey, _, err := certs.NewCertificate("envoy-control-plane", certs.MaxCertValidity)
+	serverCert, _, serverKey, _, err := certs.NewCertificate("envoy-control-plane", certs.CertValidityMax)
 	if err != nil {
 		log.WithError(err).Fatal("failed to NewCertificate")
 	}

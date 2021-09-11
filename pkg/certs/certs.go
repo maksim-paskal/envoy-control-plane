@@ -30,8 +30,8 @@ import (
 const (
 	keyBits          = 2048
 	CertValidity     = 7 * 24 * time.Hour
-	YearCertValidity = 300 * 24 * time.Hour
-	MaxCertValidity  = 3000 * 24 * time.Hour
+	CertValidityYear = 365 * 24 * time.Hour
+	CertValidityMax  = 3000 * 24 * time.Hour
 	sslMaxPathLen    = 2
 )
 
@@ -130,7 +130,7 @@ func GenCARoot() (*x509.Certificate, []byte, *rsa.PrivateKey, []byte, error) {
 			CommonName:         "envoy-control-plane",
 		},
 		NotBefore:             time.Now().Add(-10 * time.Second),
-		NotAfter:              time.Now().Add(MaxCertValidity),
+		NotAfter:              time.Now().Add(CertValidityMax),
 		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
