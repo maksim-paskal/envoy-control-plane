@@ -247,7 +247,9 @@ func filterCertificates(listiners []types.Resource) error {
 						return err
 					}
 
-					r.RequireClientCertificate.Value = false
+					if r.RequireClientCertificate != nil {
+						r.RequireClientCertificate.Value = false
+					}
 
 					pbst, err := anypb.New(&r)
 					if err != nil {
