@@ -68,6 +68,9 @@ data:
             stat_prefix: ingress_http
             codec_type: AUTO
             stream_error_on_invalid_http_message: true
+            forward_client_cert_details: SANITIZE_SET
+            set_current_client_cert_details:
+              subject: true
             tracing: {}
             access_log:
             - name: envoy.access_loggers.file
@@ -81,6 +84,8 @@ data:
                     response_code: "%RESPONSE_CODE%"
                     response_flags: "%RESPONSE_FLAGS%"
                     x_request_id: "%REQ(X-REQUEST-ID)%"
+                    x-forwarded-client-cert: "%REQ(X-FORWARDED-CLIENT-CERT)%"
+                    peer_subject: "%DOWNSTREAM_PEER_SUBJECT%"
             route_config:
               name: ingress
               virtual_hosts:

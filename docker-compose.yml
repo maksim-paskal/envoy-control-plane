@@ -19,6 +19,7 @@ services:
     - -kubeconfig.path=/app/kubeconfig
     - -ssl.crt=certs/CA.crt
     - -ssl.key=certs/CA.key
+    #- -ssl.no-validation
   statsd:
     image: prom/statsd-exporter:v0.18.0
     ports:
