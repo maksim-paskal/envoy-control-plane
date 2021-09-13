@@ -46,6 +46,7 @@ type Type struct {
 	SSLName                 *string        `yaml:"sslName"`
 	SSLCrt                  *string        `yaml:"sslCrt"`
 	SSLKey                  *string        `yaml:"sslKey"`
+	SSLDoNotUseValidation   *bool          `yaml:"sslDoNotUseValidation"`
 	SSLRotationPeriod       *time.Duration `yaml:"sslRotationPeriod"`
 	EndpointstoreWaitForPod *bool          `yaml:"waitForPod"`
 	WebAdminUser            *string        `yaml:"webAdminUser"`
@@ -73,6 +74,7 @@ var config = Type{
 	SSLCrt:                  flag.String("ssl.crt", "", "path to CA cert"),
 	SSLKey:                  flag.String("ssl.key", "", "path to CA key"),
 	SSLRotationPeriod:       flag.Duration("ssl.rotation", sslRotationPeriodDefault, "period of certificate rotation"),
+	SSLDoNotUseValidation:   flag.Bool("ssl.no-validation", false, "do not use validation. Only for development"),
 	EndpointstoreWaitForPod: flag.Bool("endpointstore.waitforpod", true, "wait for pods in namespace"),
 	WebAdminUser:            flag.String("web.adminUser", "admin", "basic auth user for admin endpoints"),
 	WebAdminPassword:        flag.String("web.adminPassword", GetVersion(), "basic auth password for admin endpoints"),

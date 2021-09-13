@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints []types.Resource, commonSecrets []tls.Secret) (cache.Snapshot, error) { //nolint: lll
@@ -45,6 +46,14 @@ func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints 
 	listiners, err := YamlToResources(configType.Listeners, listener.Listener{})
 	if err != nil {
 		return cache.Snapshot{}, err
+	}
+
+	// remove all require_client_certificate from listiners
+	if *config.Get().SSLDoNotUseValidation {
+		err = filterCertificates(listiners)
+		if err != nil {
+			return cache.Snapshot{}, err
+		}
 	}
 
 	secrets, err := YamlToResources(configType.Secrets, tls.Secret{})
@@ -181,8 +190,15 @@ func NewSecrets(dnsName string, validation interface{}) ([]tls.Secret, error) {
 		},
 	})
 
+	validationContext := tls.CertificateValidationContext{
+		TrustedCa: &core.DataSource{
+			Specifier: &core.DataSource_InlineBytes{InlineBytes: certs.GetLoadedRootCertBytes()},
+		},
+	}
+
 	// convert interface to tls.CertificateValidationContext
-	if validation != nil {
+	// validatation can be switch-off with `-ssl.no-validation`
+	if validation != nil && !*config.Get().SSLDoNotUseValidation {
 		yamlObjJSON := utils.ConvertYAMLtoJSON(validation)
 
 		jsonObj, err := json.Marshal(yamlObjJSON)
@@ -190,24 +206,61 @@ func NewSecrets(dnsName string, validation interface{}) ([]tls.Secret, error) {
 			return nil, errors.Wrap(err, "json.Marshal(yamlObjJSON)")
 		}
 
-		validatationContext := tls.CertificateValidationContext{}
-
-		err = protojson.Unmarshal(jsonObj, &validatationContext)
+		err = protojson.Unmarshal(jsonObj, &validationContext)
 		if err != nil {
 			return nil, errors.Wrap(err, "protojson.Unmarshal(jsonObj)")
 		}
 
-		validatationContext.TrustedCa = &core.DataSource{
-			Specifier: &core.DataSource_InlineBytes{InlineBytes: certs.GetLoadedRootCertBytes()},
+		if validationContext.TrustedCa == nil {
+			validationContext.TrustedCa = &core.DataSource{
+				Specifier: &core.DataSource_InlineBytes{InlineBytes: certs.GetLoadedRootCertBytes()},
+			}
 		}
-
-		commonSecrets = append(commonSecrets, tls.Secret{
-			Name: "validation",
-			Type: &tls.Secret_ValidationContext{
-				ValidationContext: &validatationContext,
-			},
-		})
 	}
 
+	commonSecrets = append(commonSecrets, tls.Secret{
+		Name: "validation",
+		Type: &tls.Secret_ValidationContext{
+			ValidationContext: &validationContext,
+		},
+	})
+
 	return commonSecrets, nil
+}
+
+// remove require_client_certificate from all listeners.
+func filterCertificates(listiners []types.Resource) error {
+	for _, listiner := range listiners {
+		c, ok := listiner.(*listener.Listener)
+		if !ok {
+			return errUnknownClass
+		}
+
+		for _, filterChain := range c.FilterChains {
+			s := filterChain.TransportSocket
+			if s != nil {
+				if s.Name == "envoy.transport_sockets.tls" {
+					r := tls.DownstreamTlsContext{}
+
+					err := s.GetTypedConfig().UnmarshalTo(&r)
+					if err != nil {
+						return err
+					}
+
+					r.RequireClientCertificate.Value = false
+
+					pbst, err := anypb.New(&r)
+					if err != nil {
+						return err
+					}
+
+					s.ConfigType = &core.TransportSocket_TypedConfig{
+						TypedConfig: pbst,
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }
