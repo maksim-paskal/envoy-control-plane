@@ -113,6 +113,11 @@ envoy:
     image: paskalmaksim/envoy-docker-image:latest
     imagePullPolicy: Always
 
+service:
+  external:
+    enable: false
+    type: LoadBalancer
+
 ratelimit:
   enabled: true
   domain: test
