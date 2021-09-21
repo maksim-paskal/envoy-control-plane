@@ -19,6 +19,9 @@ RUN touch /tmp/checksum \
 
 USER 101
 
+ENV XDS_CLUSTER_TYPE=STRICT_DNS
+ENV XDS_CLUSTER_ADDRESS=envoy-control-plane
+
 # test configuration
 RUN ENVOY_SERVICE_NAME=test-service JAEGER_AGENT_HOST=jaeger /entrypoint.sh \
 /usr/local/bin/envoy \

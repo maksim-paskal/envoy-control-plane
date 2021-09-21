@@ -50,7 +50,7 @@ static_resources:
               cluster_name: xds_cluster
   - name: xds_cluster
     connect_timeout: 1s
-    type: STRICT_DNS
+    type: {{ env "XDS_CLUSTER_TYPE" }}
     dns_lookup_family: V4_ONLY
     typed_extension_protocol_options:
       envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -84,7 +84,7 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                address: envoy-control-plane
+                address: {{ env "XDS_CLUSTER_ADDRESS" }}
                 port_value: 18080
 
 admin:

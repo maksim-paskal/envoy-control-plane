@@ -132,3 +132,21 @@ spec:
     protocol: TCP
   selector:
     app: envoy-control-plane
+{{ if .Values.service.external.enable }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-control-plane-external
+  labels:
+    app: envoy-control-plane
+spec:
+  type: {{ .Values.service.external.type }}
+  ports:
+  - name: xds
+    port: 18080
+    targetPort: 18080
+    protocol: TCP
+  selector:
+    app: envoy-control-plane
+{{ end }}
