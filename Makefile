@@ -2,11 +2,12 @@ KUBECONFIG=$(HOME)/.kube/example-kubeconfig
 
 test:
 	./scripts/validate-license.sh
-	go fmt ./cmd/...
-	go fmt ./pkg/...
+	go fmt ./cmd/... ./pkg/...
 	go mod tidy
-	./scripts/test-pkg.sh
 	golangci-lint run -v
+	./scripts/test-pkg.sh
+coverage:
+	go tool cover -html=coverage.out
 test-release:
 	goreleaser release --snapshot --skip-publish --rm-dist
 testChart:
