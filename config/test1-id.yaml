@@ -190,10 +190,8 @@ data:
                 pass_through_mode: false
                 headers:
                 - name: ":path"
-                  exact_match: "/healthz"
-                  # need update of github.com/envoyproxy/go-control-plane
-                  # string_match:
-                  #   exact: "/healthz"
+                  string_match:
+                    exact: "/healthz"
 
             - name: envoy.filters.http.router
     routes:
@@ -238,25 +236,24 @@ data:
                 weight: 50
               - name: local_service2
                 weight: 50
-        # need update of github.com/envoyproxy/go-control-plane
-        # - match:
-        #     prefix: "/test-exact-match"
-        #     headers:
-        #     - name: "create-xhprof-of-request"
-        #       string_match:
-        #         exact: "true"
-        #   route:
-        #     cluster: paket-xhprof
-        # - match:
-        #     path: "/test-regex-match"
-        #     headers:
-        #     - name: "cookie"
-        #       string_match:
-        #         safe_regex:
-        #           google_re2: {}
-        #           regex: ".*?(CanaryUser=true).*?"
-        #   route:
-        #     cluster: local_service1
+        - match:
+            prefix: "/test-exact-match"
+            headers:
+            - name: "create-xhprof-of-request"
+              string_match:
+                exact: "true"
+          route:
+            cluster: paket-xhprof
+        - match:
+            path: "/test-regex-match"
+            headers:
+            - name: "cookie"
+              string_match:
+                safe_regex:
+                  google_re2: {}
+                  regex: ".*?(CanaryUser=true).*?"
+          route:
+            cluster: local_service1
         - match:
             prefix: "/no-ratelimits"
           route:

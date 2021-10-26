@@ -175,12 +175,10 @@ func main() {
 
 			cs.Stop()
 
-			drainPeriod, err := time.ParseDuration(*config.Get().ConfigDrainPeriod)
-
 			if err != nil {
 				log.WithError(err).Error()
 			} else {
-				time.Sleep(drainPeriod)
+				time.Sleep(*config.Get().ConfigDrainPeriod)
 			}
 
 			configstore.StoreMap.Delete(nodeID)
@@ -263,13 +261,8 @@ func startGRPC(grpcServer *grpc.Server, lis net.Listener) {
 
 // sync all endpoints in configs with endpointstore.
 func syncManual() {
-	WaitTime, err := time.ParseDuration(*config.Get().EndpointCheckPeriod)
-	if err != nil {
-		log.WithError(err).Fatal()
-	}
-
 	for {
-		time.Sleep(WaitTime)
+		time.Sleep(*config.Get().EndpointCheckPeriod)
 
 		configstore.StoreMap.Range(func(k, v interface{}) bool {
 			cs, ok := v.(*configstore.ConfigStore)
