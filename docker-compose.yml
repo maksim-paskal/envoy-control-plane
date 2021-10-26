@@ -74,7 +74,6 @@ services:
       /usr/local/bin/envoy \
       --config-path /etc/envoy/envoy.yaml \
       --log-level warn \
-      --bootstrap-version 3 \
       --service-cluster test \
       --service-node test1-id \
       --drain-time-s 10 \
@@ -89,7 +88,6 @@ services:
     - JAEGER_AGENT_HOST=jaeger
     command:
     - /usr/local/bin/envoy
-    - --bootstrap-version 3
     - --config-path /etc/envoy/envoy.yaml
     - --service-cluster test
     - --service-node test2-id
@@ -110,7 +108,6 @@ services:
     - JAEGER_AGENT_HOST=jaeger
     command:
     - /usr/local/bin/envoy
-    - --bootstrap-version 3
     - --config-path /etc/envoy/envoy.yaml
     - --service-cluster test
     - --service-node test3-id
