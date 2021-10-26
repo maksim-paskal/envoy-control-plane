@@ -23,10 +23,18 @@ import (
 	secretservice "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	xds "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"google.golang.org/grpc"
 )
 
-var SnapshotCache cache.SnapshotCache = cache.NewSnapshotCache(false, cache.IDHash{}, &Logger{})
+// SnapshotCache create cache with heartbeat responses for resources with a TTL.
+var SnapshotCache cache.SnapshotCache = cache.NewSnapshotCacheWithHeartbeating(
+	context.Background(),
+	false,
+	cache.IDHash{},
+	&Logger{},
+	*config.Get().EndpointTTL,
+)
 
 type ControlPlane struct{}
 

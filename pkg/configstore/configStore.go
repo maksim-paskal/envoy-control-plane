@@ -51,7 +51,7 @@ type ConfigStore struct {
 	ep                  *endpointstore.EndpointsStore
 	KubernetesEndpoints sync.Map
 	configEndpoints     map[string][]*endpoint.LocalityLbEndpoints
-	lastEndpoints       []types.Resource
+	lastEndpoints       []types.ResourceWithTTL
 	LastEndpointsArray  []string
 	ConfigStoreState    int
 	log                 *log.Entry
@@ -155,7 +155,7 @@ func (cs *ConfigStore) Push() {
 		return
 	}
 
-	err = controlplane.SnapshotCache.SetSnapshot(cs.Config.ID, snap)
+	err = controlplane.SnapshotCache.SetSnapshot(cs.ctx, cs.Config.ID, snap)
 
 	if err != nil {
 		cs.log.WithError(err).Error()
@@ -192,7 +192,7 @@ func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEn
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
 
 	for _, ep := range endpoints {
-		fixed, ok := ep.(*endpoint.ClusterLoadAssignment)
+		fixed, ok := ep.Resource.(*endpoint.ClusterLoadAssignment)
 		if !ok {
 			cs.log.WithError(errAssertion).Fatal("ep.(*endpoint.ClusterLoadAssignment)")
 		}
@@ -275,7 +275,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	})
 
 	isInvalidIP := false
-	publishEp := []types.Resource{}
+	publishEp := []types.ResourceWithTTL{}
 	publishEpArray := []string{} // for reflect.DeepEqual
 
 	for clusterName, ep := range lbEndpoints {
@@ -301,9 +301,14 @@ func (cs *ConfigStore) saveLastEndpoints() {
 			}
 		}
 
-		publishEp = append(publishEp, &endpoint.ClusterLoadAssignment{
+		clusterLoadAssignment := endpoint.ClusterLoadAssignment{
 			ClusterName: clusterName,
 			Endpoints:   ep,
+		}
+
+		publishEp = append(publishEp, types.ResourceWithTTL{
+			Resource: &clusterLoadAssignment,
+			TTL:      appConfig.Get().EndpointTTL,
 		})
 	}
 

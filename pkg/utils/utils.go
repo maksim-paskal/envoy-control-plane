@@ -23,6 +23,7 @@ import (
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/certs"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/utils-go"
@@ -32,7 +33,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints []types.Resource, commonSecrets []tls.Secret) (cache.Snapshot, error) { //nolint: lll
+func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints []types.ResourceWithTTL, commonSecrets []tls.Secret) (cache.Snapshot, error) { //nolint: lll
 	clusters, err := YamlToResources(configType.Clusters, cluster.Cluster{})
 	if err != nil {
 		return cache.Snapshot{}, err
@@ -62,21 +63,21 @@ func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints 
 	}
 
 	for i := range commonSecrets {
-		secrets = append(secrets, &commonSecrets[i])
+		secrets = append(secrets, types.ResourceWithTTL{Resource: &commonSecrets[i]})
 	}
 
-	return cache.NewSnapshot(
-		version,
-		endpoints,
-		clusters,
-		routes,
-		listiners,
-		nil,
-		secrets,
-	), nil
+	resources := make(map[string][]types.ResourceWithTTL)
+
+	resources[resource.ClusterType] = clusters
+	resources[resource.RouteType] = routes
+	resources[resource.ListenerType] = listiners
+	resources[resource.SecretType] = secrets
+	resources[resource.EndpointType] = endpoints
+
+	return cache.NewSnapshotWithTTLs(version, resources)
 }
 
-func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resource, error) {
+func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.ResourceWithTTL, error) {
 	if len(yamlObj) == 0 {
 		return nil, nil
 	}
@@ -95,7 +96,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 		return nil, errors.Wrap(err, "json.Unmarshal(jsonObj, &resources)")
 	}
 
-	results := make([]types.Resource, len(resources))
+	results := make([]types.ResourceWithTTL, len(resources))
 
 	for k, v := range resources {
 		resourcesJSON, err := utils.GetJSONfromYAML(v)
@@ -114,7 +115,8 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, errors.Wrap(err, "cluster.Cluster")
 			}
 
-			results[k] = &resource
+			results[k] = types.ResourceWithTTL{Resource: &resource}
+
 		case route.RouteConfiguration:
 			resource := route.RouteConfiguration{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
@@ -125,7 +127,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, errors.Wrap(err, "route.RouteConfiguration")
 			}
 
-			results[k] = &resource
+			results[k] = types.ResourceWithTTL{Resource: &resource}
 		case endpoint.ClusterLoadAssignment:
 			resource := endpoint.ClusterLoadAssignment{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
@@ -136,7 +138,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, errors.Wrap(err, "endpoint.ClusterLoadAssignment")
 			}
 
-			results[k] = &resource
+			results[k] = types.ResourceWithTTL{Resource: &resource}
 		case listener.Listener:
 			resource := listener.Listener{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
@@ -147,7 +149,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, errors.Wrap(err, "listener.Listener")
 			}
 
-			results[k] = &resource
+			results[k] = types.ResourceWithTTL{Resource: &resource}
 		case tls.Secret:
 			resource := tls.Secret{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
@@ -158,7 +160,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, errors.Wrap(err, "tls.Secret")
 			}
 
-			results[k] = &resource
+			results[k] = types.ResourceWithTTL{Resource: &resource}
 		default:
 			return nil, errUnknownClass
 		}
@@ -229,9 +231,9 @@ func NewSecrets(dnsName string, validation interface{}) ([]tls.Secret, error) {
 }
 
 // remove require_client_certificate from all listeners.
-func filterCertificates(listiners []types.Resource) error {
+func filterCertificates(listiners []types.ResourceWithTTL) error {
 	for _, listiner := range listiners {
-		c, ok := listiner.(*listener.Listener)
+		c, ok := listiner.Resource.(*listener.Listener)
 		if !ok {
 			return errUnknownClass
 		}

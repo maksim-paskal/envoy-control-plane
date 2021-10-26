@@ -31,37 +31,34 @@ type callbacks struct {
 }
 
 func (cb *callbacks) Report() {
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
-
 	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
-		log.WithFields(log.Fields{"fetches": cb.fetches, "requests": cb.requests}).Info("cb.Report()  callbacks")
+		log.WithFields(log.Fields{"fetches": cb.fetches, "requests": cb.requests}).Info("Report")
 	}
 }
 
-func (cb *callbacks) OnStreamOpen(ctx context.Context, id int64, typ string) error {
+func (cb *callbacks) OnStreamOpen(ctx context.Context, streamID int64, typ string) error {
 	metrics.GrpcOnStreamOpen.Inc()
 
 	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
-		log.Debugf("OnStreamOpen %d open for %s", id, typ)
+		log.WithField("streamID", streamID).Infof("OnStreamOpen==>%s", typ)
 	}
 
 	return nil
 }
 
-func (cb *callbacks) OnStreamClosed(id int64) {
+func (cb *callbacks) OnStreamClosed(streamID int64) {
 	metrics.GrpcOnStreamClosed.Inc()
 
 	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
-		log.Debugf("OnStreamClosed %d closed", id)
+		log.WithField("streamID", streamID).Info("OnStreamClosed")
 	}
 }
 
-func (cb *callbacks) OnStreamRequest(id int64, r *discovery.DiscoveryRequest) error {
+func (cb *callbacks) OnStreamRequest(streamID int64, r *discovery.DiscoveryRequest) error {
 	metrics.GrpcOnStreamRequest.Inc()
 
 	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
-		log.Debugf("OnStreamRequest")
+		log.WithField("streamID", streamID).Info("OnStreamRequest")
 	}
 
 	cb.mu.Lock()
@@ -76,15 +73,16 @@ func (cb *callbacks) OnStreamRequest(id int64, r *discovery.DiscoveryRequest) er
 	return nil
 }
 
-func (cb *callbacks) OnStreamResponse(id int64, r *discovery.DiscoveryRequest, w *discovery.DiscoveryResponse) {
+func (cb *callbacks) OnStreamResponse(ctx context.Context, streamID int64, r *discovery.DiscoveryRequest, w *discovery.DiscoveryResponse) { //nolint:lll
 	metrics.GrpcOnStreamResponse.Inc()
 
 	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
-		json, _ := protojson.Marshal(r)
-		log.Debugf("DiscoveryRequest=>\n%s\n", string(json))
+		log := log.WithField("streamID", streamID)
 
-		json, _ = protojson.Marshal(w)
-		log.Debugf("DiscoveryResponse=>\n%s\n", string(json))
+		discoveryRequest, _ := protojson.Marshal(r)
+		discoveryResponse, _ := protojson.Marshal(w)
+
+		log.Infof("DiscoveryRequest=>%s\nDiscoveryResponse=>%s\n", string(discoveryRequest), string(discoveryResponse)) //nolint:lll
 	}
 
 	cb.Report()
@@ -94,7 +92,9 @@ func (cb *callbacks) OnFetchRequest(ctx context.Context, req *discovery.Discover
 	metrics.GrpcOnFetchRequest.Inc()
 
 	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
-		log.Debugf("OnFetchRequest...")
+		log := log.WithField("node", req.Node.Id)
+
+		log.Info("OnFetchRequest")
 	}
 
 	cb.mu.Lock()
@@ -113,11 +113,12 @@ func (cb *callbacks) OnFetchResponse(r *discovery.DiscoveryRequest, w *discovery
 	metrics.GrpcOnFetchResponse.Inc()
 
 	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
-		json, _ := protojson.Marshal(r)
-		log.Debugf("DiscoveryRequest=>\n%s\n", string(json))
+		log := log.WithField("node", r.Node.Id)
 
-		json, _ = protojson.Marshal(w)
-		log.Debugf("DiscoveryResponse=>\n%s\n", string(json))
+		discoveryRequest, _ := protojson.Marshal(r)
+		discoveryResponse, _ := protojson.Marshal(w)
+
+		log.Infof("DiscoveryRequest=>%s\nDiscoveryResponse=>%s\n", string(discoveryRequest), string(discoveryResponse)) //nolint:lll
 	}
 }
 
@@ -128,7 +129,7 @@ func (cb *callbacks) OnStreamDeltaRequest(streamID int64, req *discovery.DeltaDi
 		log := log.WithField("streamID", streamID)
 
 		json, _ := protojson.Marshal(req)
-		log.Debugf("DeltaDiscoveryRequest=>\n%s\n", string(json))
+		log.Infof("DeltaDiscoveryRequest=>\n%s\n", string(json))
 	}
 
 	return nil
@@ -140,11 +141,10 @@ func (cb *callbacks) OnStreamDeltaResponse(streamID int64, req *discovery.DeltaD
 	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log := log.WithField("streamID", streamID)
 
-		json, _ := protojson.Marshal(req)
-		log.Debugf("DeltaDiscoveryRequest=>\n%s\n", string(json))
+		deltaDiscoveryRequest, _ := protojson.Marshal(req)
+		deltaDiscoveryResponse, _ := protojson.Marshal(resp)
 
-		json, _ = protojson.Marshal(resp)
-		log.Debugf("DeltaDiscoveryResponse=>\n%s\n", string(json))
+		log.Infof("DeltaDiscoveryRequest=>%s\nDeltaDiscoveryResponse=>%s\n", string(deltaDiscoveryRequest), string(deltaDiscoveryResponse)) //nolint:lll
 	}
 }
 
@@ -155,7 +155,7 @@ func (cb *callbacks) OnStreamDeltaRequestOnStreamDeltaRequest(streamID int64, re
 		log := log.WithField("streamID", streamID)
 
 		json, _ := protojson.Marshal(req)
-		log.Debugf("DeltaDiscoveryRequest=>\n%s\n", string(json))
+		log.Infof("DeltaDiscoveryRequest=>\n%s\n", string(json))
 	}
 
 	return nil
@@ -167,7 +167,7 @@ func (cb *callbacks) OnDeltaStreamOpen(ctx context.Context, streamID int64, type
 	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log := log.WithField("streamID", streamID)
 
-		log.Debugf("typeURL=>\n%s\n", typeURL)
+		log.Infof("typeURL=>\n%s\n", typeURL)
 	}
 
 	return nil
@@ -179,6 +179,6 @@ func (cb *callbacks) OnDeltaStreamClosed(streamID int64) {
 	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
 		log := log.WithField("streamID", streamID)
 
-		log.Debugf("closed")
+		log.Infof("OnDeltaStreamClosed")
 	}
 }
