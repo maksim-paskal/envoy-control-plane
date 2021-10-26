@@ -21,7 +21,7 @@ build:
 	make build-goreleaser
 	docker build --pull . -t paskalmaksim/envoy-control-plane:dev
 	docker build --pull . -f ./envoy/Dockerfile -t paskalmaksim/envoy-docker-image:dev
-	docker-compose build
+	docker-compose build --pull --parallel
 security-scan:
 	trivy fs --ignore-unfixed .
 security-check:
@@ -31,9 +31,10 @@ push:
 	docker push paskalmaksim/envoy-control-plane:dev
 	docker push paskalmaksim/envoy-docker-image:dev
 k8sConfig:
-	kubectl apply -f ./chart/envoy-control-plane/templates/testPods.yaml
-	kubectl apply -f ./config/
+	kubectl -n default apply -f ./chart/envoy-control-plane/templates/testPods.yaml
+	kubectl -n default apply -f ./config/
 run:
+	cp ${KUBECONFIG} kubeconfig
 	kubectl -n default delete cm -lapp=envoy-control-plane || true
 	make k8sConfig
 	make build-goreleaser
@@ -74,8 +75,8 @@ clean:
 	helm uninstall envoy-control-plane --namespace envoy-control-plane || true
 	kubectl delete ns envoy-control-plane || true
 	kubectl -n default delete cm -lapp=envoy-control-plane || true
-	kubectl delete -f ./config/ || true
-	kubectl delete -f ./chart/envoy-control-plane/templates/testPods.yaml || true
+	kubectl -n default delete -f ./config/ || true
+	kubectl -n default delete -f ./chart/envoy-control-plane/templates/testPods.yaml || true
 	docker-compose down --remove-orphans
 upgrade:
 	go get -v -u k8s.io/api@v0.20.9 || true

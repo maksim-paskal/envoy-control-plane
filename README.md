@@ -68,7 +68,6 @@ containers:
     /usr/local/bin/envoy \
     --config-path /etc/envoy/envoy.yaml \
     --log-level warn \
-    --bootstrap-version 3 \
     --service-cluster test \
     --service-node test1-id
   resources:
