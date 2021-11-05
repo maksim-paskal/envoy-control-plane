@@ -1,2 +1,0 @@
-sslCrt: testdata/CA.crt
-sslKey: testdata/CA.key

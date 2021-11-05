@@ -1,2 +1,0 @@
-kubeConfigFile: /some/test/path
-endpointTtl: 3s

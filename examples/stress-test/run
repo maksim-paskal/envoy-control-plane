@@ -1,2 +1,0 @@
-rm -rf logs/
-docker run -v $(pwd):/var/loadtest -it direvius/yandex-tank
