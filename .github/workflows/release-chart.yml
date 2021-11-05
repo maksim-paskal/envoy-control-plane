@@ -11,7 +11,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-
       - name: Configure Git
         run: |
           git config user.name "${GITHUB_ACTOR}"
@@ -20,9 +19,8 @@ jobs:
         uses: azure/setup-helm@v1
         with:
           version: v3.4.2
-
-      - env:
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.1.0
+        env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CR_RELEASE_NAME_TEMPLATE: "helm-chart-{{ .Version }}"
-        name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.1.0
