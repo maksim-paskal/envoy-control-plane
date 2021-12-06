@@ -13,8 +13,8 @@ test-release:
 	git tag -d `git tag -l "helm-chart-*"`
 	go run github.com/goreleaser/goreleaser@latest release --snapshot --skip-publish --rm-dist
 testChart:
-	helm lint --strict ./chart/envoy-control-plane
-	helm template ./chart/envoy-control-plane | kubectl apply --dry-run=client --validate -f -
+	helm lint --strict ./charts/envoy-control-plane
+	helm template ./charts/envoy-control-plane | kubectl apply --dry-run=client --validate -f -
 build-goreleaser:
 	git tag -d `git tag -l "helm-chart-*"`
 	go run github.com/goreleaser/goreleaser@latest build --rm-dist --snapshot
@@ -34,7 +34,7 @@ push:
 	docker push paskalmaksim/envoy-control-plane:dev
 	docker push paskalmaksim/envoy-docker-image:dev
 k8sConfig:
-	kubectl -n default apply -f ./chart/envoy-control-plane/templates/testPods.yaml
+	kubectl -n default apply -f ./charts/envoy-control-plane/templates/testPods.yaml
 	kubectl -n default apply -f ./config/
 run:
 	cp ${KUBECONFIG} kubeconfig
@@ -60,7 +60,7 @@ installDev:
 	--install \
 	--create-namespace \
 	--namespace envoy-control-plane \
-	./chart/envoy-control-plane \
+	./charts/envoy-control-plane \
 	--set withExamples=true \
 	--set ingress.enabled=true \
 	--set registry.image=paskalmaksim/envoy-control-plane:dev \
@@ -70,16 +70,16 @@ installDev:
 	--set-file certificates.envoyKey=./certs/envoy.key \
 	--set-file certificates.envoyCrt=./certs/envoy.crt
 
-	kubectl apply -n envoy-control-plane -f ./chart/envoy-control-plane/templates/testPods.yaml
+	kubectl apply -n envoy-control-plane -f ./charts/envoy-control-plane/templates/testPods.yaml
 	watch kubectl -n envoy-control-plane get pods
 installDevConfig:
-	kubectl -n envoy-control-plane apply -f ./chart/envoy-control-plane/templates/envoy-test1-id.yaml
+	kubectl -n envoy-control-plane apply -f ./charts/envoy-control-plane/templates/envoy-test1-id.yaml
 clean:
 	helm uninstall envoy-control-plane --namespace envoy-control-plane || true
 	kubectl delete ns envoy-control-plane || true
 	kubectl -n default delete cm -lapp=envoy-control-plane || true
 	kubectl -n default delete -f ./config/ || true
-	kubectl -n default delete -f ./chart/envoy-control-plane/templates/testPods.yaml || true
+	kubectl -n default delete -f ./charts/envoy-control-plane/templates/testPods.yaml || true
 	docker-compose down --remove-orphans
 upgrade:
 	go get -v -u k8s.io/api@v0.20.9 || true
