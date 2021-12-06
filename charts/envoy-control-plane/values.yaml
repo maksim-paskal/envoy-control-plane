@@ -105,13 +105,13 @@ certificates:
     -----END PRIVATE KEY-----
 
 registry:
-  image: paskalmaksim/envoy-control-plane:latest
-  imagePullPolicy: Always
+  image: paskalmaksim/envoy-control-plane:v0.3.3
+  imagePullPolicy: IfNotPresent
 
 envoy:
   registry:
-    image: paskalmaksim/envoy-docker-image:latest
-    imagePullPolicy: Always
+    image: paskalmaksim/envoy-docker-image:v0.3.3
+    imagePullPolicy: IfNotPresent
 
 service:
   external:
