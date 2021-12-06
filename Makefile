@@ -3,18 +3,21 @@ KUBECONFIG=$(HOME)/.kube/example-kubeconfig
 test:
 	./scripts/validate-license.sh
 	go fmt ./cmd/... ./pkg/...
+	go vet ./cmd/... ./pkg/...
 	go mod tidy
-	golangci-lint run -v
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run -v
 	./scripts/test-pkg.sh
 coverage:
 	go tool cover -html=coverage.out
 test-release:
-	goreleaser release --snapshot --skip-publish --rm-dist
+	git tag -d `git tag -l "helm-chart-*"`
+	go run github.com/goreleaser/goreleaser@latest release --snapshot --skip-publish --rm-dist
 testChart:
 	helm lint --strict ./chart/envoy-control-plane
 	helm template ./chart/envoy-control-plane | kubectl apply --dry-run=client --validate -f -
 build-goreleaser:
-	goreleaser build --rm-dist --snapshot
+	git tag -d `git tag -l "helm-chart-*"`
+	go run github.com/goreleaser/goreleaser@latest build --rm-dist --snapshot
 	mv ./dist/envoy-control-plane_linux_amd64/envoy-control-plane envoy-control-plane
 	mv ./dist/cli_linux_amd64/cli cli
 build:
