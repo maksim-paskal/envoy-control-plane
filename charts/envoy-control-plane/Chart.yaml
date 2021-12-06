@@ -1,4 +1,4 @@
 apiVersion: v2
 icon: https://helm.sh/img/helm.svg
 name: envoy-control-plane
-version: v0.0.1
+version: v0.0.2
