@@ -21,6 +21,7 @@ import (
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
@@ -47,6 +48,8 @@ func New() *ConfigMapStore {
 }
 
 func (cms *ConfigMapStore) init() {
+	defer runtime.HandleCrash()
+
 	if *config.Get().WatchNamespaced {
 		cms.log.Infof("start namespaced, namespace=%s", *config.Get().Namespace)
 		cms.factory = informers.NewSharedInformerFactoryWithOptions(
@@ -97,6 +100,13 @@ func (cms *ConfigMapStore) init() {
 		},
 	})
 
+	err := cms.informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		cms.log.WithError(err).Error()
+	})
+	if err != nil {
+		cms.log.WithError(err).Fatal()
+	}
+
 	cms.stopCh = make(chan struct{})
 
 	defer close(cms.stopCh)
@@ -107,7 +117,7 @@ func (cms *ConfigMapStore) init() {
 	go cms.informer.Run(cms.stopCh)
 
 	if !cache.WaitForCacheSync(cms.stopCh, cms.informer.HasSynced) {
-		log.WithError(errTimeout).Fatal()
+		cms.log.WithError(errTimeout).Fatal()
 
 		return
 	}
