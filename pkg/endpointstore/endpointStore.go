@@ -20,6 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
@@ -46,6 +47,8 @@ func New() *EndpointsStore {
 }
 
 func (es *EndpointsStore) init() {
+	defer runtime.HandleCrash()
+
 	if *config.Get().WatchNamespaced {
 		es.log.Infof("start namespaced, namespace=%s", *config.Get().Namespace)
 		es.Factory = informers.NewSharedInformerFactoryWithOptions(
@@ -92,6 +95,13 @@ func (es *EndpointsStore) init() {
 			go es.OnDeletePod(pod)
 		},
 	})
+
+	err := es.informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
+		es.log.WithError(err).Error()
+	})
+	if err != nil {
+		es.log.WithError(err).Fatal()
+	}
 
 	es.Factory.Start(es.stopCh)
 	es.Factory.WaitForCacheSync(es.stopCh)
