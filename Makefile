@@ -82,9 +82,9 @@ clean:
 	kubectl -n default delete -f ./charts/envoy-control-plane/templates/testPods.yaml || true
 	docker-compose down --remove-orphans
 upgrade:
-	go get -v -u k8s.io/api@v0.20.9 || true
-	go get -v -u k8s.io/apimachinery@v0.20.9
-	go get -v -u k8s.io/client-go@v0.20.9
+	go get -v -u k8s.io/api@v0.20.13 || true
+	go get -v -u k8s.io/apimachinery@v0.20.13
+	go get -v -u k8s.io/client-go@v0.20.13
 	go mod tidy
 heap:
 	go tool pprof -http=127.0.0.1:8080 https+insecure://localhost:18081/debug/pprof/heap
