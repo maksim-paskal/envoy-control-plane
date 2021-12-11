@@ -101,7 +101,7 @@ func (cms *ConfigMapStore) init() {
 	})
 
 	err := cms.informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
-		cms.log.WithError(err).Error()
+		cms.log.WithError(err).Fatal()
 	})
 	if err != nil {
 		cms.log.WithError(err).Fatal()

@@ -97,7 +97,7 @@ func (es *EndpointsStore) init() {
 	})
 
 	err := es.informer.SetWatchErrorHandler(func(r *cache.Reflector, err error) {
-		es.log.WithError(err).Error()
+		es.log.WithError(err).Fatal()
 	})
 	if err != nil {
 		es.log.WithError(err).Fatal()
