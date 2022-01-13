@@ -2,6 +2,14 @@ apiVersion: v1
 entries:
   envoy-control-plane:
   - apiVersion: v2
+    created: "2022-01-13T15:58:27.555266545Z"
+    digest: 73016122f7c641fa312568534780a7cfb65ebd5173f1de7dbb9ebcd8cdcf513f
+    icon: https://helm.sh/img/helm.svg
+    name: envoy-control-plane
+    urls:
+    - https://github.com/maksim-paskal/envoy-control-plane/releases/download/helm-chart-v0.0.3/envoy-control-plane-v0.0.3.tgz
+    version: v0.0.3
+  - apiVersion: v2
     created: "2021-12-06T12:18:41.44847898Z"
     digest: 1f39571bfbea60a9e33a1e01cf45268ccc1ab595c141826b14abf4d44822cd30
     icon: https://helm.sh/img/helm.svg
