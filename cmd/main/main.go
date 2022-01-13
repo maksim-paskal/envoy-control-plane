@@ -96,7 +96,7 @@ func main() {
 
 	log.Infof("Starting %s...", config.GetVersion())
 
-	if err = api.MakeAuth(); err != nil {
+	if err = api.Init(); err != nil {
 		log.WithError(err).Fatal()
 	}
 
@@ -245,7 +245,7 @@ func main() {
 	go startGRPC(grpcServer, lis)
 
 	// sync manual
-	go syncManual()
+	go syncManual(ep, cms)
 
 	defer hook.Stop()
 
@@ -260,9 +260,17 @@ func startGRPC(grpcServer *grpc.Server, lis net.Listener) {
 }
 
 // sync all endpoints in configs with endpointstore.
-func syncManual() {
+func syncManual(ep *endpointstore.EndpointsStore, cms *configmapsstore.ConfigMapStore) {
 	for {
 		time.Sleep(*config.Get().EndpointCheckPeriod)
+
+		if err := ep.Ping(); err != nil {
+			log.WithError(err).Fatal(err)
+		}
+
+		if err := cms.Ping(); err != nil {
+			log.WithError(err).Fatal(err)
+		}
 
 		configstore.StoreMap.Range(func(k, v interface{}) bool {
 			cs, ok := v.(*configstore.ConfigStore)

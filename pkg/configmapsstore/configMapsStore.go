@@ -19,10 +19,13 @@ import (
 
 	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/informers"
+	listerv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -31,8 +34,8 @@ type ConfigMapStore struct {
 	OnNewConfig    func(*config.ConfigType)
 	OnDeleteConfig func(string)
 	log            *log.Entry
-	factory        informers.SharedInformerFactory
 	informer       cache.SharedIndexInformer
+	lister         listerv1.ConfigMapLister
 }
 
 func New() *ConfigMapStore {
@@ -50,22 +53,13 @@ func New() *ConfigMapStore {
 func (cms *ConfigMapStore) init() {
 	defer runtime.HandleCrash()
 
-	if *config.Get().WatchNamespaced {
-		cms.log.Infof("start namespaced, namespace=%s", *config.Get().Namespace)
-		cms.factory = informers.NewSharedInformerFactoryWithOptions(
-			api.Clientset, 0,
-			informers.WithNamespace(*config.Get().Namespace),
-		)
-	} else {
-		cms.factory = informers.NewSharedInformerFactoryWithOptions(
-			api.Clientset, 0,
-		)
-	}
-
-	cms.informer = cms.factory.Core().V1().ConfigMaps().Informer()
+	cms.informer = api.Client.KubeFactory().Core().V1().ConfigMaps().Informer()
+	cms.lister = api.Client.KubeFactory().Core().V1().ConfigMaps().Lister()
 
 	cms.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
+			metrics.ConfigmapsstoreAddFunc.Inc()
+
 			cm, ok := obj.(*v1.ConfigMap)
 			if !ok {
 				cms.log.WithError(errAssertion).Fatal("obj.(*v1.ConfigMap)")
@@ -74,6 +68,8 @@ func (cms *ConfigMapStore) init() {
 			cms.CheckData(cm)
 		},
 		UpdateFunc: func(old, cur interface{}) {
+			metrics.ConfigmapsstoreUpdateFunc.Inc()
+
 			curConfig, ok := cur.(*v1.ConfigMap)
 			if !ok {
 				cms.log.WithError(errAssertion).Fatal("cur.(*v1.ConfigMap)")
@@ -91,6 +87,8 @@ func (cms *ConfigMapStore) init() {
 			cms.CheckData(curConfig)
 		},
 		DeleteFunc: func(obj interface{}) {
+			metrics.ConfigmapsstoreDeleteFunc.Inc()
+
 			cm, ok := obj.(*v1.ConfigMap)
 			if !ok {
 				cms.log.WithError(errAssertion).Fatal("obj.(*v1.ConfigMap)")
@@ -110,9 +108,6 @@ func (cms *ConfigMapStore) init() {
 	cms.stopCh = make(chan struct{})
 
 	defer close(cms.stopCh)
-
-	cms.factory.Start(cms.stopCh)
-	cms.factory.WaitForCacheSync(cms.stopCh)
 
 	go cms.informer.Run(cms.stopCh)
 
@@ -185,6 +180,15 @@ func (cms *ConfigMapStore) CheckData(cm *v1.ConfigMap) {
 			go cms.OnNewConfig(&config)
 		}
 	}
+}
+
+func (cms *ConfigMapStore) Ping() error {
+	_, err := cms.lister.List(labels.Everything())
+	if err != nil {
+		return errors.Wrap(err, "error listing pods")
+	}
+
+	return nil
 }
 
 func (cms *ConfigMapStore) Stop() {

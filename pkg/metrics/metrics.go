@@ -89,6 +89,42 @@ var (
 		Name:      "apiserver_request_duration",
 		Help:      "The duration in seconds of kunernetes API requests",
 	})
+
+	ConfigmapsstoreAddFunc = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "configmapsstore_add_total",
+		Help:      "The total number of AddFunc events in configmapsstore",
+	})
+
+	ConfigmapsstoreUpdateFunc = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "configmapsstore_update_total",
+		Help:      "The total number of UpdateFunc events in configmapsstore",
+	})
+
+	ConfigmapsstoreDeleteFunc = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "configmapsstore_delete_total",
+		Help:      "The total number of DeleteFunc events in configmapsstore",
+	})
+
+	EndpointstoreAddFunc = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "endpointstore_add_total",
+		Help:      "The total number of AddFunc events in endpointstore",
+	})
+
+	EndpointstoreUpdateFunc = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "endpointstore_update_total",
+		Help:      "The total number of UpdateFunc events in endpointstore",
+	})
+
+	EndpointstoreDeleteFunc = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "endpointstore_delete_total",
+		Help:      "The total number of DeleteFunc events in endpointstore",
+	})
 )
 
 func GetHandler() http.Handler {

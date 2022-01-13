@@ -17,17 +17,19 @@ import (
 
 	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/informers"
+	listerv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
 type EndpointsStore struct {
 	informer    cache.SharedIndexInformer
-	Factory     informers.SharedInformerFactory
+	lister      listerv1.PodLister
 	stopCh      chan struct{}
 	OnNewPod    func(pod *v1.Pod)
 	OnDeletePod func(pod *v1.Pod)
@@ -49,25 +51,16 @@ func New() *EndpointsStore {
 func (es *EndpointsStore) init() {
 	defer runtime.HandleCrash()
 
-	if *config.Get().WatchNamespaced {
-		es.log.Infof("start namespaced, namespace=%s", *config.Get().Namespace)
-		es.Factory = informers.NewSharedInformerFactoryWithOptions(
-			api.Clientset, 0,
-			informers.WithNamespace(*config.Get().Namespace),
-		)
-	} else {
-		es.Factory = informers.NewSharedInformerFactoryWithOptions(
-			api.Clientset, 0,
-		)
-	}
-
-	es.informer = es.Factory.Core().V1().Pods().Informer()
+	es.informer = api.Client.KubeFactory().Core().V1().Pods().Informer()
+	es.lister = api.Client.KubeFactory().Core().V1().Pods().Lister()
 	es.stopCh = make(chan struct{})
 
 	defer close(es.stopCh)
 
 	es.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
+			metrics.EndpointstoreAddFunc.Inc()
+
 			log.Debug("AddFunc")
 			pod, ok := obj.(*v1.Pod)
 			if !ok {
@@ -77,6 +70,8 @@ func (es *EndpointsStore) init() {
 			go es.OnNewPod(pod)
 		},
 		UpdateFunc: func(oldObj interface{}, newObj interface{}) {
+			metrics.EndpointstoreUpdateFunc.Inc()
+
 			log.Debug("UpdateFunc")
 			pod, ok := newObj.(*v1.Pod)
 			if !ok {
@@ -86,6 +81,8 @@ func (es *EndpointsStore) init() {
 			go es.OnNewPod(pod)
 		},
 		DeleteFunc: func(obj interface{}) {
+			metrics.EndpointstoreDeleteFunc.Inc()
+
 			log.Debug("DeleteFunc")
 			pod, ok := obj.(*v1.Pod)
 			if !ok {
@@ -103,9 +100,6 @@ func (es *EndpointsStore) init() {
 		es.log.WithError(err).Fatal()
 	}
 
-	es.Factory.Start(es.stopCh)
-	es.Factory.WaitForCacheSync(es.stopCh)
-
 	go es.informer.Run(es.stopCh)
 
 	if !cache.WaitForCacheSync(es.stopCh, es.informer.HasSynced) {
@@ -116,7 +110,7 @@ func (es *EndpointsStore) init() {
 
 	if *config.Get().EndpointstoreWaitForPod {
 		for {
-			pods, err := es.Factory.Core().V1().Pods().Lister().List(labels.Everything())
+			pods, err := es.lister.List(labels.Everything())
 			if err != nil {
 				es.log.WithError(err).Error("error listing pods")
 			}
@@ -131,6 +125,15 @@ func (es *EndpointsStore) init() {
 	}
 
 	<-es.stopCh
+}
+
+func (es *EndpointsStore) Ping() error {
+	_, err := es.lister.List(labels.Everything())
+	if err != nil {
+		return errors.Wrap(err, "error listing pods")
+	}
+
+	return nil
 }
 
 func (es *EndpointsStore) Stop() {

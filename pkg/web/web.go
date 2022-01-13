@@ -411,14 +411,14 @@ func (ws *Server) handlerStatus(w http.ResponseWriter, r *http.Request) {
 func (ws *Server) getZone(namespace string, pod string) string {
 	const unknown = "unknown"
 
-	podInfo, err := api.Clientset.CoreV1().Pods(namespace).Get(ws.ctx, pod, metav1.GetOptions{})
+	podInfo, err := api.Client.KubeClient().CoreV1().Pods(namespace).Get(ws.ctx, pod, metav1.GetOptions{})
 	if err != nil {
 		ws.log.WithError(err).Error()
 
 		return unknown
 	}
 
-	nodeInfo, err := api.Clientset.CoreV1().Nodes().Get(ws.ctx, podInfo.Spec.NodeName, metav1.GetOptions{})
+	nodeInfo, err := api.Client.KubeClient().CoreV1().Nodes().Get(ws.ctx, podInfo.Spec.NodeName, metav1.GetOptions{})
 	if err != nil {
 		ws.log.WithError(err).Error()
 
