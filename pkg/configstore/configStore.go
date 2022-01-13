@@ -94,7 +94,7 @@ func New(config *appConfig.ConfigType, ep *endpointstore.EndpointsStore) (*Confi
 		namespaceSearch = *appConfig.Get().Namespace
 	}
 
-	pods, err := api.Clientset.CoreV1().Pods(namespaceSearch).List(context.Background(), metav1.ListOptions{})
+	pods, err := api.Client.KubeClient().CoreV1().Pods(namespaceSearch).List(cs.ctx, metav1.ListOptions{})
 	if err != nil {
 		cs.log.WithError(err).Error()
 	}
@@ -420,7 +420,7 @@ func (cs *ConfigStore) Stop() {
 }
 
 func (cs *ConfigStore) getNode(nodeName string) (*v1.Node, error) {
-	nodeInfo, err := api.Clientset.CoreV1().Nodes().Get(cs.ctx, nodeName, metav1.GetOptions{})
+	nodeInfo, err := api.Client.KubeClient().CoreV1().Nodes().Get(cs.ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return nil, errors.Wrap(err, "cs.ep.clientset.CoreV1().Nodes().Get")
 	}
