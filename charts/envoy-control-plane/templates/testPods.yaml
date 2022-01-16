@@ -63,12 +63,16 @@ spec:
           name: test-pod-config
       containers:
       - name: test-001
-        image: envoyproxy/envoy:v1.21.0
-        imagePullPolicy: IfNotPresent
+        image: paskalmaksim/envoy-docker-image:latest
+        imagePullPolicy: Always
         resources:
           limits:
             cpu: 10m
             memory: 100Mi
+        command:
+        - /usr/local/bin/envoy
+        - --config-path /etc/envoy/envoy.yaml
+        - --log-level warn
         # stop container after 30 sec
         # lifecycle:
         #   preStop:
@@ -108,12 +112,16 @@ spec:
           name: test-pod-config
       containers:
       - name: test-002
-        image: envoyproxy/envoy:v1.21.0
-        imagePullPolicy: IfNotPresent
+        image: paskalmaksim/envoy-docker-image:latest
+        imagePullPolicy: Always
         resources:
           limits:
             cpu: 10m
             memory: 100Mi
+        command:
+        - /usr/local/bin/envoy
+        - --config-path /etc/envoy/envoy.yaml
+        - --log-level warn
         # stop container after 30 sec
         # lifecycle:
         #   preStop:

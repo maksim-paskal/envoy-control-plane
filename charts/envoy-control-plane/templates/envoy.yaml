@@ -46,7 +46,7 @@ spec:
             exec:
               # gracefully drain all connection
               command: ["/bin/sh", "-c", "cli -drainEnvoy; sleep 5s; pkill -SIGTERM envoy"]
-        image: {{ .Values.envoy.registry.image | quote }}
+        image: {{ tpl .Values.envoy.registry.image . | quote }}
         imagePullPolicy: {{ .Values.envoy.registry.imagePullPolicy | quote }}
         args:
         - /bin/sh

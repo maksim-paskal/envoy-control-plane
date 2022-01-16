@@ -77,7 +77,7 @@ spec:
           name: envoy-control-plane-certs
       containers:
       - name: envoy-control-plane
-        image: {{ .Values.registry.image | quote }}
+        image: {{ tpl .Values.registry.image . | quote }}
         imagePullPolicy: {{ .Values.registry.imagePullPolicy | quote }}
         env:
         - name: MY_POD_NAMESPACE

@@ -105,12 +105,12 @@ certificates:
     -----END PRIVATE KEY-----
 
 registry:
-  image: paskalmaksim/envoy-control-plane:v0.3.5
+  image: paskalmaksim/envoy-control-plane:{{ .Chart.AppVersion }}
   imagePullPolicy: IfNotPresent
 
 envoy:
   registry:
-    image: paskalmaksim/envoy-docker-image:v0.3.5
+    image: paskalmaksim/envoy-docker-image:{{ .Chart.AppVersion }}
     imagePullPolicy: IfNotPresent
 
 service:

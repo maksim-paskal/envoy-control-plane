@@ -2,7 +2,7 @@ version: '3'
 
 services:
   envoy:
-    image: envoyproxy/envoy:v1.21.0
+    image: paskalmaksim/envoy-docker-image:latest
     ports:
     - 8000:8000
     - 8001:8001
