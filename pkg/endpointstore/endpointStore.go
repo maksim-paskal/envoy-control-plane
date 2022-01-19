@@ -136,6 +136,10 @@ func (es *EndpointsStore) Ping() error {
 	return nil
 }
 
+func (es *EndpointsStore) List() (ret []*v1.Pod, err error) {
+	return es.lister.List(labels.Everything())
+}
+
 func (es *EndpointsStore) Stop() {
 	close(es.stopCh)
 }

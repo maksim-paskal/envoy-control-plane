@@ -279,10 +279,7 @@ func syncManual(ep *endpointstore.EndpointsStore, cms *configmapsstore.ConfigMap
 				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 			}
 
-			if cs.ConfigStoreState != configstore.ConfigStoreStateSTOP {
-				log.Debugf("check endpoints=%s", cs.Config.ID)
-				cs.Sync()
-			}
+			cs.Sync()
 
 			return true
 		})
@@ -307,7 +304,7 @@ func rotateCertificates() {
 			if err := cs.LoadNewSecrets(); err != nil {
 				log.WithError(err).Error("error in LoadNewSecrets")
 			} else {
-				cs.Push()
+				cs.Push("LoadNewSecrets")
 			}
 
 			return true

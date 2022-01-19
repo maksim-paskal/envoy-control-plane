@@ -30,6 +30,7 @@ import (
 	appConfig "github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/controlplane"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/endpointstore"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -88,32 +89,28 @@ func New(config *appConfig.ConfigType, ep *endpointstore.EndpointsStore) (*Confi
 		cs.log.WithError(err).Error()
 	}
 
-	namespaceSearch := ""
-
-	if *appConfig.Get().WatchNamespaced {
-		namespaceSearch = *appConfig.Get().Namespace
-	}
-
-	pods, err := api.Client.KubeClient().CoreV1().Pods(namespaceSearch).List(cs.ctx, metav1.ListOptions{})
-	if err != nil {
-		cs.log.WithError(err).Error()
-	}
-
-	log.Infof("Found %d pods", len(pods.Items))
-
-	for i := range pods.Items {
-		cs.loadEndpoint(&pods.Items[i])
-	}
-
-	cs.saveLastEndpoints()
+	cs.loadPods()
 
 	if err = cs.LoadNewSecrets(); err != nil {
 		return nil, errors.Wrap(err, "error in LoadNewSecrets")
 	}
 
-	cs.Push()
-
 	return &cs, nil
+}
+
+func (cs *ConfigStore) loadPods() {
+	pods, err := cs.ep.List()
+	if err != nil {
+		cs.log.WithError(err).Error()
+	}
+
+	cs.log.Debugf("Found %d pods", len(pods))
+
+	for _, pod := range pods {
+		cs.loadEndpoint(pod)
+	}
+
+	cs.saveLastEndpoints()
 }
 
 func (cs *ConfigStore) NewPod(pod *v1.Pod) {
@@ -135,9 +132,11 @@ func (cs *ConfigStore) DeletePod(pod *v1.Pod) {
 	cs.saveLastEndpoints()
 }
 
-func (cs *ConfigStore) Push() {
+func (cs *ConfigStore) Push(reason string) {
 	cs.mutex.Lock()
 	defer cs.mutex.Unlock()
+
+	metrics.ConfigmapsstorePush.Inc()
 
 	for {
 		newVersion := uuid.New().String()
@@ -163,7 +162,7 @@ func (cs *ConfigStore) Push() {
 		return
 	}
 
-	cs.log.WithField("version", cs.Version).Infof("pushed")
+	cs.log.WithField("version", cs.Version).Infof("pushed, reason=%s", reason)
 }
 
 func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
@@ -179,7 +178,7 @@ func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
 			cs.KubernetesEndpoints.Store(pod.Name, podInfo)
 		}
 	} else {
-		log.Debugf("pod %s not valid", pod.Name)
+		cs.log.Debugf("pod %s not valid", pod.Name)
 	}
 }
 
@@ -326,7 +325,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 		cs.LastEndpointsArray = publishEpArray
 		cs.log.Debug("new endpoints")
 		// endpoints changes
-		cs.Push()
+		cs.Push("new endpoints")
 	}
 }
 
@@ -432,6 +431,8 @@ func (cs *ConfigStore) Sync() {
 	if cs.ConfigStoreState == ConfigStoreStateSTOP {
 		return
 	}
+
+	cs.loadPods()
 
 	if cs.lastEndpoints != nil {
 		snap, err := controlplane.SnapshotCache.GetSnapshot(cs.Config.ID)
