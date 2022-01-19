@@ -116,9 +116,7 @@ func main() {
 				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 			}
 
-			if cs.ConfigStoreState != configstore.ConfigStoreStateSTOP {
-				cs.NewPod(pod)
-			}
+			cs.NewPod(pod)
 
 			return true
 		})
@@ -132,9 +130,7 @@ func main() {
 				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 			}
 
-			if cs.ConfigStoreState != configstore.ConfigStoreStateSTOP {
-				cs.DeletePod(pod)
-			}
+			cs.DeletePod(pod)
 
 			return true
 		})
@@ -188,7 +184,7 @@ func main() {
 
 	defer cms.Stop()
 
-	serverCert, _, serverKey, _, err := certs.NewCertificate("envoy-control-plane", certs.CertValidityMax)
+	serverCert, _, serverKey, _, err := certs.NewCertificate(config.AppName, certs.CertValidityMax)
 	if err != nil {
 		log.WithError(err).Fatal("failed to NewCertificate")
 	}

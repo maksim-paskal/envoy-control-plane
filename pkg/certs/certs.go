@@ -125,9 +125,9 @@ func GenCARoot() (*x509.Certificate, []byte, *rsa.PrivateKey, []byte, error) {
 		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
 			Country:            []string{"US"},
-			Organization:       []string{"envoy-control-plane"},
+			Organization:       []string{config.AppName},
 			OrganizationalUnit: []string{"CA"},
-			CommonName:         "envoy-control-plane",
+			CommonName:         config.AppName,
 		},
 		NotBefore:             time.Now().Add(-10 * time.Second),
 		NotAfter:              time.Now().Add(CertValidityMax),
@@ -166,7 +166,7 @@ func GenServerCert(dnsName string, rootCert *x509.Certificate, rootKey *rsa.Priv
 		SerialNumber: new(big.Int).SetInt64(time.Now().Unix()),
 		Subject: pkix.Name{
 			Country:            []string{"US"},
-			Organization:       []string{"envoy-control-plane"},
+			Organization:       []string{config.AppName},
 			OrganizationalUnit: []string{"CLIENT"},
 			CommonName:         dnsName,
 		},

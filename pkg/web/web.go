@@ -36,11 +36,10 @@ import (
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	basicRealm  = "envoy-control-plane"
+	basicRealm  = config.AppName
 	adminPrefix = "/api/admin"
 )
 
@@ -154,7 +153,7 @@ func (ws *Server) Start() {
 func (ws *Server) StartTLS() {
 	ws.log.Info("https.address=", *config.Get().WebHTTPSAddress)
 
-	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate("envoy-control-plane", certs.CertValidityYear)
+	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate(config.AppName, certs.CertValidityYear)
 	if err != nil {
 		log.WithError(err).Fatal("failed to NewCertificate")
 	}
@@ -408,32 +407,6 @@ func (ws *Server) handlerStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ws *Server) getZone(namespace string, pod string) string {
-	const unknown = "unknown"
-
-	podInfo, err := api.Client.KubeClient().CoreV1().Pods(namespace).Get(ws.ctx, pod, metav1.GetOptions{})
-	if err != nil {
-		ws.log.WithError(err).Error()
-
-		return unknown
-	}
-
-	nodeInfo, err := api.Client.KubeClient().CoreV1().Nodes().Get(ws.ctx, podInfo.Spec.NodeName, metav1.GetOptions{})
-	if err != nil {
-		ws.log.WithError(err).Error()
-
-		return unknown
-	}
-
-	zone := nodeInfo.Labels[*config.Get().NodeZoneLabel]
-
-	if len(zone) == 0 {
-		return unknown
-	}
-
-	return zone
-}
-
 func (ws *Server) handlerZone(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
@@ -446,7 +419,7 @@ func (ws *Server) handlerZone(w http.ResponseWriter, r *http.Request) {
 	namespace := r.Form.Get("namespace")
 	pod := r.Form.Get("pod")
 
-	zone := ws.getZone(namespace, pod)
+	zone := api.GetZone(namespace, pod)
 
 	_, err = w.Write([]byte(zone))
 	if err != nil {

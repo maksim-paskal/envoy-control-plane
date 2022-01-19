@@ -36,7 +36,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -56,7 +55,8 @@ type ConfigStore struct {
 	LastEndpointsArray  []string
 	ConfigStoreState    int
 	log                 *log.Entry
-	mutex               sync.Mutex
+	mutexPush           sync.Mutex
+	mutexSave           sync.Mutex
 	ctx                 context.Context
 	secrets             []tls.Secret
 }
@@ -98,6 +98,10 @@ func New(config *appConfig.ConfigType, ep *endpointstore.EndpointsStore) (*Confi
 	return &cs, nil
 }
 
+func (cs *ConfigStore) isStoped() bool {
+	return cs.ConfigStoreState == ConfigStoreStateSTOP
+}
+
 func (cs *ConfigStore) loadPods() {
 	pods, err := cs.ep.List()
 	if err != nil {
@@ -114,7 +118,7 @@ func (cs *ConfigStore) loadPods() {
 }
 
 func (cs *ConfigStore) NewPod(pod *v1.Pod) {
-	if cs.ConfigStoreState == ConfigStoreStateSTOP {
+	if cs.isStoped() {
 		return
 	}
 
@@ -123,7 +127,7 @@ func (cs *ConfigStore) NewPod(pod *v1.Pod) {
 }
 
 func (cs *ConfigStore) DeletePod(pod *v1.Pod) {
-	if cs.ConfigStoreState == ConfigStoreStateSTOP {
+	if cs.isStoped() {
 		return
 	}
 
@@ -133,8 +137,8 @@ func (cs *ConfigStore) DeletePod(pod *v1.Pod) {
 }
 
 func (cs *ConfigStore) Push(reason string) {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
+	cs.mutexPush.Lock()
+	defer cs.mutexPush.Unlock()
 
 	metrics.ConfigmapsstorePush.Inc()
 
@@ -216,6 +220,9 @@ func (cs *ConfigStore) LoadNewSecrets() error {
 
 // save endpoints.
 func (cs *ConfigStore) saveLastEndpoints() {
+	cs.mutexSave.Lock()
+	defer cs.mutexSave.Unlock()
+
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
 	// copy map
 	for key, value := range cs.configEndpoints {
@@ -391,7 +398,7 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) CheckPodResult {
 				if len(result.nodeZone) == 0 {
 					zone := ""
 
-					nodeInfo, err := cs.getNode(pod.Spec.NodeName)
+					nodeInfo, err := api.GetNode(pod.Spec.NodeName)
 					if err != nil {
 						log.WithError(err).Error()
 					} else {
@@ -418,17 +425,8 @@ func (cs *ConfigStore) Stop() {
 	cs.ConfigStoreState = ConfigStoreStateSTOP
 }
 
-func (cs *ConfigStore) getNode(nodeName string) (*v1.Node, error) {
-	nodeInfo, err := api.Client.KubeClient().CoreV1().Nodes().Get(cs.ctx, nodeName, metav1.GetOptions{})
-	if err != nil {
-		return nil, errors.Wrap(err, "cs.ep.clientset.CoreV1().Nodes().Get")
-	}
-
-	return nodeInfo, nil
-}
-
 func (cs *ConfigStore) Sync() {
-	if cs.ConfigStoreState == ConfigStoreStateSTOP {
+	if cs.isStoped() {
 		return
 	}
 

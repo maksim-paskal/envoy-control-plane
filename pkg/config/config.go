@@ -25,6 +25,7 @@ import (
 )
 
 const (
+	AppName                    = "envoy-control-plane"
 	sslRotationPeriodDefault   = 1 * time.Hour
 	endpointCheckPeriodDefault = 60 * time.Second
 	endpointTTLDefault         = 30 * time.Second
