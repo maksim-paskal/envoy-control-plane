@@ -108,6 +108,12 @@ var (
 		Help:      "The total number of DeleteFunc events in configmapsstore",
 	})
 
+	ConfigmapsstorePush = promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "configmapsstore_push_total",
+		Help:      "The total number of Push",
+	})
+
 	EndpointstoreAddFunc = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: namespace,
 		Name:      "endpointstore_add_total",
