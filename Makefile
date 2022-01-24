@@ -1,4 +1,5 @@
 KUBECONFIG=$(HOME)/.kube/example-kubeconfig
+initialPodCount=10
 
 test:
 	./scripts/validate-license.sh
@@ -45,7 +46,10 @@ run:
 runRaceDetection:
 	go run -v -race ./cmd/main \
 	-log.level=DEBUG \
-	-log.pretty -kubeconfig.path=$(KUBECONFIG) \
+	-log.pretty \
+	-kubeconfig.path=$(KUBECONFIG) \
+	-web.adminUser=admin \
+	-web.adminPassword=admin \
 	-ssl.crt=certs/CA.crt \
 	-ssl.key=certs/CA.key
 runCli:
@@ -116,3 +120,17 @@ sslTestClient:
 	curl -v --cacert ./certs/CA.crt --resolve "test3-id:8002:127.0.0.1" --key ./certs/test.key --cert ./certs/test.crt https://test3-id:8002
 sslTestControlPlane:
 	curl -vk --http2 --cacert ./certs/CA.crt --resolve "envoy-control-plane:18080:127.0.0.1" --key ./certs/test.key --cert ./certs/test.crt https://envoy-control-plane:18080
+test-e2e:
+	make clean k8sConfig
+	kubectl scale deploy test-001 test-002 --replicas=${initialPodCount}
+	kubectl wait --for=condition=available deployment --all --timeout=600s
+	kubectl wait --for=condition=Ready pods --all --timeout=600s
+
+	go test -v -race ./e2e \
+	-initialPodCount=${initialPodCount} \
+	-kubeconfig.path=$(KUBECONFIG) \
+	-config.drainPeriod=1s \
+	-endpoint.checkPeriod=1s \
+	-ssl.rotation=1s \
+	-log.level=INFO \
+	-log.pretty

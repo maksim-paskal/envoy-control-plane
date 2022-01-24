@@ -27,7 +27,7 @@ type callbacks struct {
 	signal   chan struct{}
 	fetches  int
 	requests int
-	mu       sync.Mutex
+	mutex    sync.Mutex
 }
 
 func (cb *callbacks) Report() {
@@ -61,8 +61,8 @@ func (cb *callbacks) OnStreamRequest(streamID int64, r *discovery.DiscoveryReque
 		log.WithField("streamID", streamID).Info("OnStreamRequest")
 	}
 
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
+	cb.mutex.Lock()
+	defer cb.mutex.Unlock()
 	cb.requests++
 
 	if cb.signal != nil {
@@ -97,8 +97,8 @@ func (cb *callbacks) OnFetchRequest(ctx context.Context, req *discovery.Discover
 		log.Info("OnFetchRequest")
 	}
 
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
+	cb.mutex.Lock()
+	defer cb.mutex.Unlock()
 	cb.fetches++
 
 	if cb.signal != nil {
