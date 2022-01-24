@@ -10,11 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package endpointstore
+package internal
 
 import "errors"
 
-var (
-	errTimeout   = errors.New("timed out waiting for caches to sync")
-	errAssertion = errors.New("assertion error")
-)
+var errAssertion = errors.New("assertion error")

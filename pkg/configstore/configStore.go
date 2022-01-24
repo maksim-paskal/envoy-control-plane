@@ -29,44 +29,35 @@ import (
 	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
 	appConfig "github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/controlplane"
-	"github.com/maksim-paskal/envoy-control-plane/pkg/endpointstore"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"go.uber.org/atomic"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
-)
-
-const (
-	ConfigStoreStateRUN int = iota
-	ConfigStoreStateSTOP
 )
 
 var StoreMap = new(sync.Map)
 
 type ConfigStore struct {
-	Version             string
-	Config              *appConfig.ConfigType
-	ep                  *endpointstore.EndpointsStore
-	KubernetesEndpoints sync.Map
-	configEndpoints     map[string][]*endpoint.LocalityLbEndpoints
-	lastEndpoints       []types.ResourceWithTTL
-	LastEndpointsArray  []string
-	ConfigStoreState    int
-	log                 *log.Entry
-	mutexPush           sync.Mutex
-	mutexSave           sync.Mutex
-	ctx                 context.Context
-	secrets             []tls.Secret
+	Version            string
+	Config             *appConfig.ConfigType
+	configEndpoints    map[string][]*endpoint.LocalityLbEndpoints
+	lastEndpoints      []types.ResourceWithTTL
+	lastEndpointsArray []string
+	log                *log.Entry
+	mutex              sync.Mutex
+	ctx                context.Context
+	secrets            []tls.Secret
+	isStoped           *atomic.Bool
 }
 
-func New(config *appConfig.ConfigType, ep *endpointstore.EndpointsStore) (*ConfigStore, error) {
+func New(config *appConfig.ConfigType) (*ConfigStore, error) {
 	cs := ConfigStore{
-		Config:           config,
-		ep:               ep,
-		ctx:              context.Background(),
-		ConfigStoreState: ConfigStoreStateRUN,
+		Config:   config,
+		ctx:      context.Background(),
+		isStoped: atomic.NewBool(false),
 		log: log.WithFields(log.Fields{
 			"type":   "ConfigStore",
 			"nodeID": config.ID,
@@ -89,56 +80,38 @@ func New(config *appConfig.ConfigType, ep *endpointstore.EndpointsStore) (*Confi
 		cs.log.WithError(err).Error()
 	}
 
-	cs.loadPods()
-
 	if err = cs.LoadNewSecrets(); err != nil {
 		return nil, errors.Wrap(err, "error in LoadNewSecrets")
 	}
 
+	cs.saveLastEndpoints()
+
 	return &cs, nil
 }
 
-func (cs *ConfigStore) isStoped() bool {
-	return cs.ConfigStoreState == ConfigStoreStateSTOP
-}
-
-func (cs *ConfigStore) loadPods() {
-	pods, err := cs.ep.List()
-	if err != nil {
-		cs.log.WithError(err).Error()
-	}
-
-	cs.log.Debugf("Found %d pods", len(pods))
-
-	for _, pod := range pods {
-		cs.loadEndpoint(pod)
-	}
-
-	cs.saveLastEndpoints()
+func (cs *ConfigStore) hasStoped() bool {
+	return cs.isStoped.Load()
 }
 
 func (cs *ConfigStore) NewPod(pod *v1.Pod) {
-	if cs.isStoped() {
+	if cs.hasStoped() {
 		return
 	}
 
-	cs.loadEndpoint(pod)
 	cs.saveLastEndpoints()
 }
 
 func (cs *ConfigStore) DeletePod(pod *v1.Pod) {
-	if cs.isStoped() {
+	if cs.hasStoped() {
 		return
 	}
-
-	cs.KubernetesEndpoints.Delete(pod.Name)
 
 	cs.saveLastEndpoints()
 }
 
 func (cs *ConfigStore) Push(reason string) {
-	cs.mutexPush.Lock()
-	defer cs.mutexPush.Unlock()
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
 
 	metrics.ConfigmapsstorePush.Inc()
 
@@ -169,23 +142,6 @@ func (cs *ConfigStore) Push(reason string) {
 	cs.log.WithField("version", cs.Version).Infof("pushed, reason=%s", reason)
 }
 
-func (cs *ConfigStore) loadEndpoint(pod *v1.Pod) {
-	// load only valid pods with ip and node
-	if len(pod.Status.PodIP) > 0 && len(pod.Spec.NodeName) > 0 {
-		podInfo := cs.podInfo(pod)
-
-		cs.log.Debugf("pod=%s,namespace=%s,podInfo=%+v", pod.Name, pod.Namespace, podInfo)
-
-		if pod.DeletionTimestamp != nil {
-			cs.KubernetesEndpoints.Delete(pod.Name)
-		} else if podInfo.check {
-			cs.KubernetesEndpoints.Store(pod.Name, podInfo)
-		}
-	} else {
-		cs.log.Debugf("pod %s not valid", pod.Name)
-	}
-}
-
 func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEndpoints, error) {
 	endpoints, err := utils.YamlToResources(cs.Config.Endpoints, endpoint.ClusterLoadAssignment{})
 	if err != nil {
@@ -208,6 +164,9 @@ func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEn
 
 // create new secrets.
 func (cs *ConfigStore) LoadNewSecrets() error {
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
+
 	secrets, err := utils.NewSecrets(cs.Config.Name, cs.Config.Validation)
 	if err != nil {
 		return errors.Wrap(err, "can not create secrets")
@@ -220,65 +179,84 @@ func (cs *ConfigStore) LoadNewSecrets() error {
 
 // save endpoints.
 func (cs *ConfigStore) saveLastEndpoints() {
-	cs.mutexSave.Lock()
-	defer cs.mutexSave.Unlock()
-
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
 	// copy map
 	for key, value := range cs.configEndpoints {
 		lbEndpoints[key] = value
 	}
 
-	cs.KubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
-		info, ok := value.(CheckPodResult)
-		if !ok {
-			cs.log.WithError(errAssertion).Fatal("value.(CheckPodResult)")
+	pods, err := api.ListPods()
+	if err != nil {
+		log.WithError(err).Error(err)
+	}
+
+	for _, pod := range pods {
+		// if pod has no IP or node
+		if len(pod.Status.PodIP) == 0 || len(pod.Spec.NodeName) == 0 {
+			continue
 		}
 
-		// add endpoint only if ready
-		if info.ready && len(info.podIP) > 0 && len(info.nodeZone) > 0 {
-			nodeLocality := &core.Locality{
-				Zone: info.nodeZone,
-			}
+		// pod deleted
+		if pod.DeletionTimestamp != nil {
+			continue
+		}
 
-			priority := uint32(0)
+		podInfo, err := cs.podInfo(pod)
+		if err != nil {
+			log.WithError(err).Errorf("error getting pod %s", cs.getPodID(pod))
 
-			if info.priority > 0 {
-				priority = info.priority
-			}
+			break
+		}
 
-			healthCheckConfig := &endpoint.Endpoint_HealthCheckConfig{}
+		// if pod does not assign to cluster
+		if !podInfo.check {
+			continue
+		}
 
-			if info.healthCheckPort > 0 {
-				healthCheckConfig.PortValue = info.healthCheckPort
-			}
-			// add element to publishEpArray
-			lbEndpoints[info.clusterName] = append(lbEndpoints[info.clusterName], &endpoint.LocalityLbEndpoints{
-				Locality: nodeLocality,
-				Priority: priority,
-				LbEndpoints: []*endpoint.LbEndpoint{{
-					HostIdentifier: &endpoint.LbEndpoint_Endpoint{
-						Endpoint: &endpoint.Endpoint{
-							HealthCheckConfig: healthCheckConfig,
-							Address: &core.Address{
-								Address: &core.Address_SocketAddress{
-									SocketAddress: &core.SocketAddress{
-										Protocol: core.SocketAddress_TCP,
-										Address:  info.podIP,
-										PortSpecifier: &core.SocketAddress_PortValue{
-											PortValue: info.port,
-										},
+		// if pod does not ready
+		if !podInfo.ready || len(podInfo.podIP) == 0 || len(podInfo.nodeZone) == 0 {
+			continue
+		}
+
+		nodeLocality := &core.Locality{
+			Zone: podInfo.nodeZone,
+		}
+
+		priority := uint32(0)
+
+		if podInfo.priority > 0 {
+			priority = podInfo.priority
+		}
+
+		healthCheckConfig := &endpoint.Endpoint_HealthCheckConfig{}
+
+		if podInfo.healthCheckPort > 0 {
+			healthCheckConfig.PortValue = podInfo.healthCheckPort
+		}
+		// add element to publishEpArray
+		lbEndpoints[podInfo.clusterName] = append(lbEndpoints[podInfo.clusterName], &endpoint.LocalityLbEndpoints{
+			Locality: nodeLocality,
+			Priority: priority,
+			LbEndpoints: []*endpoint.LbEndpoint{{
+				HostIdentifier: &endpoint.LbEndpoint_Endpoint{
+					Endpoint: &endpoint.Endpoint{
+						HealthCheckConfig: healthCheckConfig,
+						Address: &core.Address{
+							Address: &core.Address_SocketAddress{
+								SocketAddress: &core.SocketAddress{
+									Protocol: core.SocketAddress_TCP,
+									Address:  podInfo.podIP,
+									PortSpecifier: &core.SocketAddress_PortValue{
+										PortValue: podInfo.port,
 									},
 								},
 							},
 						},
 					},
-				}},
-			})
-		}
-
-		return true
-	})
+				},
+			}},
+		})
+	}
 
 	isInvalidIP := false
 	publishEp := []types.ResourceWithTTL{}
@@ -327,13 +305,23 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	// reflect.DeepEqual only on sorted values
 	sort.Strings(publishEpArray)
 
-	if !reflect.DeepEqual(cs.LastEndpointsArray, publishEpArray) {
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
+
+	if !reflect.DeepEqual(cs.lastEndpointsArray, publishEpArray) {
 		cs.lastEndpoints = publishEp
-		cs.LastEndpointsArray = publishEpArray
-		cs.log.Debug("new endpoints")
+		cs.lastEndpointsArray = publishEpArray
+
 		// endpoints changes
-		cs.Push("new endpoints")
+		go cs.Push("new endpoints")
 	}
+}
+
+func (cs *ConfigStore) GetLastEndpoints() []string {
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
+
+	return cs.lastEndpointsArray
 }
 
 //nolint:maligned
@@ -350,7 +338,7 @@ type CheckPodResult struct {
 	healthCheckPort uint32
 }
 
-func (cs *ConfigStore) podInfo(pod *v1.Pod) CheckPodResult {
+func (cs *ConfigStore) podInfo(pod *v1.Pod) (CheckPodResult, error) {
 	for _, config := range cs.Config.Kubernetes {
 		if config.Namespace == pod.Namespace {
 			labelsFound := 0
@@ -384,53 +372,40 @@ func (cs *ConfigStore) podInfo(pod *v1.Pod) CheckPodResult {
 					priority:        config.Priority,
 				}
 
-				// get zone from saved endpoint
-				ep, ok := cs.KubernetesEndpoints.Load(pod.Name)
-				if ok {
-					saved, ok := ep.(CheckPodResult)
-					if !ok {
-						cs.log.WithError(errAssertion).Fatal("ep.(CheckPodResult)")
-					}
-
-					result.nodeZone = saved.nodeZone
+				nodeInfo, err := api.GetNode(pod.Spec.NodeName)
+				if err != nil {
+					return result, err
 				}
 
-				if len(result.nodeZone) == 0 {
-					zone := ""
-
-					nodeInfo, err := api.GetNode(pod.Spec.NodeName)
-					if err != nil {
-						log.WithError(err).Error()
-					} else {
-						zone = nodeInfo.Labels[*appConfig.Get().NodeZoneLabel]
-					}
-
-					if len(zone) == 0 {
-						zone = "unknown"
-					}
-
-					result.nodeZone = zone
+				zone := nodeInfo.Labels[*appConfig.Get().NodeZoneLabel]
+				if len(zone) == 0 {
+					zone = "unknown"
 				}
 
-				return result
+				result.nodeZone = zone
+
+				return result, nil
 			}
 		}
 	}
 
-	return CheckPodResult{check: false}
+	return CheckPodResult{check: false}, nil
 }
 
 func (cs *ConfigStore) Stop() {
 	cs.log.Info("stop")
-	cs.ConfigStoreState = ConfigStoreStateSTOP
+	cs.isStoped.Store(true)
 }
 
 func (cs *ConfigStore) Sync() {
-	if cs.isStoped() {
+	if cs.hasStoped() {
 		return
 	}
 
-	cs.loadPods()
+	cs.saveLastEndpoints()
+
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
 
 	if cs.lastEndpoints != nil {
 		snap, err := controlplane.SnapshotCache.GetSnapshot(cs.Config.ID)
@@ -444,9 +419,13 @@ func (cs *ConfigStore) Sync() {
 			log.Warnf("nodeID=%s,version not match %s,%s", cs.Config.ID, snapVersion, cs.Version)
 
 			cs.lastEndpoints = nil
-			cs.LastEndpointsArray = nil
+			cs.lastEndpointsArray = nil
 
-			cs.saveLastEndpoints()
+			go cs.saveLastEndpoints()
 		}
 	}
+}
+
+func (cs *ConfigStore) getPodID(pod *v1.Pod) string {
+	return fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)
 }

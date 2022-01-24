@@ -14,7 +14,6 @@ package web
 
 import (
 	"bytes"
-	"context"
 	"crypto/subtle"
 	"crypto/tls"
 	"encoding/json"
@@ -43,7 +42,7 @@ const (
 	adminPrefix = "/api/admin"
 )
 
-type Routes struct {
+type Route struct {
 	path        string
 	description string
 	handlerFunc func(w http.ResponseWriter, r *http.Request)
@@ -51,107 +50,96 @@ type Routes struct {
 	httpShema   bool
 }
 
-type Server struct {
-	routes []Routes
-	log    *log.Entry
-	ctx    context.Context
-}
+func getRoutes() []Route {
+	routes := make([]Route, 0)
 
-func NewServer() *Server {
-	ws := Server{
-		ctx: context.Background(),
-		log: log.WithFields(log.Fields{
-			"type": "ConfigStore",
-		}),
-	}
-	ws.routes = make([]Routes, 0)
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/api/help",
 		description: "Help",
-		handlerFunc: ws.handlerHelp,
+		handlerFunc: handlerHelp,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/api/ready",
 		description: "Route for application rediness probe",
-		handlerFunc: ws.handlerReady,
+		handlerFunc: handlerReady,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/api/healthz",
 		description: "Route for application health probe",
-		handlerFunc: ws.handlerHealthz,
+		handlerFunc: handlerHealthz,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/api/admin/status",
 		description: "Status all nodes in SnapshotCache ",
-		handlerFunc: ws.handlerStatus,
+		handlerFunc: handlerStatus,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/api/admin/config_dump",
 		description: "All dumps of configs that loaded to control-plane",
-		handlerFunc: ws.handlerConfigDump,
+		handlerFunc: handlerConfigDump,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/api/config_endpoints",
 		description: "All endpoints in configs",
-		handlerFunc: ws.handlerConfigEndpoints,
+		handlerFunc: handlerConfigEndpoints,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/api/zone",
 		description: "Get pod zone",
-		handlerFunc: ws.handlerZone,
+		handlerFunc: handlerZone,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/api/version",
 		description: "Get version",
-		handlerFunc: ws.handlerVersion,
+		handlerFunc: handlerVersion,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/api/metrics",
 		httpShema:   true,
 		description: "Get metrics",
 		handler:     metrics.GetHandler(),
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/api/admin/certs",
 		description: "Generate cert",
-		handlerFunc: ws.handlerCerts,
+		handlerFunc: handlerCerts,
 	})
 
 	// pprof
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/debug/pprof/",
 		handlerFunc: pprof.Index,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/debug/pprof/cmdline",
 		handlerFunc: pprof.Cmdline,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/debug/pprof/profile",
 		handlerFunc: pprof.Profile,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/debug/pprof/symbol",
 		handlerFunc: pprof.Symbol,
 	})
-	ws.routes = append(ws.routes, Routes{
+	routes = append(routes, Route{
 		path:        "/debug/pprof/trace",
 		handlerFunc: pprof.Trace,
 	})
 
-	return &ws
+	return routes
 }
 
-func (ws *Server) Start() {
-	ws.log.Info("http.address=", *config.Get().WebHTTPAddress)
+func Start() {
+	log.Info("http.address=", *config.Get().WebHTTPAddress)
 
-	if err := http.ListenAndServe(*config.Get().WebHTTPAddress, auth(ws.GetHandler(true))); err != nil {
+	if err := http.ListenAndServe(*config.Get().WebHTTPAddress, auth(GetHandler(true))); err != nil {
 		log.WithError(err).Fatal()
 	}
 }
 
-func (ws *Server) StartTLS() {
-	ws.log.Info("https.address=", *config.Get().WebHTTPSAddress)
+func StartTLS() {
+	log.Info("https.address=", *config.Get().WebHTTPSAddress)
 
 	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate(config.AppName, certs.CertValidityYear)
 	if err != nil {
@@ -171,7 +159,7 @@ func (ws *Server) StartTLS() {
 	server := http.Server{
 		Addr:      *config.Get().WebHTTPSAddress,
 		TLSConfig: tlsConfig,
-		Handler:   auth(ws.GetHandler(false)),
+		Handler:   auth(GetHandler(false)),
 	}
 
 	if err := server.ListenAndServeTLS("", ""); err != nil {
@@ -179,10 +167,10 @@ func (ws *Server) StartTLS() {
 	}
 }
 
-func (ws *Server) GetHandler(onlyHTTPShema bool) *http.ServeMux {
+func GetHandler(onlyHTTPShema bool) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	for _, route := range ws.routes {
+	for _, route := range getRoutes() {
 		// add only routes with httpShema if onlyHttpShema
 		if !onlyHTTPShema || route.httpShema == onlyHTTPShema {
 			if route.handler != nil {
@@ -227,7 +215,7 @@ func auth(mux http.Handler) http.Handler {
 	})
 }
 
-func (ws *Server) handlerHelp(w http.ResponseWriter, r *http.Request) {
+func handlerHelp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
 	var result bytes.Buffer
@@ -236,7 +224,7 @@ func (ws *Server) handlerHelp(w http.ResponseWriter, r *http.Request) {
 
 	result.WriteString("<table border='1' cellpadding='8'>")
 
-	for _, route := range ws.routes {
+	for _, route := range getRoutes() {
 		if len(route.description) > 0 {
 			result.WriteString(fmt.Sprintf(linkFormat, route.description, route.path, route.path))
 		}
@@ -245,24 +233,24 @@ func (ws *Server) handlerHelp(w http.ResponseWriter, r *http.Request) {
 	result.WriteString("</table>")
 
 	if _, err := w.Write(result.Bytes()); err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
-func (ws *Server) handlerReady(w http.ResponseWriter, r *http.Request) {
+func handlerReady(w http.ResponseWriter, r *http.Request) {
 	_, err := w.Write([]byte("ready"))
 	if err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
-func (ws *Server) handlerHealthz(w http.ResponseWriter, r *http.Request) {
+func handlerHealthz(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write([]byte("LIVE")); err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
-func (ws *Server) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
+func handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	results := []*config.ConfigType{}
@@ -275,7 +263,7 @@ func (ws *Server) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 		cs, ok := v.(*configstore.ConfigStore)
 
 		if !ok {
-			ws.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+			log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 		}
 
 		if len(id) == 0 || cs.Config.ID == id {
@@ -293,22 +281,25 @@ func (ws *Server) handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
-func (ws *Server) handlerConfigEndpoints(w http.ResponseWriter, r *http.Request) {
+func handlerConfigEndpoints(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	_ = r.ParseForm()
+
+	id := r.Form.Get("id")
 
 	type EndpointsResults struct {
 		Name      string
 		Version   string
-		PodInfo   []string
 		LastSaved []string
 	}
 
@@ -318,27 +309,18 @@ func (ws *Server) handlerConfigEndpoints(w http.ResponseWriter, r *http.Request)
 		cs, ok := v.(*configstore.ConfigStore)
 
 		if !ok {
-			ws.log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+			log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
 		}
 
 		endpoints := EndpointsResults{
 			Name:      cs.Config.ID,
 			Version:   cs.Version,
-			LastSaved: cs.LastEndpointsArray,
+			LastSaved: cs.GetLastEndpoints(),
 		}
 
-		cs.KubernetesEndpoints.Range(func(key interface{}, value interface{}) bool {
-			podInfo, ok := value.(configstore.CheckPodResult)
-			if !ok {
-				ws.log.WithError(errAssertion).Fatal("value.(checkPodResult)")
-			}
-
-			endpoints.PodInfo = append(endpoints.PodInfo, fmt.Sprintf("%+v", podInfo))
-
-			return true
-		})
-
-		results = append(results, endpoints)
+		if len(id) == 0 || cs.Config.ID == id {
+			results = append(results, endpoints)
+		}
 
 		return true
 	})
@@ -351,16 +333,16 @@ func (ws *Server) handlerConfigEndpoints(w http.ResponseWriter, r *http.Request)
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
-func (ws *Server) handlerStatus(w http.ResponseWriter, r *http.Request) {
+func handlerStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	type StatusResponce struct {
@@ -379,7 +361,7 @@ func (ws *Server) handlerStatus(w http.ResponseWriter, r *http.Request) {
 	for _, nodeID := range statusKeys {
 		sn, err := controlplane.SnapshotCache.GetSnapshot(nodeID)
 		if err != nil {
-			ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+			log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 		}
 
 		if len(id) == 0 || id == nodeID {
@@ -398,20 +380,20 @@ func (ws *Server) handlerStatus(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.MarshalIndent(results, "", " ")
 	if err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
 	_, err = w.Write(b)
 	if err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
-func (ws *Server) handlerZone(w http.ResponseWriter, r *http.Request) {
+func handlerZone(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 
 		return
 	}
@@ -419,11 +401,11 @@ func (ws *Server) handlerZone(w http.ResponseWriter, r *http.Request) {
 	namespace := r.Form.Get("namespace")
 	pod := r.Form.Get("pod")
 
-	zone := api.GetZone(namespace, pod)
+	zone := api.GetZoneByPodName(namespace, pod)
 
 	_, err = w.Write([]byte(zone))
 	if err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
@@ -436,7 +418,7 @@ type APIVersion struct {
 	GODEBUG    string
 }
 
-func (ws *Server) handlerVersion(w http.ResponseWriter, r *http.Request) {
+func handlerVersion(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	result := APIVersion{
@@ -450,21 +432,21 @@ func (ws *Server) handlerVersion(w http.ResponseWriter, r *http.Request) {
 
 	resultJSON, err := json.Marshal(result)
 	if err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
 	_, err = w.Write(resultJSON)
 
 	if err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
 
-func (ws *Server) handlerCerts(w http.ResponseWriter, r *http.Request) {
+func handlerCerts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
 	if err := r.ParseForm(); err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
 	certDuration := certs.CertValidity
@@ -497,7 +479,7 @@ func (ws *Server) handlerCerts(w http.ResponseWriter, r *http.Request) {
 
 	_, crtBytes, _, keyBytes, err := certs.NewCertificate(name, certDuration)
 	if err != nil {
-		ws.log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
+		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
 	_, _ = w.Write(crtBytes)

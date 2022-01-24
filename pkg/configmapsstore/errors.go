@@ -14,7 +14,4 @@ package configmapsstore
 
 import "errors"
 
-var (
-	errTimeout   = errors.New("timed out waiting for caches to sync")
-	errAssertion = errors.New("assertion error")
-)
+var errAssertion = errors.New("assertion error")

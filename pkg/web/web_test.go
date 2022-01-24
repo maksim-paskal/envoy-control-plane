@@ -25,10 +25,9 @@ import (
 )
 
 var (
-	client    = &http.Client{}
-	webServer = web.NewServer()
-	ts        = httptest.NewServer(webServer.GetHandler(false))
-	ctx       = context.Background()
+	client = &http.Client{}
+	ts     = httptest.NewServer(web.GetHandler(false))
+	ctx    = context.Background()
 )
 
 func TestReady(t *testing.T) {

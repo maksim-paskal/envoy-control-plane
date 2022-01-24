@@ -14,6 +14,10 @@ package controlplane
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"net"
+	"time"
 
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v3"
 	clusterservice "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
@@ -23,8 +27,19 @@ import (
 	secretservice "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	xds "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/certs"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
+)
+
+const (
+	grpcKeepaliveTime        = 30 * time.Second
+	grpcKeepaliveTimeout     = 5 * time.Second
+	grpcKeepaliveMinTime     = 30 * time.Second
+	grpcMaxConcurrentStreams = 1000000
 )
 
 // SnapshotCache create cache with heartbeat responses for resources with a TTL.
@@ -36,17 +51,17 @@ var SnapshotCache cache.SnapshotCache = cache.NewSnapshotCacheWithHeartbeating(
 	*config.Get().EndpointTTL,
 )
 
-type ControlPlane struct{}
+var grpcServer *grpc.Server
 
-func New(ctx context.Context, grpcServer *grpc.Server) *ControlPlane {
-	cp := ControlPlane{}
-
+func Init(ctx context.Context) {
 	signal := make(chan struct{})
 	cb := &callbacks{
 		signal:   signal,
 		fetches:  0,
 		requests: 0,
 	}
+
+	createGrpcServer()
 
 	als := &AccessLogService{}
 
@@ -58,6 +73,59 @@ func New(ctx context.Context, grpcServer *grpc.Server) *ControlPlane {
 	routeservice.RegisterRouteDiscoveryServiceServer(grpcServer, server)
 	listenerservice.RegisterListenerDiscoveryServiceServer(grpcServer, server)
 	secretservice.RegisterSecretDiscoveryServiceServer(grpcServer, server)
+}
 
-	return &cp
+func createGrpcServer() {
+	serverCert, _, serverKey, _, err := certs.NewCertificate(config.AppName, certs.CertValidityMax)
+	if err != nil {
+		log.WithError(err).Fatal()
+	}
+
+	certPool := x509.NewCertPool()
+	certPool.AddCert(certs.GetLoadedRootCert())
+
+	grpcCred := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		Certificates: []tls.Certificate{{
+			Certificate: [][]byte{serverCert.Raw},
+			Leaf:        serverCert,
+			PrivateKey:  serverKey,
+		}},
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  certPool,
+		RootCAs:    certPool,
+	}
+
+	grpcOptions := []grpc.ServerOption{}
+	grpcOptions = append(grpcOptions,
+		grpc.Creds(credentials.NewTLS(grpcCred)),
+		grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time:    grpcKeepaliveTime,
+			Timeout: grpcKeepaliveTimeout,
+		}),
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             grpcKeepaliveMinTime,
+			PermitWithoutStream: true,
+		}),
+	)
+
+	grpcServer = grpc.NewServer(grpcOptions...)
+}
+
+func Stop() {
+	grpcServer.GracefulStop()
+}
+
+func Start() {
+	log.Info("grpc.address=", *config.Get().GrpcAddress)
+
+	lis, err := net.Listen("tcp", *config.Get().GrpcAddress)
+	if err != nil {
+		log.WithError(err).Fatal()
+	}
+
+	if err := grpcServer.Serve(lis); err != nil {
+		log.WithError(err).Fatal()
+	}
 }
