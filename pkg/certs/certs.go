@@ -88,8 +88,16 @@ func GetLoadedRootCertBytes() []byte {
 	return caCertBytes
 }
 
-func NewCertificate(dnsName string, certDuration time.Duration) (*x509.Certificate, []byte, *rsa.PrivateKey, []byte, error) { //nolint:lll
-	return GenServerCert(dnsName, caCert, caKey, certDuration)
+func GetLoadedRootKey() *rsa.PrivateKey {
+	return caKey
+}
+
+func GetLoadedRootKeyBytes() ([]byte, error) {
+	return exportPrivateKey(caKey)
+}
+
+func NewCertificate(dnsNames []string, certDuration time.Duration) (*x509.Certificate, []byte, *rsa.PrivateKey, []byte, error) { //nolint:lll
+	return GenServerCert(dnsNames, caCert, caKey, certDuration)
 }
 
 func loadCAFromFiles() (*x509.Certificate, []byte, *rsa.PrivateKey, error) {
@@ -117,7 +125,13 @@ func loadCAFromFiles() (*x509.Certificate, []byte, *rsa.PrivateKey, error) {
 		return nil, nil, nil, errors.Wrap(err, "can not parse key")
 	}
 
-	return cert, certBytes, key.(*rsa.PrivateKey), nil
+	privateKey, ok := key.(*rsa.PrivateKey)
+
+	if !ok {
+		return nil, nil, nil, errors.New("assertion error")
+	}
+
+	return cert, certBytes, privateKey, nil
 }
 
 func GenCARoot() (*x509.Certificate, []byte, *rsa.PrivateKey, []byte, error) {
@@ -156,7 +170,7 @@ func GenCARoot() (*x509.Certificate, []byte, *rsa.PrivateKey, []byte, error) {
 	return rootCert, rootCertBytes, priv, priBytes, nil
 }
 
-func GenServerCert(dnsName string, rootCert *x509.Certificate, rootKey *rsa.PrivateKey, certDuration time.Duration) (*x509.Certificate, []byte, *rsa.PrivateKey, []byte, error) { //nolint: lll
+func GenServerCert(dnsNames []string, rootCert *x509.Certificate, rootKey *rsa.PrivateKey, certDuration time.Duration) (*x509.Certificate, []byte, *rsa.PrivateKey, []byte, error) { //nolint: lll
 	priv, err := rsa.GenerateKey(rand.Reader, keyBits)
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrap(err, "Failed to generate key")
@@ -168,9 +182,9 @@ func GenServerCert(dnsName string, rootCert *x509.Certificate, rootKey *rsa.Priv
 			Country:            []string{"US"},
 			Organization:       []string{config.AppName},
 			OrganizationalUnit: []string{"CLIENT"},
-			CommonName:         dnsName,
+			CommonName:         dnsNames[0],
 		},
-		DNSNames:       []string{dnsName},
+		DNSNames:       dnsNames,
 		NotBefore:      time.Now().Add(-10 * time.Second),
 		NotAfter:       time.Now().Add(certDuration),
 		KeyUsage:       x509.KeyUsageDigitalSignature,

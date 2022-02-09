@@ -170,7 +170,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 }
 
 func NewSecrets(dnsName string, validation interface{}) ([]tls.Secret, error) {
-	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate(dnsName, certs.CertValidity)
+	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate([]string{dnsName}, certs.CertValidity)
 	if err != nil {
 		return nil, err
 	}

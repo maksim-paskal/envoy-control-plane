@@ -63,8 +63,11 @@ containers:
   lifecycle:
     preStop:
       exec:
-        # gracefully drain all connection
-        command: ["/bin/sh", "-c", "cli -drainEnvoy; sleep 5s; pkill -SIGTERM envoy"]
+        # gracefully drain all connection and shutdown
+        command:
+        - cli
+        - -drainEnvoy
+        - -timeout=10s
   image: paskalmaksim/envoy-docker-image:latest
   imagePullPolicy: Always
   args:
@@ -98,13 +101,13 @@ containers:
   readinessProbe:
     httpGet:
       path: /ready
-      port: 18000
+      port: 18001
     initialDelaySeconds: 3
     periodSeconds: 5
   livenessProbe:
     httpGet:
       path: /server_info
-      port: 18000
+      port: 18001
     initialDelaySeconds: 60
     periodSeconds: 10
 

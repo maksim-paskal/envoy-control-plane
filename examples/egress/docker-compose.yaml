@@ -1,0 +1,37 @@
+version: '3'
+services:
+  init:
+    image: paskalmaksim/envoy-docker-image:dev
+    user: "0"
+    command:
+    - sh
+    - -c
+    - |
+      set -ex
+
+      apt update; apt install -y curl
+
+      /scripts/prepare_proxy.sh 
+
+      curl 127.0.0.1:18000/listeners
+      curl -v http://google.com
+
+      curl -v --cacert /egress/CA.crt https://google.com
+      curl -v --cacert /egress/CA.crt https://get.paskal-dev.com
+      curl -v --cacert /egress/CA.crt https://www.recaptcha.net
+
+      cli -drainEnvoy -timeout=0s
+
+    cap_add:
+    - NET_ADMIN
+    volumes:
+    - ./certs:/egress:ro
+  envoy:
+    image: paskalmaksim/envoy-docker-image:dev
+    volumes:
+    - ./envoy.yaml:/envoy/envoy.yaml:ro
+    - ./certs/server.key:/envoy/server.key:ro
+    - ./certs/server.crt:/envoy/server.crt:ro
+    network_mode: "service:init"
+    depends_on:
+    - init

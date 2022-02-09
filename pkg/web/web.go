@@ -141,7 +141,7 @@ func Start() {
 func StartTLS() {
 	log.Info("https.address=", *config.Get().WebHTTPSAddress)
 
-	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate(config.AppName, certs.CertValidityYear)
+	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate([]string{config.AppName}, certs.CertValidityYear)
 	if err != nil {
 		log.WithError(err).Fatal("failed to NewCertificate")
 	}
@@ -477,7 +477,7 @@ func handlerCerts(w http.ResponseWriter, r *http.Request) {
 		certDuration = parsedDuration
 	}
 
-	_, crtBytes, _, keyBytes, err := certs.NewCertificate(name, certDuration)
+	_, crtBytes, _, keyBytes, err := certs.NewCertificate([]string{name}, certDuration)
 	if err != nil {
 		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      volumes:
+      - name: envoy-config
+        configMap:
+          name: envoy-config
+      initContainers:
+      - name: envoy-init
+        image: paskalmaksim/envoy-docker-image:dev
+        imagePullPolicy: Always
+        securityContext:
+          runAsUser: 0
+          capabilities:
+            add:
+            - NET_ADMIN
+        command:
+        - /scripts/prepare_proxy.sh
+      containers:
+      - name: envoy
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - cli
+              - -drainEnvoy
+              - -timeout=10s
+        image: paskalmaksim/envoy-docker-image:dev
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: envoy-config
+          mountPath: /envoy

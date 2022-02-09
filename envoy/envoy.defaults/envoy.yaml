@@ -34,6 +34,32 @@ dynamic_resources:
           cluster_name: xds_cluster
 
 static_resources:
+  listeners:
+  - name: envoy_healthcheck
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 18001
+    traffic_direction: INBOUND
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: envoy_healthcheck
+          route_config:
+            name: envoy_healthcheck
+            virtual_hosts:
+            - name: envoy_healthcheck
+              domains:
+              - "*"
+              routes:
+              - match:
+                  prefix: "/"
+                route:
+                  cluster: envoy_admin_cluster
+          http_filters:
+          - name: envoy.filters.http.router
   clusters:
   - name: {{ env "ENVOY_SERVICE_NAME" }}
     connect_timeout: 0.25s
@@ -95,6 +121,19 @@ static_resources:
               socket_address:
                 address: {{ env "XDS_CLUSTER_ADDRESS" }}
                 port_value: 18080
+  - name: envoy_admin_cluster
+    connect_timeout: 1s
+    type: STATIC
+    dns_lookup_family: V4_ONLY
+    load_assignment:
+      cluster_name: envoy_admin_cluster
+      endpoints:
+      - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: 127.0.0.1
+                  port_value: 18000
 
 admin:
   address:

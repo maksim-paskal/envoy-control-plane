@@ -38,6 +38,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+var ctx = context.Background()
+
 var StoreMap = new(sync.Map)
 
 type ConfigStore struct {
@@ -48,7 +50,6 @@ type ConfigStore struct {
 	lastEndpointsArray []string
 	log                *log.Entry
 	mutex              sync.Mutex
-	ctx                context.Context
 	secrets            []tls.Secret
 	isStoped           *atomic.Bool
 }
@@ -56,7 +57,6 @@ type ConfigStore struct {
 func New(config *appConfig.ConfigType) (*ConfigStore, error) {
 	cs := ConfigStore{
 		Config:   config,
-		ctx:      context.Background(),
 		isStoped: atomic.NewBool(false),
 		log: log.WithFields(log.Fields{
 			"type":   "ConfigStore",
@@ -131,7 +131,7 @@ func (cs *ConfigStore) Push(reason string) {
 		return
 	}
 
-	err = controlplane.SnapshotCache.SetSnapshot(cs.ctx, cs.Config.ID, snap)
+	err = controlplane.SnapshotCache.SetSnapshot(ctx, cs.Config.ID, snap)
 
 	if err != nil {
 		cs.log.WithError(err).Error()
