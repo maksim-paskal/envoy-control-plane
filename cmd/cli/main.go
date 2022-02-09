@@ -30,6 +30,7 @@ import (
 const (
 	serverPort      = 18081
 	serverAdminPort = 18000
+	defaultTimeout  = 10 * time.Second
 )
 
 var (
@@ -42,7 +43,9 @@ var (
 	port           = flag.Int("port", serverPort, "controlplane port")
 	wait           = flag.Bool("wait", true, "wait controlplane")
 	debug          = flag.Bool("debug", false, "debug mode")
+	envoyLogLevel  = flag.String("envoyLogLevel", "", "set envoy log level")
 	drainEnvoy     = flag.Bool("drainEnvoy", false, "drain envoy")
+	timeout        = flag.Duration("timeout", defaultTimeout, "timeout to shutdown envoy")
 	envoyAdminPort = flag.Int("envoyAdminPort", serverAdminPort, "envoy admin port")
 	logFlags       = flag.Int("logFlags", 0, "log flags")
 	tlsInsecure    = flag.Bool("tls.insecure", false, "use insecure TLS")
@@ -86,7 +89,8 @@ func waitForAPI() {
 	}
 }
 
-func requestEnvoyAdmin(method string, path string) {
+func requestEnvoyAdmin(path string) {
+	method := http.MethodPost
 	url := fmt.Sprintf("http://127.0.0.1:%d%s", *envoyAdminPort, path)
 
 	req, err := http.NewRequestWithContext(ctx, method, url, nil)
@@ -146,9 +150,23 @@ func main() {
 		},
 	}
 
+	if len(*envoyLogLevel) > 0 {
+		requestEnvoyAdmin(fmt.Sprintf("/logging?level=%s", *envoyLogLevel))
+
+		return
+	}
+
 	if *drainEnvoy {
-		requestEnvoyAdmin(http.MethodPost, "/drain_listeners?graceful")
-		requestEnvoyAdmin(http.MethodPost, "/healthcheck/fail")
+		// draining connections
+		requestEnvoyAdmin("/drain_listeners?graceful")
+		requestEnvoyAdmin("/healthcheck/fail")
+
+		// wait some time
+		log.Printf("Waiting %s to Envoy quit", *timeout)
+		time.Sleep(*timeout)
+
+		// shutdown envoy
+		requestEnvoyAdmin("/quitquitquit")
 
 		return
 	}

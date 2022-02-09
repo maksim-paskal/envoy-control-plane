@@ -1,3 +1,8 @@
+release:
+  footer: |
+    ## Docker Images
+    - `paskalmaksim/envoy-control-plane:latest`
+    - `paskalmaksim/envoy-control-plane:{{ .Tag }}`
 dockers:
 - goos: linux
   goarch: amd64

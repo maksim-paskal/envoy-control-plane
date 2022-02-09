@@ -4,6 +4,7 @@ ADD --chown=envoy:envoy https://github.com/maksim-paskal/go-template/releases/do
 ADD --chown=envoy:envoy https://github.com/maksim-paskal/jaeger-client-cpp/releases/download/v0.5.0/libjaegertracing_plugin.so /usr/local/lib/libjaegertracing_plugin.so
 
 COPY ./cli /usr/local/bin/cli
+COPY ./envoy/scripts /scripts
 COPY ./envoy/entrypoint.sh /entrypoint.sh
 COPY ./envoy/envoy.defaults /envoy.defaults/
 COPY ./envoy/certs /certs/
@@ -14,8 +15,11 @@ RUN touch /tmp/checksum \
 && cat /tmp/checksum \
 && sha256sum -c /tmp/checksum \
 && rm /tmp/checksum \
-&& chmod +x /usr/local/bin/go-template /entrypoint.sh /usr/local/bin/cli \
-&& chown -R 101:101 /etc/envoy
+&& chmod +x /usr/local/bin/go-template /entrypoint.sh /usr/local/bin/cli /scripts/* \
+&& chown -R 101:101 /etc/envoy \
+&& apt update; apt install -y iptables \
+&& apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+&& rm -rf /var/lib/apt/lists/*
 
 USER 101
 

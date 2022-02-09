@@ -39,7 +39,7 @@ func TestCert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	serverCert, _, _, _, err := certs.GenServerCert("test", rootCert, rootKey, time.Minute) //nolint:dogsled
+	serverCert, _, _, _, err := certs.GenServerCert([]string{"test"}, rootCert, rootKey, time.Minute) //nolint:dogsled
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestLoadCert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	serverCert, _, _, _, err := certs.NewCertificate("test", time.Minute) //nolint:dogsled
+	serverCert, _, _, _, err := certs.NewCertificate([]string{"test"}, time.Minute) //nolint:dogsled
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -76,7 +76,7 @@ func Init(ctx context.Context) {
 }
 
 func createGrpcServer() {
-	serverCert, _, serverKey, _, err := certs.NewCertificate(config.AppName, certs.CertValidityMax)
+	serverCert, _, serverKey, _, err := certs.NewCertificate([]string{config.AppName}, certs.CertValidityMax)
 	if err != nil {
 		log.WithError(err).Fatal()
 	}

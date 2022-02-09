@@ -17,37 +17,49 @@ import (
 	"io/fs"
 	"io/ioutil"
 	"path"
+	"strings"
 
 	"github.com/maksim-paskal/envoy-control-plane/pkg/certs"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
 	certPath := flag.String("cert.path", "certs", "path to generate certificates")
+	dnsNames := flag.String("dns.names", "test", "dns names for server certificate")
 
 	flag.Parse()
 
 	files := make(map[string][]byte)
 
-	log.Info("generate certificates")
+	if err := certs.Init(); err != nil {
+		log.WithError(err).Fatal()
+	}
 
-	rootCrt, rootCrtBytes, rootKey, rootKeyBytes, err := certs.GenCARoot()
+	rootCrt := certs.GetLoadedRootCert()
+	rootCrtBytes := certs.GetLoadedRootCertBytes()
+
+	rootKey := certs.GetLoadedRootKey()
+
+	rootKeyBytes, err := certs.GetLoadedRootKeyBytes()
+	if err != nil {
+		log.WithError(err).Fatal()
+	}
+
+	if len(*config.Get().SSLCrt) == 0 && len(*config.Get().SSLKey) == 0 {
+		files["CA.crt"] = rootCrtBytes
+		files["CA.key"] = rootKeyBytes
+	}
+
+	_, serverCrtBytes, _, serverKeyBytes, err := certs.GenServerCert(strings.Split(*dnsNames, ","), rootCrt, rootKey, certs.CertValidityMax) //nolint:lll
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	files["CA.crt"] = rootCrtBytes
-	files["CA.key"] = rootKeyBytes
+	files["server.crt"] = serverCrtBytes
+	files["server.key"] = serverKeyBytes
 
-	_, serverCrtBytes, _, serverKeyBytes, err := certs.GenServerCert("test", rootCrt, rootKey, certs.CertValidity)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	files["test.crt"] = serverCrtBytes
-	files["test.key"] = serverKeyBytes
-
-	_, envoyCrtBytes, _, envoyKeyBytes, err := certs.GenServerCert("envoy", rootCrt, rootKey, certs.CertValidityMax)
+	_, envoyCrtBytes, _, envoyKeyBytes, err := certs.GenServerCert([]string{"envoy"}, rootCrt, rootKey, certs.CertValidityMax) //nolint:lll
 	if err != nil {
 		log.Fatal(err)
 	}
