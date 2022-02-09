@@ -3,6 +3,8 @@ release:
     ## Docker Images
     - `paskalmaksim/envoy-control-plane:latest`
     - `paskalmaksim/envoy-control-plane:{{ .Tag }}`
+    - `paskalmaksim/envoy-docker-image:latest`
+    - `paskalmaksim/envoy-docker-image:{{ .Tag }}`
 dockers:
 - goos: linux
   goarch: amd64
