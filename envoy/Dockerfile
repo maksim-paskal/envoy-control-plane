@@ -1,4 +1,6 @@
 FROM envoyproxy/envoy:v1.21.0
+# for decoding envoy critical exceptions - use image with debug symbols
+# FROM paskalmaksim/envoy-docker-image:debug-base
 
 ADD --chown=envoy:envoy https://github.com/maksim-paskal/go-template/releases/download/v0.1.0/go-template_0.1.0_linux_amd64 /usr/local/bin/go-template
 ADD --chown=envoy:envoy https://github.com/maksim-paskal/jaeger-client-cpp/releases/download/v0.5.0/libjaegertracing_plugin.so /usr/local/lib/libjaegertracing_plugin.so
