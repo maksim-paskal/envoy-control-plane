@@ -36,6 +36,7 @@ type Type struct {
 	LogLevel              *string `yaml:"logLevel"`
 	LogPretty             *bool   `yaml:"logPretty"`
 	LogAccess             *bool   `yaml:"logAccess"`
+	LogPath               *string `yaml:"logPath"`
 	LogReportCaller       *bool   `yaml:"logReportCaller"`
 	ConfigFile            *string
 	ConfigMapLabels       *string        `yaml:"configMapLabels"`
@@ -63,6 +64,7 @@ var config = Type{
 	LogLevel:              flag.String("log.level", "INFO", "log level"),
 	LogPretty:             flag.Bool("log.pretty", false, "log in pretty format"),
 	LogAccess:             flag.Bool("log.access", false, "access log"),
+	LogPath:               flag.String("log.path", "/tmp", "access log path"),
 	LogReportCaller:       flag.Bool("log.reportCaller", true, "log file name and line number"),
 	ConfigFile:            flag.String("config", getEnvDefault("CONFIG", "config.yaml"), "load config from file"),
 	ConfigMapLabels:       flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
