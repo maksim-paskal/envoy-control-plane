@@ -1,5 +1,6 @@
 KUBECONFIG=$(HOME)/.kube/example-kubeconfig
 initialPodCount=10
+gitTag=$(shell git rev-parse --abbrev-ref HEAD)
 
 test:
 	./scripts/validate-license.sh
@@ -23,17 +24,18 @@ build-goreleaser:
 	mv ./dist/cli_linux_amd64/cli cli
 build:
 	make build-goreleaser
-	docker build --pull . -t paskalmaksim/envoy-control-plane:dev
-	docker build --pull . -f ./envoy/Dockerfile -t paskalmaksim/envoy-docker-image:dev
+	docker build --pull . -t paskalmaksim/envoy-control-plane:$(gitTag)
+	docker build --pull . --build-arg base=paskalmaksim/envoy-docker-image:debug-base -f ./envoy/Dockerfile -t paskalmaksim/envoy-docker-image:$(gitTag)
+build-composer:
 	docker-compose build --pull --parallel
 security-scan:
 	trivy fs --ignore-unfixed .
 security-check:
 	# https://github.com/aquasecurity/trivy
-	trivy --ignore-unfixed paskalmaksim/envoy-control-plane:dev
+	trivy --ignore-unfixed paskalmaksim/envoy-control-plane:$(gitTag)
 push:
-	docker push paskalmaksim/envoy-control-plane:dev
-	docker push paskalmaksim/envoy-docker-image:dev
+	docker push paskalmaksim/envoy-control-plane:$(gitTag)
+	docker push paskalmaksim/envoy-docker-image:$(gitTag)
 k8sConfig:
 	kubectl -n default apply -f ./charts/envoy-control-plane/templates/testPods.yaml
 	kubectl -n default apply -f ./config/
@@ -67,8 +69,8 @@ installDev:
 	./charts/envoy-control-plane \
 	--set withExamples=true \
 	--set ingress.enabled=true \
-	--set registry.image=paskalmaksim/envoy-control-plane:dev \
-	--set envoy.registry.image=paskalmaksim/envoy-docker-image:dev \
+	--set registry.image=paskalmaksim/envoy-control-plane:$(gitTag) \
+	--set envoy.registry.image=paskalmaksim/envoy-docker-image:$(gitTag) \
 	--set-file certificates.caKey=./certs/CA.key \
 	--set-file certificates.caCrt=./certs/CA.crt \
 	--set-file certificates.envoyKey=./certs/envoy.key \
