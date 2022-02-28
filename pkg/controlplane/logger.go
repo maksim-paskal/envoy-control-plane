@@ -20,25 +20,25 @@ import (
 type Logger struct{}
 
 func (s *Logger) Infof(format string, args ...interface{}) {
-	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
+	if *config.Get().LogAccess {
 		log.Infof(format, args...)
 	}
 }
 
 func (s *Logger) Debugf(format string, args ...interface{}) {
-	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
+	if *config.Get().LogAccess {
 		log.Debugf(format, args...)
 	}
 }
 
 func (s *Logger) Warnf(format string, args ...interface{}) {
-	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
+	if *config.Get().LogAccess {
 		log.Warnf(format, args...)
 	}
 }
 
 func (s *Logger) Errorf(format string, args ...interface{}) {
-	if log.GetLevel() >= log.DebugLevel || *config.Get().LogAccess {
+	if *config.Get().LogAccess {
 		log.Errorf(format, args...)
 	}
 }
