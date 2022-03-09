@@ -13,6 +13,7 @@ limitations under the License.
 package api
 
 import (
+	"context"
 	"net/url"
 	"time"
 
@@ -21,12 +22,12 @@ import (
 
 type requestResult struct{}
 
-func (r *requestResult) Increment(code string, method string, host string) {
+func (r *requestResult) Increment(ctx context.Context, code string, method string, host string) {
 	metrics.KubernetesAPIRequest.WithLabelValues(code).Inc()
 }
 
 type requestLatency struct{}
 
-func (r *requestLatency) Observe(verb string, u url.URL, latency time.Duration) {
+func (r *requestLatency) Observe(ctx context.Context, verb string, u url.URL, latency time.Duration) {
 	metrics.KubernetesAPIRequestDuration.Observe(latency.Seconds())
 }
