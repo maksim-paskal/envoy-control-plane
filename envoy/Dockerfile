@@ -1,6 +1,6 @@
 # for decoding envoy critical exceptions - use image with debug symbols
 # paskalmaksim/envoy-docker-image:debug-base
-ARG base=envoyproxy/envoy:v1.21.0
+ARG base=envoyproxy/envoy:v1.21.1
 
 FROM $base
 
