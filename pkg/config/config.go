@@ -28,7 +28,6 @@ const (
 	AppName                    = "envoy-control-plane"
 	sslRotationPeriodDefault   = 1 * time.Hour
 	endpointCheckPeriodDefault = 60 * time.Second
-	endpointTTLDefault         = 30 * time.Second
 	configDrainPeriodDefault   = 5 * time.Second
 )
 
@@ -49,7 +48,6 @@ type Type struct {
 	NodeZoneLabel         *string        `yaml:"nodeZoneLabel"`
 	ConfigDrainPeriod     *time.Duration `yaml:"configDrainPeriod"`
 	EndpointCheckPeriod   *time.Duration `yaml:"endpointCheckPeriod"`
-	EndpointTTL           *time.Duration `yaml:"endpointTtl"`
 	SentryDSN             *string        `yaml:"sentryDsn"`
 	SSLName               *string        `yaml:"sslName"`
 	SSLCrt                *string        `yaml:"sslCrt"`
@@ -77,7 +75,6 @@ var config = Type{
 	NodeZoneLabel:         flag.String("node.label.zone", "topology.kubernetes.io/zone", "node label region"),
 	ConfigDrainPeriod:     flag.Duration("config.drainPeriod", configDrainPeriodDefault, "drain period"),
 	EndpointCheckPeriod:   flag.Duration("endpoint.checkPeriod", endpointCheckPeriodDefault, "check period"),
-	EndpointTTL:           flag.Duration("endpoint.ttl", endpointTTLDefault, "xDS TTL"),
 	SentryDSN:             flag.String("sentry.dsn", "", "sentry DSN"),
 	SSLName:               flag.String("ssl.name", "envoy_control_plane_default", "name of certificate in envoy secrets"), //nolint:lll
 	SSLCrt:                flag.String("ssl.crt", "", "path to CA cert"),

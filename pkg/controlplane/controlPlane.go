@@ -42,14 +42,7 @@ const (
 	grpcMaxConcurrentStreams = 1000000
 )
 
-// SnapshotCache create cache with heartbeat responses for resources with a TTL.
-var SnapshotCache cache.SnapshotCache = cache.NewSnapshotCacheWithHeartbeating(
-	context.Background(),
-	false,
-	cache.IDHash{},
-	&Logger{},
-	*config.Get().EndpointTTL,
-)
+var SnapshotCache cache.SnapshotCache = cache.NewSnapshotCache(false, cache.IDHash{}, &Logger{})
 
 var grpcServer *grpc.Server
 

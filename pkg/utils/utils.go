@@ -33,7 +33,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints []types.ResourceWithTTL, commonSecrets []tls.Secret) (cache.Snapshot, error) { //nolint: lll
+func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints []types.Resource, commonSecrets []tls.Secret) (cache.Snapshot, error) { //nolint: lll
 	clusters, err := YamlToResources(configType.Clusters, cluster.Cluster{})
 	if err != nil {
 		return cache.Snapshot{}, err
@@ -63,10 +63,10 @@ func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints 
 	}
 
 	for i := range commonSecrets {
-		secrets = append(secrets, types.ResourceWithTTL{Resource: &commonSecrets[i]})
+		secrets = append(secrets, &commonSecrets[i])
 	}
 
-	resources := make(map[string][]types.ResourceWithTTL)
+	resources := make(map[string][]types.Resource)
 
 	resources[resource.ClusterType] = clusters
 	resources[resource.RouteType] = routes
@@ -74,10 +74,10 @@ func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints 
 	resources[resource.SecretType] = secrets
 	resources[resource.EndpointType] = endpoints
 
-	return cache.NewSnapshotWithTTLs(version, resources)
+	return cache.NewSnapshot(version, resources)
 }
 
-func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.ResourceWithTTL, error) {
+func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resource, error) {
 	if len(yamlObj) == 0 {
 		return nil, nil
 	}
@@ -96,7 +96,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 		return nil, errors.Wrap(err, "json.Unmarshal(jsonObj, &resources)")
 	}
 
-	results := make([]types.ResourceWithTTL, len(resources))
+	results := make([]types.Resource, len(resources))
 
 	for k, v := range resources {
 		resourcesJSON, err := utils.GetJSONfromYAML(v)
@@ -115,7 +115,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, errors.Wrap(err, "cluster.Cluster")
 			}
 
-			results[k] = types.ResourceWithTTL{Resource: &resource}
+			results[k] = &resource
 
 		case route.RouteConfiguration:
 			resource := route.RouteConfiguration{}
@@ -127,7 +127,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, errors.Wrap(err, "route.RouteConfiguration")
 			}
 
-			results[k] = types.ResourceWithTTL{Resource: &resource}
+			results[k] = &resource
 		case endpoint.ClusterLoadAssignment:
 			resource := endpoint.ClusterLoadAssignment{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
@@ -138,7 +138,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, errors.Wrap(err, "endpoint.ClusterLoadAssignment")
 			}
 
-			results[k] = types.ResourceWithTTL{Resource: &resource}
+			results[k] = &resource
 		case listener.Listener:
 			resource := listener.Listener{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
@@ -149,7 +149,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, errors.Wrap(err, "listener.Listener")
 			}
 
-			results[k] = types.ResourceWithTTL{Resource: &resource}
+			results[k] = &resource
 		case tls.Secret:
 			resource := tls.Secret{}
 			err = protojson.Unmarshal(resourcesJSON, &resource)
@@ -160,7 +160,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 				return nil, errors.Wrap(err, "tls.Secret")
 			}
 
-			results[k] = types.ResourceWithTTL{Resource: &resource}
+			results[k] = &resource
 		default:
 			return nil, errUnknownClass
 		}
@@ -231,9 +231,9 @@ func NewSecrets(dnsName string, validation interface{}) ([]tls.Secret, error) {
 }
 
 // remove require_client_certificate from all listeners.
-func filterCertificates(listiners []types.ResourceWithTTL) error {
+func filterCertificates(listiners []types.Resource) error {
 	for _, listiner := range listiners {
-		c, ok := listiner.Resource.(*listener.Listener)
+		c, ok := listiner.(*listener.Listener)
 		if !ok {
 			return errUnknownClass
 		}
