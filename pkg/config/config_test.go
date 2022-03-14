@@ -14,7 +14,6 @@ package config_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 )
@@ -28,9 +27,5 @@ func TestConfig(t *testing.T) {
 
 	if want := "/some/test/path"; *config.Get().KubeConfigFile != want {
 		t.Fatalf("KubeConfigFile != %s", want)
-	}
-
-	if want := 3 * time.Second; *config.Get().EndpointTTL != want {
-		t.Fatalf("EndpointTTL != %s", want)
 	}
 }

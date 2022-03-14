@@ -46,7 +46,7 @@ type ConfigStore struct {
 	Version            string
 	Config             *appConfig.ConfigType
 	configEndpoints    map[string][]*endpoint.LocalityLbEndpoints
-	lastEndpoints      []types.ResourceWithTTL
+	lastEndpoints      []types.Resource
 	lastEndpointsArray []string
 	log                *log.Entry
 	mutex              sync.Mutex
@@ -151,7 +151,7 @@ func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEn
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
 
 	for _, ep := range endpoints {
-		fixed, ok := ep.Resource.(*endpoint.ClusterLoadAssignment)
+		fixed, ok := ep.(*endpoint.ClusterLoadAssignment)
 		if !ok {
 			cs.log.WithError(errAssertion).Fatal("ep.(*endpoint.ClusterLoadAssignment)")
 		}
@@ -259,7 +259,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 	}
 
 	isInvalidIP := false
-	publishEp := []types.ResourceWithTTL{}
+	publishEp := []types.Resource{}
 	publishEpArray := []string{} // for reflect.DeepEqual
 
 	for clusterName, ep := range lbEndpoints {
@@ -290,10 +290,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 			Endpoints:   ep,
 		}
 
-		publishEp = append(publishEp, types.ResourceWithTTL{
-			Resource: &clusterLoadAssignment,
-			TTL:      appConfig.Get().EndpointTTL,
-		})
+		publishEp = append(publishEp, &clusterLoadAssignment)
 	}
 
 	if isInvalidIP {

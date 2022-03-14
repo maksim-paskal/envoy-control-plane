@@ -136,3 +136,5 @@ test-e2e:
 	-ssl.rotation=1s \
 	-log.level=INFO \
 	-log.pretty
+
+	make clean

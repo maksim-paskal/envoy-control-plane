@@ -27,14 +27,14 @@ func TestGetConfigSnapshot(t *testing.T) {
 	t.Parallel()
 
 	c := config.ConfigType{}
-	r := []types.ResourceWithTTL{}
+	r := []types.Resource{}
 	s := []tls.Secret{}
 
 	e := endpoint.ClusterLoadAssignment{
 		ClusterName: "clusterName",
 	}
 
-	r = append(r, types.ResourceWithTTL{Resource: &e})
+	r = append(r, &e)
 
 	version := uuid.New().String()
 
