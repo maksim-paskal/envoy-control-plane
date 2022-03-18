@@ -13,7 +13,9 @@ COPY ./envoy/entrypoint.sh /entrypoint.sh
 COPY ./envoy/envoy.defaults /envoy.defaults/
 COPY ./envoy/certs /certs/
 
-RUN touch /tmp/checksum \
+RUN apt update \
+&& apt full-upgrade -y \
+&& touch /tmp/checksum \
 && echo "473ce4db569c2adfb6fc52a35582310c66164a241b7d7c5cc514d334757b682a /usr/local/lib/libjaegertracing_plugin.so" >> /tmp/checksum \
 && echo "6eb0a7ba547f425c63887287e15448bb3e6d009b1c0750d93e07f08d6f1dad68 /usr/local/bin/go-template" >> /tmp/checksum \
 && cat /tmp/checksum \
