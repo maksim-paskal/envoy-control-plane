@@ -138,3 +138,10 @@ test-e2e:
 	-log.pretty
 
 	make clean
+scan:
+	@trivy image \
+	-ignore-unfixed --no-progress --severity HIGH,CRITICAL \
+	paskalmaksim/envoy-control-plane:$(gitTag)
+	@trivy image \
+	-ignore-unfixed --no-progress --severity HIGH,CRITICAL \
+	paskalmaksim/envoy-docker-image:$(gitTag)
