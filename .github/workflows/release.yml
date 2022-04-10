@@ -17,6 +17,8 @@ jobs:
         fetch-depth: 0
     - name: Remove Git Tags with Charts
       run: git tag -d $(git tag -l "helm-chart-*")
+    - name: Remove Git Tags with Charts
+      run: git tag -d $(git tag -l "envoy-*")
     - name: Set up Go
       uses: actions/setup-go@v2
       with:

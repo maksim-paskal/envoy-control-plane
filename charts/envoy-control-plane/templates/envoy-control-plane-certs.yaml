@@ -4,6 +4,6 @@ metadata:
   name: envoy-control-plane-certs
 data:
   CA.crt: |
-{{- .Values.certificates.caCrt | nindent 5 }}
+{{- .Values.caCrt | nindent 5 }}
   CA.key: |
-{{- .Values.certificates.caKey | nindent 5 }}
+{{- .Values.caKey | nindent 5 }}

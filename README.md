@@ -27,18 +27,18 @@ helm upgrade envoy-control-plane \
   --create-namespace \
   --namespace envoy-control-plane \
   maksim-paskal-envoy-control-plane/envoy-control-plane \
-  --set withExamples=true \
   --set ingress.enabled=true \
   --set-file certificates.caKey=./certs/CA.key \
   --set-file certificates.caCrt=./certs/CA.crt \
   --set-file certificates.envoyKey=./certs/envoy.key \
   --set-file certificates.envoyCrt=./certs/envoy.crt
 
-# get NAME of envoy POD, must be in Ready state
-kubectl -n envoy-control-plane get pods -lapp=envoy -o wide
+# add testpods
+kubectl -n envoy-control-plane create -f ./examples/testPods
 
-# port forward to envoy pod, open browser http://127.0.0.1:8000, success result `Hello World`
-kubectl -n envoy-control-plane port-forward <envoy-pod-name> 8000
+# port forward to test envoy pod, open browser http://127.0.0.1:8000
+# success result `Hello World`
+kubectl -n envoy-control-plane port-forward svc/envoy 8000
 
 # port forward to envoy pod, open browser https://127.0.0.1:18000, envoy administration interface
 # https://www.envoyproxy.io/docs/envoy/latest/operations/admin

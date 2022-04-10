@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy-control-plane
+  labels:
+    app: envoy-control-plane
+spec:
+  selector:
+    matchLabels:
+      app: envoy-control-plane
+  replicas: 1
+  template:
+    metadata:
+      {{- if or .Values.global.metrics.enabled .Values.metrics.enabled  }}
+      annotations:
+        prometheus.io/path: '/api/metrics'
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '18082'
+      {{- end }}
+      labels:
+        app: envoy-control-plane
+    spec:
+      serviceAccountName: envoy-control-plane
+      volumes:
+      - name: certs
+        configMap:
+          name: envoy-control-plane-certs
+      containers:
+      - name: envoy-control-plane
+        image: {{ printf "%s:%s" .Values.image.repository .Values.tag  }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: MY_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+{{- if .Values.env }}
+{{ toYaml .Values.env | indent 8 }}
+{{- end }}
+        command:
+        - /app/envoy-control-plane
+        - -ssl.crt=/certs/CA.crt
+        - -ssl.key=/certs/CA.key
+{{- if .Values.noTLSValidation }}
+        - -ssl.no-validation
+        - -web.adminPassword=admin
+{{- end }}
+{{- if .Values.args }}
+{{ toYaml .Values.args | indent 8 }}
+{{- end }}
+        resources:
+{{ toYaml .Values.resources | indent 9 }}
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /api/ready
+            port: 18081
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /api/healthz
+            port: 18081
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        ports:
+        - containerPort: 18080
+        - containerPort: 18081
+        - containerPort: 18082
+        volumeMounts:
+        - name: certs
+          mountPath: /certs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-control-plane
+  labels:
+    app: envoy-control-plane
+spec:
+  type: ClusterIP
+  ports:
+  - name: xds
+    port: 18080
+    protocol: TCP
+  - name: https
+    port: 18081
+    protocol: TCP
+  selector:
+    app: envoy-control-plane

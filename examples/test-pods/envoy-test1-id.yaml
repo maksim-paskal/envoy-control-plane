@@ -1,4 +1,3 @@
-{{ if .Values.withExamples }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -59,11 +58,10 @@ data:
                   - envoy_grpc:
                       cluster_name: xds_cluster
             http_filters:
-            {{- if .Values.ratelimit.enabled }}
             - name: envoy.filters.http.ratelimit
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
-                domain: {{ .Values.ratelimit.domain }}
+                domain: test
                 enable_x_ratelimit_headers: DRAFT_VERSION_03
                 failure_mode_deny: false
                 rate_limit_service:
@@ -71,7 +69,6 @@ data:
                   grpc_service:
                     envoy_grpc:
                       cluster_name: rate_limit_cluster
-             {{- end }}
             - name: envoy.filters.http.router
     endpoints:
     - cluster_name: local_service1
@@ -89,10 +86,17 @@ data:
       - name: test
         domains:
         - "*"
-        {{- if .Values.ratelimit.enabled }}
         rate_limits:
-        {{- .Values.ratelimit.rate_limits | toYaml | nindent 9 }}
-        {{- end }}
+        - actions:
+          - header_value_match:
+              descriptor_value: no-cf-connecting-ip
+              expect_match: false
+              headers:
+              - name: "cf-connecting-ip"
+        - actions:
+          - request_headers:
+              header_name: cf-connecting-ip
+              descriptor_key: cf-connecting-ip
         retry_policy:
           retry_on: "cancelled,connect-failure,gateway-error,refused-stream,reset,resource-exhausted,unavailable"
           num_retries: 1
@@ -152,7 +156,6 @@ data:
             grpc_services:
             - envoy_grpc:
                 cluster_name: xds_cluster
-    {{- if .Values.ratelimit.enabled }}
     - name: rate_limit_cluster
       connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN
@@ -171,5 +174,3 @@ data:
                 socket_address:
                   address: envoy-ratelimit
                   port_value: 8081
-    {{- end }}
-{{ end }}

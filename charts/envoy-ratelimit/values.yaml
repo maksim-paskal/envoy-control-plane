@@ -1,0 +1,42 @@
+global:
+  metrics:
+    enabled: false
+
+image:
+  repository: envoyproxy/ratelimit
+  tag: 6f5de117
+  pullPolicy: IfNotPresent
+
+nodeSelector: {}
+redisURL: "127.0.0.1:6379"
+resources:
+  requests:
+    cpu: 100m
+    memory: 100Mi
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: 6.0.9
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+metrics:
+  enabled: false
+topologySpreadConstraints:
+  enabled: true
+statsd:
+  image:
+    repository: prom/statsd-exporter
+    tag: v0.18.0
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100Mi
+# https://github.com/envoyproxy/ratelimit#descriptor-list-definition
+config:
+  domain: ratelimit
+  descriptors: []
