@@ -1,6 +1,6 @@
 module github.com/maksim-paskal/envoy-control-plane
 
-go 1.17
+go 1.18
 
 require (
 	github.com/envoyproxy/go-control-plane v0.10.1
