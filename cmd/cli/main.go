@@ -55,7 +55,7 @@ var (
 )
 
 func waitForAPI() {
-	url := fmt.Sprintf("https://%s:%d/api/ready", *server, *port)
+	url := fmt.Sprintf("https://%s:%d/api/ready", *server, *port) //nolint:nosprintfhostport
 
 	for {
 		if *debug {
@@ -183,7 +183,7 @@ func main() {
 		waitForAPI()
 	}
 
-	requestURL := fmt.Sprintf("https://%s:%d%s", *server, *port, *action)
+	requestURL := fmt.Sprintf("https://%s:%d%s", *server, *port, *action) //nolint:nosprintfhostport
 
 	data := url.Values{
 		"namespace": {*namespace},

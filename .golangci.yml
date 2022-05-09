@@ -10,6 +10,7 @@ linters:
   - funlen
   - gocognit
   - exhaustivestruct
+  - exhaustruct
   - cyclop
   # https://github.com/tomarrell/wrapcheck/issues/8
   - wrapcheck

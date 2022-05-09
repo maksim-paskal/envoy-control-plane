@@ -191,11 +191,11 @@ func watchErrors(r *cache.Reflector, err error) {
 	log.WithError(err).Fatal()
 }
 
-func ListPods() (ret []*v1.Pod, err error) {
+func ListPods() ([]*v1.Pod, error) {
 	return podLister.List(labels.Everything())
 }
 
-func ListConfigMaps() (ret []*v1.ConfigMap, err error) {
+func ListConfigMaps() ([]*v1.ConfigMap, error) {
 	return configLister.List(labels.Everything())
 }
 
