@@ -105,7 +105,7 @@ func Init() {
 	}
 
 	api.OnNewConfig = func(cm *v1.ConfigMap) {
-		if configmapsstore.NewConfigMap(cm) != nil {
+		if err := configmapsstore.NewConfigMap(cm); err != nil {
 			log.WithError(err).Error()
 		}
 	}

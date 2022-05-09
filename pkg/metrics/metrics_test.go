@@ -14,7 +14,6 @@ package metrics_test
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -68,6 +67,6 @@ func TestMetricsHandler(t *testing.T) {
 	defer resp.Body.Close()
 
 	if m := "envoy_control_plane_on_delta_stream_closed_total"; !strings.Contains(string(body), m) {
-		t.Fatal(fmt.Sprintf("no metric %s found", m))
+		t.Fatalf("no metric %s found", m)
 	}
 }
