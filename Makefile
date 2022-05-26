@@ -122,7 +122,9 @@ sslTestClient:
 	curl -v --cacert ./certs/CA.crt --resolve "test3-id:8002:127.0.0.1" --key ./certs/server.key --cert ./certs/server.crt https://test3-id:8002
 sslTestControlPlane:
 	curl -vk --http2 --cacert ./certs/CA.crt --resolve "envoy-control-plane:18080:127.0.0.1" --key ./certs/server.key --cert ./certs/server.crt https://envoy-control-plane:18080
-test-e2e:
+
+.PHONY: e2e
+e2e:
 	make clean k8sConfig
 	kubectl scale deploy test-001 test-002 --replicas=${initialPodCount}
 	kubectl wait --for=condition=available deployment --all --timeout=600s
