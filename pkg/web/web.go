@@ -38,8 +38,9 @@ import (
 )
 
 const (
-	basicRealm  = config.AppName
-	adminPrefix = "/api/admin"
+	basicRealm            = config.AppName
+	adminPrefix           = "/api/admin"
+	httpReadHeaderTimeout = 10 * time.Second
 )
 
 type Route struct {
@@ -157,9 +158,10 @@ func StartTLS() {
 	}
 
 	server := http.Server{
-		Addr:      *config.Get().WebHTTPSAddress,
-		TLSConfig: tlsConfig,
-		Handler:   auth(GetHandler(false)),
+		Addr:              *config.Get().WebHTTPSAddress,
+		TLSConfig:         tlsConfig,
+		Handler:           auth(GetHandler(false)),
+		ReadHeaderTimeout: httpReadHeaderTimeout,
 	}
 
 	if err := server.ListenAndServeTLS("", ""); err != nil {
