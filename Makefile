@@ -20,12 +20,12 @@ testChart:
 build-goreleaser:
 	git tag -d `git tag -l "helm-chart-*"`
 	go run github.com/goreleaser/goreleaser@latest build --rm-dist --snapshot
-	mv ./dist/envoy-control-plane_linux_amd64/envoy-control-plane envoy-control-plane
-	mv ./dist/cli_linux_amd64/cli cli
+	mv ./dist/envoy-control-plane_linux_amd64_v1/envoy-control-plane envoy-control-plane
+	mv ./dist/cli_linux_amd64_v1/cli cli
 build:
 	make build-goreleaser
-	docker build --pull . -t paskalmaksim/envoy-control-plane:$(gitTag)
-	docker build --pull . --build-arg base=paskalmaksim/envoy-docker-image:debug-base -f ./envoy/Dockerfile -t paskalmaksim/envoy-docker-image:$(gitTag)
+	docker build --pull --push . -t paskalmaksim/envoy-control-plane:$(gitTag)
+	docker build --pull --push . --build-arg base=paskalmaksim/envoy-docker-image:debug-base -f ./envoy/Dockerfile -t paskalmaksim/envoy-docker-image:$(gitTag)
 build-composer:
 	docker-compose build --pull --parallel
 security-scan:
@@ -53,7 +53,8 @@ runRaceDetection:
 	-web.adminUser=admin \
 	-web.adminPassword=admin \
 	-ssl.crt=certs/CA.crt \
-	-ssl.key=certs/CA.key
+	-ssl.key=certs/CA.key \
+	-leaderElection=false
 runCli:
 	go run ./cmd/cli -debug -namespace=1 -pod=2 \
 	-tls.CA=certs/CA.crt \
@@ -70,6 +71,7 @@ installDev:
 	--set withExamples=true \
 	--set ingress.enabled=true \
 	--set registry.image=paskalmaksim/envoy-control-plane:$(gitTag) \
+	--set registry.imagePullPolicy=Always \
 	--set envoy.registry.image=paskalmaksim/envoy-docker-image:$(gitTag) \
 	--set-file certificates.caKey=./certs/CA.key \
 	--set-file certificates.caCrt=./certs/CA.crt \

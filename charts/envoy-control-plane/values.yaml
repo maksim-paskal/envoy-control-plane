@@ -1,5 +1,7 @@
 withExamples: false
 
+replicas: 3
+
 certificates:
   caCrt: |
     -----BEGIN CERTIFICATE-----

@@ -14,6 +14,9 @@ rules:
 - apiGroups: [""]
   resources: ["pods"]
   verbs: ["get","list","watch"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["*"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -60,7 +63,7 @@ spec:
   selector:
     matchLabels:
       app: envoy-control-plane
-  replicas: 1
+  replicas: {{ .Values.replicas }}
   template:
     metadata:
       annotations:
@@ -71,6 +74,16 @@ spec:
         app: envoy-control-plane
     spec:
       serviceAccountName: envoy-control-plane
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - envoy-control-plane
+            topologyKey: kubernetes.io/hostname
       volumes:
       - name: certs
         configMap:
@@ -79,7 +92,22 @@ spec:
       - name: envoy-control-plane
         image: {{ tpl .Values.registry.image . | quote }}
         imagePullPolicy: {{ .Values.registry.imagePullPolicy | quote }}
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 30001
+          runAsGroup: 30001
+          privileged: false
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         env:
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
         - name: MY_POD_NAMESPACE
           valueFrom:
             fieldRef:
@@ -93,18 +121,11 @@ spec:
           requests:
             cpu: 10m
             memory: 100Mi
-        readinessProbe:
-          httpGet:
-            scheme: HTTPS
-            path: /api/ready
-            port: 18081
-          initialDelaySeconds: 3
-          periodSeconds: 5
         livenessProbe:
           httpGet:
-            scheme: HTTPS
-            path: /api/healthz
-            port: 18081
+            scheme: HTTP
+            path: /api/metrics
+            port: 18082
           initialDelaySeconds: 10
           periodSeconds: 10
         ports:
@@ -123,6 +144,7 @@ metadata:
     app: envoy-control-plane
 spec:
   type: ClusterIP
+  clusterIP: "None" # headless service
   ports:
   - name: xds
     port: 18080

@@ -15,7 +15,7 @@ package main
 import (
 	"flag"
 	"io/fs"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 
@@ -74,7 +74,7 @@ func main() {
 
 		log.Infof("saving file %s", filePath)
 
-		if err = ioutil.WriteFile(filePath, fileContent, fileMode); err != nil {
+		if err = os.WriteFile(filePath, fileContent, fileMode); err != nil {
 			log.Fatal(err)
 		}
 	}

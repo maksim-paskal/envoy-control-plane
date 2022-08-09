@@ -18,8 +18,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
@@ -101,7 +101,7 @@ func NewCertificate(dnsNames []string, certDuration time.Duration) (*x509.Certif
 }
 
 func loadCAFromFiles() (*x509.Certificate, []byte, *rsa.PrivateKey, error) {
-	certBytes, err := ioutil.ReadFile(*config.Get().SSLCrt)
+	certBytes, err := os.ReadFile(*config.Get().SSLCrt)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "can not load certicate")
 	}
@@ -113,7 +113,7 @@ func loadCAFromFiles() (*x509.Certificate, []byte, *rsa.PrivateKey, error) {
 		return nil, nil, nil, errors.Wrap(err, "can not parse certicate")
 	}
 
-	keyBytes, err := ioutil.ReadFile(*config.Get().SSLKey)
+	keyBytes, err := os.ReadFile(*config.Get().SSLKey)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "can not load key")
 	}
