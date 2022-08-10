@@ -1,9 +1,9 @@
 dependencies:
 - name: envoy-control-plane
   repository: file://../../charts/envoy-control-plane
-  version: 0.0.7
+  version: 0.0.8
 - name: envoy-ratelimit-service
   repository: file://../../charts/envoy-ratelimit-service
   version: 0.0.2
-digest: sha256:e2ce5a188b7b6006ae584ee2e54ad0ca973e21bc0ab2a1c1e8668978a090197e
-generated: "2022-08-10T19:34:07.964485+03:00"
+digest: sha256:02401c78f79e422027215bacd8d2d025a3b810deb23e6aa9ac712816722299ff
+generated: "2022-08-10T19:58:34.856126+03:00"

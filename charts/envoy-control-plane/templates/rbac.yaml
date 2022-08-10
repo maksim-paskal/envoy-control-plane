@@ -46,7 +46,7 @@ metadata:
   name: {{ tpl .Values.rbac.clusterRoleBindingName . | quote }}
 roleRef:
   kind: ClusterRole
-  name: envoy-control-plane-role
+  name: {{ tpl .Values.rbac.clusterRoleName . | quote }}
   apiGroup: rbac.authorization.k8s.io
 subjects:
 - kind: ServiceAccount
