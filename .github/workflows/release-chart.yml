@@ -19,6 +19,10 @@ jobs:
         uses: azure/setup-helm@v1
         with:
           version: v3.8.1
+
+      - name: Add helm dep repository
+        run: ./scripts/add-helm-repo.sh
+
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.1.0
         env:

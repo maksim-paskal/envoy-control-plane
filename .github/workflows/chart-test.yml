@@ -22,9 +22,7 @@ jobs:
         uses: helm/chart-testing-action@v2.2.1
 
       - name: Add helm dep repository
-        run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+        run: ./scripts/add-helm-repo.sh
 
       - name: Run chart-testing (lint)
         run: ct lint --target-branch main
