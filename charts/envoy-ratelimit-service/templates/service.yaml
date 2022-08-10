@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-ratelimit
+  labels:
+    app: envoy-ratelimit
+spec:
+  type: ClusterIP
+  ports:
+  - name: grpc
+    port: 8080
+    protocol: TCP
+  - name: http
+    port: 8081
+    protocol: TCP
+  selector:
+    app: envoy-ratelimit

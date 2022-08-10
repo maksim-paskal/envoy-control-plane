@@ -1,4 +1,4 @@
-KUBECONFIG=$(HOME)/.kube/example-kubeconfig
+KUBECONFIG=$(HOME)/.kube/dev
 initialPodCount=10
 gitTag=$(shell git rev-parse --abbrev-ref HEAD)
 
@@ -15,8 +15,18 @@ test-release:
 	git tag -d `git tag -l "helm-chart-*"`
 	go run github.com/goreleaser/goreleaser@latest release --snapshot --skip-publish --rm-dist
 testChart:
+	ct lint --target-branch main --all
 	helm lint --strict ./charts/envoy-control-plane
 	helm template ./charts/envoy-control-plane | kubectl apply --dry-run=client --validate -f -
+
+	helm dep up ./charts/envoy-ratelimit-service
+	helm lint --strict ./charts/envoy-ratelimit-service
+	helm template ./charts/envoy-ratelimit-service | kubectl apply --dry-run=client --validate -f -
+
+	rm -rf ./examples/test-deploy/charts
+	helm dep up ./examples/test-deploy
+	ct lint --charts ./examples/test-deploy
+	helm template ./examples/test-deploy | kubectl apply --dry-run=client --validate -f -
 build-goreleaser:
 	git tag -d `git tag -l "helm-chart-*"`
 	go run github.com/goreleaser/goreleaser@latest build --rm-dist --snapshot
@@ -37,7 +47,7 @@ push:
 	docker push paskalmaksim/envoy-control-plane:$(gitTag)
 	docker push paskalmaksim/envoy-docker-image:$(gitTag)
 k8sConfig:
-	kubectl -n default apply -f ./charts/envoy-control-plane/templates/testPods.yaml
+	kubectl -n default apply -f ./examples/test-deploy/templates/testPods.yaml
 	kubectl -n default apply -f ./config/
 run:
 	cp ${KUBECONFIG} kubeconfig
@@ -62,32 +72,35 @@ runCli:
 	-tls.Key=certs/envoy.key
 
 installDev:
-	helm uninstall envoy-control-plane --namespace envoy-control-plane || true
-	helm upgrade envoy-control-plane \
+	rm -rf ./examples/test-deploy/charts
+	helm dep build ./examples/test-deploy
+
+	helm uninstall test-deploy --namespace envoy-control-plane || true
+	helm upgrade test-deploy \
 	--install \
 	--create-namespace \
 	--namespace envoy-control-plane \
-	./charts/envoy-control-plane \
-	--set withExamples=true \
-	--set ingress.enabled=true \
-	--set registry.image=paskalmaksim/envoy-control-plane:$(gitTag) \
-	--set registry.imagePullPolicy=Always \
-	--set envoy.registry.image=paskalmaksim/envoy-docker-image:$(gitTag) \
-	--set-file certificates.caKey=./certs/CA.key \
-	--set-file certificates.caCrt=./certs/CA.crt \
-	--set-file certificates.envoyKey=./certs/envoy.key \
-	--set-file certificates.envoyCrt=./certs/envoy.crt
+	./examples/test-deploy \
+	--set image.repository=paskalmaksim/envoy-docker-image \
+	--set image.tag=$(gitTag) \
+	--set image.pullPolicy=Always \
+	--set envoy-control-plane.image.repository=paskalmaksim/envoy-control-plane \
+	--set envoy-control-plane.image.tag=$(gitTag) \
+	--set envoy-control-plane.image.pullPolicy=Always \
+	--set-file envoy-control-plane.certificates.caKey=./certs/CA.key \
+	--set-file envoy-control-plane.certificates.caCrt=./certs/CA.crt \
+	--set-file envoy-control-plane.certificates.envoyKey=./certs/envoy.key \
+	--set-file envoy-control-plane.certificates.envoyCrt=./certs/envoy.crt
 
-	kubectl apply -n envoy-control-plane -f ./charts/envoy-control-plane/templates/testPods.yaml
 	watch kubectl -n envoy-control-plane get pods
 installDevConfig:
 	kubectl -n envoy-control-plane apply -f ./charts/envoy-control-plane/templates/envoy-test1-id.yaml
 clean:
-	helm uninstall envoy-control-plane --namespace envoy-control-plane || true
+	helm uninstall test-deploy --namespace envoy-control-plane || true
 	kubectl delete ns envoy-control-plane || true
 	kubectl -n default delete cm -lapp=envoy-control-plane || true
 	kubectl -n default delete -f ./config/ || true
-	kubectl -n default delete -f ./charts/envoy-control-plane/templates/testPods.yaml || true
+	kubectl -n default delete -f ./examples/test-deploy/templates/testPods.yaml || true
 	docker-compose down --remove-orphans
 upgrade:
 	go get -v -u k8s.io/api@v0.21.10 || true
