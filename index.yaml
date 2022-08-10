@@ -2,6 +2,18 @@ apiVersion: v1
 entries:
   envoy-control-plane:
   - apiVersion: v2
+    created: "2022-08-10T16:42:14.225974731Z"
+    description: Lightweight Envoy control plane
+    digest: 2b9b4c452f6ee2c7cbb61edd38dc149b1a44d1a42e211bc9f72ea70c799e4ab3
+    icon: https://helm.sh/img/helm.svg
+    maintainers:
+    - email: paskal.maksim@gmail.com
+      name: maksim-paskal
+    name: envoy-control-plane
+    urls:
+    - https://github.com/maksim-paskal/envoy-control-plane/releases/download/envoy-control-plane-0.0.7/envoy-control-plane-0.0.7.tgz
+    version: 0.0.7
+  - apiVersion: v2
     created: "2022-08-10T14:18:44.686932112Z"
     description: Lightweight Envoy control plane
     digest: 8f23bfea5b6436f1511403afe8fa00c66fe5f03d7991a6705bf25414da0eccea
@@ -47,6 +59,27 @@ entries:
     - https://github.com/maksim-paskal/envoy-control-plane/releases/download/helm-chart-v0.0.1/envoy-control-plane-v0.0.1.tgz
     version: v0.0.1
   envoy-ratelimit-service:
+  - apiVersion: v2
+    created: "2022-08-10T16:42:14.407077663Z"
+    dependencies:
+    - condition: redis.enabled
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 16.8.4
+    - condition: prometheus-statsd-exporter.enabled
+      name: prometheus-statsd-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 0.5.0
+    description: Implementation of the Envoy Rate Limit Service
+    digest: 6b828d15cb3e8c52b79f821eb83d14f7a6fb51cd536f7675facfd097382bc97e
+    icon: https://helm.sh/img/helm.svg
+    maintainers:
+    - email: paskal.maksim@gmail.com
+      name: maksim-paskal
+    name: envoy-ratelimit-service
+    urls:
+    - https://github.com/maksim-paskal/envoy-control-plane/releases/download/envoy-ratelimit-service-0.0.2/envoy-ratelimit-service-0.0.2.tgz
+    version: 0.0.2
   - apiVersion: v2
     created: "2022-08-10T14:18:44.841642645Z"
     dependencies:
