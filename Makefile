@@ -73,7 +73,7 @@ runCli:
 
 installDev:
 	rm -rf ./examples/test-deploy/charts
-	helm dep build ./examples/test-deploy
+	helm dep up ./examples/test-deploy
 
 	helm uninstall test-deploy --namespace envoy-control-plane || true
 	helm upgrade test-deploy \

@@ -14,6 +14,15 @@ resources:
     cpu: 100m
     memory: 100Mi
 
+rbac:
+  clusterRoleName: "{{ .Release.Namespace }}-role"
+  clusterRoleBindingName: "{{ .Release.Namespace }}"
+
+pdb:
+  enabled: false
+  spec:
+    minAvailable: 1
+
 priorityClassName: ""
 
 tolerations: []
