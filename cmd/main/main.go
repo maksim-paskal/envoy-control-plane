@@ -17,18 +17,29 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/maksim-paskal/envoy-control-plane/internal"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/controlplane"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/web"
+	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 )
 
 var version = flag.Bool("version", false, "version")
 
-func main() {
-	ctx := context.Background()
+const (
+	defaultLeaseDuration = 15 * time.Second
+	defaultRenewDeadline = 10 * time.Second
+	defaultRetryPeriod   = 2 * time.Second
+)
 
+func main() {
 	flag.Parse()
 
 	if *version {
@@ -38,17 +49,86 @@ func main() {
 
 	// application initialization
 	internal.Init()
-	defer internal.Stop()
+
+	// initial master value
+	metrics.LeaderElectionIsMaster.Set(0)
+
+	// start metrics server
+	go web.Start()
+
+	if *config.Get().LeaderElection {
+		// run leader election
+		RunLeaderElection()
+	} else {
+		// run as a single instance
+		ctx := context.Background()
+
+		start(context.Background())
+		defer stop()
+
+		<-ctx.Done()
+	}
+}
+
+func start(ctx context.Context) {
+	internal.Start()
 
 	// start controlplane
 	controlplane.Init(ctx)
-	defer controlplane.Stop()
 
 	go controlplane.Start()
 
-	// create web server
-	go web.Start()
 	go web.StartTLS()
+}
 
-	<-ctx.Done()
+func stop() {
+	internal.Stop()
+	controlplane.Stop()
+}
+
+func RunLeaderElection() {
+	if len(*config.Get().Namespace) == 0 {
+		log.Fatal("-namespace is not set")
+	}
+
+	if len(*config.Get().PodName) == 0 {
+		log.Fatal("-pod is not set")
+	}
+
+	lock := GetLeaseLock(*config.Get().Namespace, *config.Get().PodName)
+
+	leaderelection.RunOrDie(context.Background(), leaderelection.LeaderElectionConfig{
+		Lock:            lock,
+		ReleaseOnCancel: true,
+		LeaseDuration:   defaultLeaseDuration,
+		RenewDeadline:   defaultRenewDeadline,
+		RetryPeriod:     defaultRetryPeriod,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: func(ctx context.Context) {
+				metrics.LeaderElectionIsMaster.Set(1)
+				start(ctx)
+			},
+			OnStoppedLeading: func() {
+				log.Warn("leader election lost")
+				// close active connections and exit
+				stop()
+				os.Exit(1)
+			},
+		},
+	})
+}
+
+func GetLeaseLock(podNamespace string, podName string) *resourcelock.LeaseLock {
+	clientset := api.Client.KubeClient()
+
+	return &resourcelock.LeaseLock{
+		LeaseMeta: metav1.ObjectMeta{
+			Name:      config.AppName,
+			Namespace: podNamespace,
+		},
+		Client: clientset.CoordinationV1(),
+		LockConfig: resourcelock.ResourceLockConfig{
+			Identity: podName,
+		},
+	}
 }

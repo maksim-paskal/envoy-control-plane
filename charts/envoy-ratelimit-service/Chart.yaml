@@ -1,0 +1,17 @@
+apiVersion: v2
+icon: https://helm.sh/img/helm.svg
+name: envoy-ratelimit-service
+version: 0.0.1
+description: Implementation of the Envoy Rate Limit Service
+maintainers:
+- name: maksim-paskal  # Maksim Paskal
+  email: paskal.maksim@gmail.com
+dependencies:
+- name: redis
+  version: 16.8.4
+  repository: https://charts.bitnami.com/bitnami
+  condition: redis.enabled
+- name: prometheus-statsd-exporter
+  version: 0.5.0
+  repository: https://prometheus-community.github.io/helm-charts
+  condition: prometheus-statsd-exporter.enabled

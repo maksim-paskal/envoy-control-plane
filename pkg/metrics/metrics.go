@@ -23,6 +23,11 @@ import (
 const namespace = "envoy_control_plane"
 
 var (
+	LeaderElectionIsMaster = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "leader_election_is_master",
+		Help:      "0 if not master, 1 if master",
+	})
 	GrpcOnStreamOpen = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: namespace,
 		Name:      "on_stream_open_total",

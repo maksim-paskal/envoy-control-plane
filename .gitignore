@@ -8,3 +8,5 @@ dist
 __debug_bin
 /certs
 coverage.out
+/charts/*/charts/
+/examples/test-deploy/charts/

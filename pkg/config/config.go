@@ -15,7 +15,6 @@ package config
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -41,6 +40,8 @@ type Type struct {
 	ConfigMapLabels       *string        `yaml:"configMapLabels"`
 	KubeConfigFile        *string        `yaml:"kubeConfigFile"`
 	WatchNamespaced       *bool          `yaml:"watchNamespaced"`
+	LeaderElection        *bool          `yaml:"leaderElection"`
+	PodName               *string        `yaml:"podName"`
 	Namespace             *string        `yaml:"namespace"`
 	GrpcAddress           *string        `yaml:"grpcAddress"`
 	WebHTTPAddress        *string        `yaml:"webHttpAddress"`
@@ -68,6 +69,8 @@ var config = Type{
 	ConfigMapLabels:       flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
 	KubeConfigFile:        flag.String("kubeconfig.path", "", "kubeconfig path"),
 	WatchNamespaced:       flag.Bool("namespaced", true, "watch pod in one namespace"),
+	LeaderElection:        flag.Bool("leaderElection", true, "leader election"),
+	PodName:               flag.String("pod", os.Getenv("MY_POD_NAME"), "name of pod"),
 	Namespace:             flag.String("namespace", getEnvDefault("MY_POD_NAMESPACE", "default"), "watch namespace"),
 	GrpcAddress:           flag.String("grpc.address", ":18080", "grpc address"),
 	WebHTTPSAddress:       flag.String("web.https.address", ":18081", "https web address"),
@@ -86,7 +89,7 @@ var config = Type{
 }
 
 func Load() error {
-	configByte, err := ioutil.ReadFile(*config.ConfigFile)
+	configByte, err := os.ReadFile(*config.ConfigFile)
 	if err != nil {
 		log.Debug(err)
 

@@ -1,6 +1,43 @@
-withExamples: false
+replicas: 3
+
+global:
+  imageRegistry: ""
+
+image:
+  registry: docker.io
+  repository: paskalmaksim/envoy-control-plane
+  tag: v0.4.0
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 100Mi
+
+priorityClassName: ""
+
+tolerations: []
+
+nodeSelector: {}
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - envoy-control-plane
+      topologyKey: kubernetes.io/hostname
+
+env: []
+
+metrics:
+  enabled: false
 
 certificates:
+  create: true
   caCrt: |
     -----BEGIN CERTIFICATE-----
     MIIDizCCAnOgAwIBAgIBATANBgkqhkiG9w0BAQsFADBWMQswCQYDVQQGEwJVUzEc
@@ -103,60 +140,3 @@ certificates:
     1xda4oxiKYNo432B/vRDnRZoEMpllvqe+Zr17+9zlisTiwYuegysNrQ4r7jJqiSt
     6wC7pddyJdrxVgd8UwavDA==
     -----END PRIVATE KEY-----
-
-registry:
-  image: paskalmaksim/envoy-control-plane:{{ .Chart.AppVersion }}
-  imagePullPolicy: IfNotPresent
-
-envoy:
-  registry:
-    image: paskalmaksim/envoy-docker-image:{{ .Chart.AppVersion }}
-    imagePullPolicy: IfNotPresent
-
-service:
-  external:
-    enable: false
-    type: LoadBalancer
-
-ratelimit:
-  enabled: true
-  domain: test
-  rate_limits:
-  - actions:
-    - header_value_match:
-        descriptor_value: no-cf-connecting-ip
-        expect_match: false
-        headers:
-        - name: "cf-connecting-ip"
-  - actions:
-    - request_headers:
-        header_name: cf-connecting-ip
-        descriptor_key: cf-connecting-ip
-  config:
-    domain: test
-    descriptors:
-    - key: remote_address
-      rate_limit:
-        unit: second
-        requests_per_unit: 2
-    - key: header_match
-      value: no-cf-connecting-ip
-      rate_limit:
-        unit: minute
-        requests_per_unit: 20
-    - key: cf-connecting-ip
-      rate_limit:
-        unit: second
-        requests_per_unit: 5
-    # black list IP
-    - key: cf-connecting-ip
-      value: 203.0.113.1
-      rate_limit:
-        unit: second
-        requests_per_unit: 0
-    # auto-tests
-    - key: cf-connecting-ip
-      value: 203.0.113.144
-      rate_limit:
-        unit: second
-        requests_per_unit: 50

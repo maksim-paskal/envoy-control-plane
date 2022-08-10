@@ -75,7 +75,9 @@ func Init() {
 	if err = certs.Init(); err != nil {
 		log.WithError(err).Fatal()
 	}
+}
 
+func Start() {
 	api.OnNewPod = func(pod *v1.Pod) {
 		configstore.StoreMap.Range(func(k, v interface{}) bool {
 			cs, ok := v.(*configstore.ConfigStore)

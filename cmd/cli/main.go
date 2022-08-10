@@ -18,7 +18,7 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -103,7 +103,7 @@ func requestEnvoyAdmin(path string) {
 		log.Fatal(err)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func main() {
 	}
 
 	if !*tlsInsecure && len(*tlsCA) > 0 {
-		caCert, err := ioutil.ReadFile(*tlsCA)
+		caCert, err := os.ReadFile(*tlsCA)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -202,7 +202,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}

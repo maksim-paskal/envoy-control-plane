@@ -56,6 +56,8 @@ func TestConfigMapsStore(t *testing.T) {
 	internal.Init()
 	defer internal.Stop()
 
+	internal.Start()
+
 	// initial wait
 	time.Sleep(initialWait)
 

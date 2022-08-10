@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy-ratelimit
+  labels:
+    app: envoy-ratelimit
+spec:
+  selector:
+    matchLabels:
+      app: envoy-ratelimit
+  replicas: {{ .Values.replicas }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+      labels:
+        app: envoy-ratelimit
+    spec:
+      volumes:
+      - name: config
+        configMap:
+          name: envoy-ratelimit
+      {{ include "pod.extraSpecs" . | nindent 6 }}
+      containers:
+      - name: ratelimit
+        image: {{ printf "%s/%s:%s" (default .Values.image.registry .Values.global.imageRegistry) .Values.image.repository .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 30001
+          runAsGroup: 30001
+          privileged: false
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        env:
+        {{ if (index . "prometheus-statsd-exporter").enabled }}
+        - name: "USE_STATSD"
+          value: "true"
+        - name: "STATSD_HOST"
+          value: {{ tpl .Values.statsdHost . | quote }}
+        - name: "STATSD_PORT"
+          value: "9125"
+        {{ end }}
+        - name: "LOG_LEVEL"
+          value: {{ .Values.logLevel | quote }}
+        - name: "REDIS_SOCKET_TYPE"
+          value: "tcp"
+        - name: "REDIS_URL"
+          value: {{ tpl .Values.redisURL . | quote }}
+        - name: "RUNTIME_ROOT"
+          value: "/data"
+        - name: "RUNTIME_SUBDIRECTORY"
+          value: "ratelimit"
+        - name: "RUNTIME_IGNOREDOTFILES"
+          value: "true"
+        readinessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        command:
+        - ratelimit
+        volumeMounts:
+        - name: config
+          mountPath: /data/ratelimit
+        resources:
+{{ toYaml .Values.resources | indent 9 }}
+        ports:
+        - containerPort: 8081 # grpc
+        - containerPort: 8080 # http

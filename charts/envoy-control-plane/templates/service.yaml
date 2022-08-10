@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-control-plane
+  labels:
+    app: envoy-control-plane
+spec:
+  type: ClusterIP
+  clusterIP: "None" # headless service
+  ports:
+  - name: xds
+    port: 18080
+    protocol: TCP
+  - name: https
+    port: 18081
+    protocol: TCP
+  selector:
+    app: envoy-control-plane

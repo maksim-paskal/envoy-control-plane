@@ -1,0 +1,91 @@
+global:
+  imageRegistry: ""
+
+replicas: 1
+
+image:
+  registry: docker.io
+  repository: envoyproxy/ratelimit
+  tag: 6f5de117
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 100Mi
+
+priorityClassName: ""
+
+tolerations: []
+
+nodeSelector: {}
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - envoy-ratelimit
+      topologyKey: kubernetes.io/hostname
+
+logLevel: "info"
+
+redisURL: "envoy-ratelimit-redis-master:6379"
+statsdHost: "envoy-ratelimit-statsd"
+
+config:
+  domain: test
+  descriptors:
+  - key: remote_address
+    rate_limit:
+      unit: second
+      requests_per_unit: 2
+  - key: header_match
+    value: no-cf-connecting-ip
+    rate_limit:
+      unit: minute
+      requests_per_unit: 20
+  - key: cf-connecting-ip
+    rate_limit:
+      unit: second
+      requests_per_unit: 5
+  # black list IP
+  - key: cf-connecting-ip
+    value: 203.0.113.1
+    rate_limit:
+      unit: second
+      requests_per_unit: 0
+  # auto-tests
+  - key: cf-connecting-ip
+    value: 203.0.113.144
+    rate_limit:
+      unit: second
+      requests_per_unit: 50
+
+prometheus-statsd-exporter:
+  enabled: true
+  fullnameOverride: envoy-ratelimit-statsd
+  service:
+    annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9102"
+
+redis:
+  enabled: true
+  fullnameOverride: envoy-ratelimit-redis
+  architecture: standalone
+  auth:
+    enabled: false
+  serviceAccount:
+    create: false
+  master:
+    persistence:
+      enabled: false
+
+  resources:
+    requests:
+      cpu: 10m
+      memory: 100Mi
