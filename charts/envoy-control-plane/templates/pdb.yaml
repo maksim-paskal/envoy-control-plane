@@ -1,0 +1,11 @@
+{{ if .Values.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: envoy-control-plane
+spec:
+{{ toYaml .Values.pdb.spec | nindent 2 }}
+  selector:
+    matchLabels:
+      app: envoy-control-plane
+{{ end }}

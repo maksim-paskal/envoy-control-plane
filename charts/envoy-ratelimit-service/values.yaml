@@ -9,6 +9,11 @@ image:
   tag: 6f5de117
   pullPolicy: IfNotPresent
 
+pdb:
+  enabled: false
+  spec:
+    minAvailable: 1
+
 resources:
   requests:
     cpu: 10m
