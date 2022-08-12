@@ -5,5 +5,5 @@ dependencies:
 - name: envoy-ratelimit-service
   repository: file://../../charts/envoy-ratelimit-service
   version: 0.0.2
-digest: sha256:02401c78f79e422027215bacd8d2d025a3b810deb23e6aa9ac712816722299ff
-generated: "2022-08-10T19:58:34.856126+03:00"
+digest: sha256:01a2f1dde99f7ea357a6b796b2f56978d92a71fb11b8a0d1509bf16c9d0182b2
+generated: "2022-08-12T17:08:49.585033+03:00"

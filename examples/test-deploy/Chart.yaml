@@ -13,3 +13,4 @@ dependencies:
 - name: envoy-ratelimit-service
   version: "*"
   repository: "file://../../charts/envoy-ratelimit-service"
+  condition: "envoy-ratelimit-service.enabled"
