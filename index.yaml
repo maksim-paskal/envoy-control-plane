@@ -72,6 +72,27 @@ entries:
     version: v0.0.1
   envoy-ratelimit-service:
   - apiVersion: v2
+    created: "2022-08-12T15:10:43.800065884Z"
+    dependencies:
+    - condition: redis.enabled
+      name: redis
+      repository: https://charts.bitnami.com/bitnami
+      version: 16.8.4
+    - condition: prometheus-statsd-exporter.enabled
+      name: prometheus-statsd-exporter
+      repository: https://prometheus-community.github.io/helm-charts
+      version: 0.5.0
+    description: Implementation of the Envoy Rate Limit Service
+    digest: b8567c2735cf3112fcbd680a19d02cc74c95a229a1a98e52eb15958a06d524ca
+    icon: https://helm.sh/img/helm.svg
+    maintainers:
+    - email: paskal.maksim@gmail.com
+      name: maksim-paskal
+    name: envoy-ratelimit-service
+    urls:
+    - https://github.com/maksim-paskal/envoy-control-plane/releases/download/envoy-ratelimit-service-0.0.3/envoy-ratelimit-service-0.0.3.tgz
+    version: 0.0.3
+  - apiVersion: v2
     created: "2022-08-10T16:42:14.407077663Z"
     dependencies:
     - condition: redis.enabled
