@@ -5,6 +5,7 @@ image:
   pullPolicy: Always
 
 envoy-ratelimit-service:
+  enabled: true
   logLevel: "debug"
   config:
     domain: test

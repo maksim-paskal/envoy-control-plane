@@ -36,13 +36,16 @@ spec:
             drop:
             - ALL
         env:
-        {{ if (index . "prometheus-statsd-exporter").enabled }}
+        {{ if (index .Values "prometheus-statsd-exporter").enabled }}
         - name: "USE_STATSD"
           value: "true"
         - name: "STATSD_HOST"
           value: {{ tpl .Values.statsdHost . | quote }}
         - name: "STATSD_PORT"
           value: "9125"
+        {{ else }}
+        - name: "USE_STATSD"
+          value: "false"
         {{ end }}
         - name: "LOG_LEVEL"
           value: {{ .Values.logLevel | quote }}
