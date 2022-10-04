@@ -30,8 +30,6 @@ import (
 const unknown = "unknown"
 
 var (
-	ctx = context.Background()
-
 	podInformer    cache.SharedIndexInformer
 	podLister      listerv1.PodLister
 	nodeInformer   cache.SharedIndexInformer
@@ -203,7 +201,7 @@ func GetNode(name string) (*v1.Node, error) {
 	return nodeLister.Get(name)
 }
 
-func GetZoneByPodName(namespace string, pod string) string {
+func GetZoneByPodName(ctx context.Context, namespace string, pod string) string {
 	podInfo, err := Client.KubeClient().CoreV1().Pods(namespace).Get(ctx, pod, metav1.GetOptions{})
 	if err != nil {
 		log.WithError(err).Error()
