@@ -134,7 +134,14 @@ func getRoutes() []Route {
 func Start() {
 	log.Info("http.address=", *config.Get().WebHTTPAddress)
 
-	if err := http.ListenAndServe(*config.Get().WebHTTPAddress, auth(GetHandler(true))); err != nil {
+	server := &http.Server{
+		Addr:              *config.Get().WebHTTPAddress,
+		Handler:           auth(GetHandler(true)),
+		ReadHeaderTimeout: httpReadHeaderTimeout,
+	}
+
+	// start http server
+	if err := server.ListenAndServe(); err != nil {
 		log.WithError(err).Fatal()
 	}
 }
@@ -403,7 +410,7 @@ func handlerZone(w http.ResponseWriter, r *http.Request) {
 	namespace := r.Form.Get("namespace")
 	pod := r.Form.Get("pod")
 
-	zone := api.GetZoneByPodName(namespace, pod)
+	zone := api.GetZoneByPodName(r.Context(), namespace, pod)
 
 	_, err = w.Write([]byte(zone))
 	if err != nil {
