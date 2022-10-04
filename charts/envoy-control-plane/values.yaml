@@ -6,7 +6,7 @@ global:
 image:
   registry: docker.io
   repository: paskalmaksim/envoy-control-plane
-  tag: v0.4.0
+  tag: v0.4.1
   pullPolicy: IfNotPresent
 
 sidecar:
