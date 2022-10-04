@@ -11,9 +11,6 @@ test:
 	./scripts/test-pkg.sh
 coverage:
 	go tool cover -html=coverage.out
-test-release:
-	git tag -d `git tag -l "helm-chart-*"`
-	go run github.com/goreleaser/goreleaser@latest release --snapshot --skip-publish --rm-dist
 testChart:
 	ct lint --target-branch main --all
 	helm lint --strict ./charts/envoy-control-plane
@@ -28,14 +25,15 @@ testChart:
 	ct lint --charts ./examples/test-deploy
 	helm template ./examples/test-deploy | kubectl apply --dry-run=client --validate -f -
 build-goreleaser:
+	git tag -d `git tag -l "envoy-*"`
 	git tag -d `git tag -l "helm-chart-*"`
 	go run github.com/goreleaser/goreleaser@latest build --rm-dist --snapshot
 	mv ./dist/envoy-control-plane_linux_amd64_v1/envoy-control-plane envoy-control-plane
 	mv ./dist/cli_linux_amd64_v1/cli cli
 build:
 	make build-goreleaser
-	docker build --pull --push . -t paskalmaksim/envoy-control-plane:$(gitTag)
-	docker build --pull --push . --build-arg base=paskalmaksim/envoy-docker-image:debug-base -f ./envoy/Dockerfile -t paskalmaksim/envoy-docker-image:$(gitTag)
+	docker build --pull --push --platform=linux/amd64 . -t paskalmaksim/envoy-control-plane:$(gitTag)
+	docker build --pull --push --platform=linux/amd64 . -t paskalmaksim/envoy-docker-image:$(gitTag) -f ./envoy/Dockerfile
 build-composer:
 	docker-compose build --pull --parallel
 security-scan:

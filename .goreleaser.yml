@@ -5,20 +5,74 @@ release:
     - `paskalmaksim/envoy-control-plane:{{ .Tag }}`
     - `paskalmaksim/envoy-docker-image:latest`
     - `paskalmaksim/envoy-docker-image:{{ .Tag }}`
-dockers:
-- goos: linux
-  goarch: amd64
+docker_manifests:
+- name_template: paskalmaksim/envoy-control-plane:latest
   image_templates:
-  - paskalmaksim/envoy-control-plane:latest
-  - paskalmaksim/envoy-control-plane:{{ .Tag }}
-- dockerfile: ./envoy/Dockerfile
+  - paskalmaksim/envoy-control-plane:{{.Tag}}-amd64
+  - paskalmaksim/envoy-control-plane:{{.Tag}}-arm64
+- name_template: paskalmaksim/envoy-docker-image:latest
+  image_templates:
+  - paskalmaksim/envoy-docker-image:{{.Tag}}-amd64
+  - paskalmaksim/envoy-docker-image:{{.Tag}}-arm64
+- name_template: paskalmaksim/envoy-control-plane:{{.Tag}}
+  image_templates:
+  - paskalmaksim/envoy-control-plane:{{.Tag}}-amd64
+  - paskalmaksim/envoy-control-plane:{{.Tag}}-arm64
+- name_template: paskalmaksim/envoy-docker-image:{{.Tag}}
+  image_templates:
+  - paskalmaksim/envoy-docker-image:{{.Tag}}-amd64
+  - paskalmaksim/envoy-docker-image:{{.Tag}}-arm64
+dockers:
+- use: buildx
   goos: linux
   goarch: amd64
   image_templates:
-  - paskalmaksim/envoy-docker-image:latest
-  - paskalmaksim/envoy-docker-image:{{ .Tag }}
+  - paskalmaksim/envoy-control-plane:{{ .Tag }}-amd64
+  build_flag_templates:
+  - "--build-arg=APPVERSION={{.ShortCommit}}"
+  - "--platform=linux/amd64"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+- use: buildx
+  goos: linux
+  goarch: arm64
+  image_templates:
+  - paskalmaksim/envoy-control-plane:{{ .Tag }}-arm64
+  build_flag_templates:
+  - "--build-arg=APPVERSION={{.ShortCommit}}"
+  - "--platform=linux/arm64"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+- use: buildx
+  dockerfile: ./envoy/Dockerfile
+  goos: linux
+  goarch: amd64
+  image_templates:
+  - paskalmaksim/envoy-docker-image:{{ .Tag }}-amd64
   extra_files:
   - envoy/
+  build_flag_templates:
+  - "--build-arg=APPVERSION={{.ShortCommit}}"
+  - "--platform=linux/amd64"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
+- use: buildx
+  dockerfile: ./envoy/Dockerfile
+  goos: linux
+  goarch: arm64
+  image_templates:
+  - paskalmaksim/envoy-docker-image:{{ .Tag }}-arm64
+  extra_files:
+  - envoy/
+  build_flag_templates:
+  - "--build-arg=APPVERSION={{.ShortCommit}}"
+  - "--platform=linux/arm64"
+  - "--label=org.opencontainers.image.created={{.Date}}"
+  - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+  - "--label=org.opencontainers.image.version={{.Version}}"
 builds:
 - dir: ./cmd/cli
   id: cli
@@ -31,6 +85,7 @@ builds:
   - linux
   goarch:
   - amd64
+  - arm64
 - dir: ./cmd/main
   env:
   - CGO_ENABLED=0
@@ -42,6 +97,7 @@ builds:
   - linux
   goarch:
   - amd64
+  - arm64
 checksum:
   name_template: 'checksums.txt'
 snapshot:
