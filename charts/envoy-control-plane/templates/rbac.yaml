@@ -9,10 +9,7 @@ metadata:
   name: envoy-control-plane-role
 rules:
 - apiGroups: [""]
-  resources: ["configmaps"]
-  verbs: ["get","list","watch"]
-- apiGroups: [""]
-  resources: ["pods"]
+  resources: ["configmaps","pods","endpoints"]
   verbs: ["get","list","watch"]
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
