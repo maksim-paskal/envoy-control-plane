@@ -57,6 +57,7 @@ runRaceDetection:
 	go run -v -race ./cmd/main \
 	-log.level=DEBUG \
 	-log.pretty \
+	-namespace=envoy-control-plane \
 	-kubeconfig.path=$(KUBECONFIG) \
 	-web.adminUser=admin \
 	-web.adminPassword=admin \

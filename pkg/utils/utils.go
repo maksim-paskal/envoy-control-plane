@@ -14,6 +14,8 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
+	"time"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -267,4 +269,19 @@ func filterCertificates(listiners []types.Resource) error {
 	}
 
 	return nil
+}
+
+const timeTrackWarning = 100 * time.Millisecond
+
+// defer utils.TimeTrack("func-name",time.Now()).
+func TimeTrack(name string, start time.Time) {
+	elapsed := time.Since(start)
+
+	msg := fmt.Sprintf("func: %s, took: %s", name, elapsed)
+
+	if elapsed > timeTrackWarning {
+		log.Warn(msg)
+	} else {
+		log.Debug(msg)
+	}
 }

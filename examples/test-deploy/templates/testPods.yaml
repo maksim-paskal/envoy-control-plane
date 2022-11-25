@@ -137,3 +137,25 @@ spec:
         volumeMounts:
         - name: config
           mountPath: /etc/envoy/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-001
+spec:
+  selector:
+    app: test-001
+  ports:
+  - protocol: TCP
+    port: 8001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-002
+spec:
+  selector:
+    app: test-002
+  ports:
+  - protocol: TCP
+    port: 8001
