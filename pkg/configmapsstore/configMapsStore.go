@@ -58,10 +58,10 @@ func NewConfigMap(cm *v1.ConfigMap) error {
 		config.ConfigMapName = cm.Name
 		config.ConfigMapNamespace = cm.Namespace
 
-		if config.UseVersionLabel && len(cm.Labels["version"]) > 0 {
+		if config.UseVersionLabel && len(cm.Labels[config.VersionLabelKey]) > 0 {
 			log.Debug("update Id, using UseVersionLabel")
 
-			config.VersionLabel = cm.Labels["version"]
+			config.VersionLabel = cm.Labels[config.VersionLabelKey]
 			config.ID = fmt.Sprintf("%s-%s", config.ID, config.VersionLabel)
 		}
 
@@ -70,12 +70,6 @@ func NewConfigMap(cm *v1.ConfigMap) error {
 				log.Debug("namespace not set - using configmap namespace")
 
 				config.Kubernetes[i].Namespace = cm.Namespace
-			}
-
-			if config.Kubernetes[i].UseVersionLabel && len(config.VersionLabel) > 0 {
-				log.Debug("add selector, using Kubernetes.UseVersionLabel")
-
-				config.Kubernetes[i].Selector["version"] = config.VersionLabel
 			}
 		}
 

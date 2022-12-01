@@ -116,6 +116,20 @@ func Start() {
 		configmapsstore.DeleteConfigMap(cm)
 	}
 
+	api.OnNewEndpoints = func(endpoints *v1.Endpoints) {
+		configstore.StoreMap.Range(func(k, v interface{}) bool {
+			cs, ok := v.(*configstore.ConfigStore)
+
+			if !ok {
+				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+			}
+
+			cs.NewEndpoint(endpoints)
+
+			return true
+		})
+	}
+
 	api.Client.RunKubeInformers()
 
 	// shedule all jobs

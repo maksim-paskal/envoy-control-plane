@@ -15,6 +15,7 @@ package api
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
@@ -27,20 +28,26 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-const unknown = "unknown"
+const (
+	unknown           = "unknown"
+	informersSyncTime = 5 * time.Second
+)
 
 var (
-	podInformer    cache.SharedIndexInformer
-	podLister      listerv1.PodLister
-	nodeInformer   cache.SharedIndexInformer
-	nodeLister     listerv1.NodeLister
-	configInformer cache.SharedIndexInformer
-	configLister   listerv1.ConfigMapLister
+	podInformer       cache.SharedIndexInformer
+	podLister         listerv1.PodLister
+	nodeInformer      cache.SharedIndexInformer
+	nodeLister        listerv1.NodeLister
+	configInformer    cache.SharedIndexInformer
+	configLister      listerv1.ConfigMapLister
+	endpointsInformer cache.SharedIndexInformer
+	endpointsLister   listerv1.EndpointsLister
 
 	OnNewPod       func(pod *v1.Pod)
 	OnDeletePod    func(pod *v1.Pod)
 	OnNewConfig    func(*v1.ConfigMap)
 	OnDeleteConfig func(*v1.ConfigMap)
+	OnNewEndpoints func(pod *v1.Endpoints)
 )
 
 func (c *client) RunKubeInformers() {
@@ -54,6 +61,9 @@ func (c *client) RunKubeInformers() {
 
 	configInformer = Client.KubeFactory().Core().V1().ConfigMaps().Informer()
 	configLister = Client.KubeFactory().Core().V1().ConfigMaps().Lister()
+
+	endpointsInformer = Client.KubeFactory().Core().V1().Endpoints().Informer()
+	endpointsLister = Client.KubeFactory().Core().V1().Endpoints().Lister()
 
 	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -153,6 +163,31 @@ func (c *client) RunKubeInformers() {
 		},
 	})
 
+	endpointsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			log.Debug("endpointsInformer.AddFunc")
+			endpoints, ok := obj.(*v1.Endpoints)
+			if !ok {
+				log.WithError(errAssertion).Fatal("obj.(*v1.Endpoints)")
+			}
+
+			if OnNewEndpoints != nil {
+				OnNewEndpoints(endpoints)
+			}
+		},
+		UpdateFunc: func(old, cur interface{}) {
+			log.Debug("endpointsInformer.UpdateFunc")
+			endpoints, ok := cur.(*v1.Endpoints)
+			if !ok {
+				log.WithError(errAssertion).Fatal("cur.(*v1.Endpoints)")
+			}
+
+			if OnNewEndpoints != nil {
+				OnNewEndpoints(endpoints)
+			}
+		},
+	})
+
 	err := podInformer.SetWatchErrorHandler(watchErrors)
 	if err != nil {
 		log.WithError(err).Fatal()
@@ -168,9 +203,19 @@ func (c *client) RunKubeInformers() {
 		log.WithError(err).Fatal()
 	}
 
-	go podInformer.Run(c.stopCh)
+	err = endpointsInformer.SetWatchErrorHandler(watchErrors)
+	if err != nil {
+		log.WithError(err).Fatal()
+	}
+
 	go nodeInformer.Run(c.stopCh)
+
+	log.Infof("Waiting %s for syncing informers cache...", informersSyncTime)
+	time.Sleep(informersSyncTime)
+
+	go podInformer.Run(c.stopCh)
 	go configInformer.Run(c.stopCh)
+	go endpointsInformer.Run(c.stopCh)
 
 	if !cache.WaitForCacheSync(c.stopCh, podInformer.HasSynced) {
 		log.WithError(errTimeout).Fatal()
@@ -183,14 +228,20 @@ func (c *client) RunKubeInformers() {
 	if !cache.WaitForCacheSync(c.stopCh, configInformer.HasSynced) {
 		log.WithError(errTimeout).Fatal()
 	}
+
+	if !cache.WaitForCacheSync(c.stopCh, endpointsInformer.HasSynced) {
+		log.WithError(errTimeout).Fatal()
+	}
 }
 
 func watchErrors(r *cache.Reflector, err error) {
 	log.WithError(err).Fatal()
 }
 
-func ListPods() ([]*v1.Pod, error) {
-	return podLister.List(labels.Everything())
+func ListPods(selectorSet map[string]string) ([]*v1.Pod, error) {
+	selector := labels.Set(selectorSet).AsSelector()
+
+	return podLister.List(selector)
 }
 
 func ListConfigMaps() ([]*v1.ConfigMap, error) {
@@ -199,6 +250,22 @@ func ListConfigMaps() ([]*v1.ConfigMap, error) {
 
 func GetNode(name string) (*v1.Node, error) {
 	return nodeLister.Get(name)
+}
+
+func GetEndpoint(name string) (*v1.Endpoints, error) {
+	endpoints, err := endpointsLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, endpoint := range endpoints {
+		if endpoint.Name == name {
+			return endpoint, nil
+		}
+	}
+
+	// nothing found
+	return nil, nil //nolint:nilnil
 }
 
 func GetZoneByPodName(ctx context.Context, namespace string, pod string) string {

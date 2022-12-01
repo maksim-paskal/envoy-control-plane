@@ -22,16 +22,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//nolint:maligned
-type kubernetesType struct {
-	// add version on configmap to selector
-	UseVersionLabel bool              `yaml:"useversionlabel"`
+type KubernetesType struct {
 	ClusterName     string            `yaml:"cluster_name"` //nolint:tagliatelle
 	Namespace       string            `yaml:"namespace"`
 	Port            uint32            `yaml:"port"`
 	HealthCheckPort uint32            `yaml:"healthcheckport"`
 	Priority        uint32            `yaml:"priority"`
 	Selector        map[string]string `yaml:"selector"`
+	Service         string            `yaml:"service"`
 }
 
 type ConfigType struct { //nolint: golint,revive
@@ -40,13 +38,15 @@ type ConfigType struct { //nolint: golint,revive
 	Name string `yaml:"name"`
 	// add version to node name
 	UseVersionLabel bool `yaml:"useversionlabel"`
+	// version label name
+	VersionLabelKey string `yaml:"versionlabelkey"`
 	// version value
 	VersionLabel string
 	// source configmap name
 	ConfigMapName string
 	// source configmap namespace
 	ConfigMapNamespace string
-	Kubernetes         []kubernetesType `yaml:"kubernetes"`
+	Kubernetes         []KubernetesType `yaml:"kubernetes"`
 	// config.endpoint.v3.ClusterLoadAssignment
 	Endpoints []interface{} `yaml:"endpoints"`
 	// config.route.v3.RouteConfiguration
@@ -72,7 +72,9 @@ func ParseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, 
 		return ConfigType{}, errors.Wrap(err, "templates.ExecuteTemplate")
 	}
 
-	var config ConfigType
+	config := ConfigType{
+		VersionLabelKey: "version",
+	}
 
 	err = yaml.Unmarshal(tpl.Bytes(), &config)
 	if err != nil {

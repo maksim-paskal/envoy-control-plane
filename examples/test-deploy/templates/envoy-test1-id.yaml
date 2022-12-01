@@ -17,9 +17,8 @@ data:
         app: test-002
 
     - cluster_name: test-envoy-service
-      port: 7000
-      selector:
-        app: envoy
+      port: 8001
+      service: test-envoy-service
 
     listeners:
     - name: listener_0
@@ -140,6 +139,19 @@ data:
         base_ejection_time: 30s
         max_ejection_percent: 50
         consecutive_gateway_failure: 5
+      lb_policy: ROUND_ROBIN
+      type: EDS
+      eds_cluster_config:
+        eds_config:
+          resource_api_version: V3
+          api_config_source:
+            api_type: GRPC
+            transport_api_version: V3
+            grpc_services:
+            - envoy_grpc:
+                cluster_name: xds_cluster
+    - name: test-envoy-service
+      connect_timeout: 0.25s
       lb_policy: ROUND_ROBIN
       type: EDS
       eds_cluster_config:

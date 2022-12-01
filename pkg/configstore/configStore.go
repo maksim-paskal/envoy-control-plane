@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+	"time"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -35,12 +36,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/atomic"
 	"gopkg.in/yaml.v3"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var ctx = context.Background()
 
 var StoreMap = new(sync.Map)
+
+const defaultZone = "unknown"
 
 type ConfigStore struct {
 	Version            string
@@ -93,7 +96,7 @@ func (cs *ConfigStore) hasStoped() bool {
 	return cs.isStoped.Load()
 }
 
-func (cs *ConfigStore) NewPod(pod *v1.Pod) {
+func (cs *ConfigStore) NewPod(pod *corev1.Pod) {
 	if cs.hasStoped() {
 		return
 	}
@@ -101,7 +104,15 @@ func (cs *ConfigStore) NewPod(pod *v1.Pod) {
 	cs.saveLastEndpoints()
 }
 
-func (cs *ConfigStore) DeletePod(pod *v1.Pod) {
+func (cs *ConfigStore) NewEndpoint(endpoint *corev1.Endpoints) {
+	if cs.hasStoped() {
+		return
+	}
+
+	cs.saveLastEndpoints()
+}
+
+func (cs *ConfigStore) DeletePod(pod *corev1.Pod) {
 	if cs.hasStoped() {
 		return
 	}
@@ -177,85 +188,172 @@ func (cs *ConfigStore) LoadNewSecrets() error {
 	return nil
 }
 
+func (cs *ConfigStore) getEndpointLocality(node string) *core.Locality {
+	nodeInfo, err := api.GetNode(node)
+	if err != nil {
+		log.WithError(err).Errorf("can not get node info for %s", node)
+
+		return &core.Locality{
+			Zone: defaultZone,
+		}
+	}
+
+	zone := nodeInfo.Labels[*appConfig.Get().NodeZoneLabel]
+
+	if len(zone) == 0 {
+		zone = defaultZone
+	}
+
+	return &core.Locality{
+		Zone: zone,
+	}
+}
+
+func (cs *ConfigStore) getEnvoyLocalityLbEndpoint(node string, address string, item appConfig.KubernetesType) *endpoint.LocalityLbEndpoints { //nolint:lll
+	priority := uint32(0)
+
+	if item.Priority > 0 {
+		priority = item.Priority
+	}
+
+	healthCheckConfig := &endpoint.Endpoint_HealthCheckConfig{}
+
+	if item.HealthCheckPort > 0 {
+		healthCheckConfig.PortValue = item.HealthCheckPort
+	}
+
+	return &endpoint.LocalityLbEndpoints{
+		Locality: cs.getEndpointLocality(node),
+		Priority: priority,
+		LbEndpoints: []*endpoint.LbEndpoint{{
+			HostIdentifier: &endpoint.LbEndpoint_Endpoint{
+				Endpoint: &endpoint.Endpoint{
+					HealthCheckConfig: healthCheckConfig,
+					Address: &core.Address{
+						Address: &core.Address_SocketAddress{
+							SocketAddress: &core.SocketAddress{
+								Protocol: core.SocketAddress_TCP,
+								Address:  address,
+								PortSpecifier: &core.SocketAddress_PortValue{
+									PortValue: item.Port,
+								},
+							},
+						},
+					},
+				},
+			},
+		}},
+	}
+}
+
+// return true if pod is ready.
+func (cs *ConfigStore) isPodReady(pod *corev1.Pod) bool {
+	if pod.Status.Phase == corev1.PodRunning {
+		for _, podCondition := range pod.Status.Conditions {
+			if podCondition.Type == corev1.PodReady && podCondition.Status == "True" {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (cs *ConfigStore) getLocalityLbEndpoints() (map[string][]*endpoint.LocalityLbEndpoints, error) {
+	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
+
+	// loading endpoints from pods selector
+	for _, kubernetes := range cs.Config.Kubernetes {
+		// get endpoint only for objects with selector
+		if kubernetes.Selector == nil {
+			continue
+		}
+
+		pods, err := api.ListPods(kubernetes.Selector)
+		if err != nil {
+			return nil, errors.Wrap(err, "error getting pods")
+		}
+
+		for _, pod := range pods {
+			// ignore pod if it has no IP or no node
+			if len(pod.Status.PodIP) == 0 || len(pod.Spec.NodeName) == 0 {
+				continue
+			}
+
+			// ignore pod if deleted
+			if pod.DeletionTimestamp != nil {
+				continue
+			}
+
+			// ignore pod if not ready
+			if !cs.isPodReady(pod) {
+				continue
+			}
+
+			// get envoy endpoint
+			lbEndpoints[kubernetes.ClusterName] = append(lbEndpoints[kubernetes.ClusterName], cs.getEnvoyLocalityLbEndpoint(
+				pod.Spec.NodeName,
+				pod.Status.PodIP,
+				kubernetes,
+			))
+		}
+	}
+
+	// loading endpoints from service
+	for _, kubernetes := range cs.Config.Kubernetes {
+		// get endpoint with service name
+		if len(kubernetes.Service) == 0 {
+			continue
+		}
+
+		// get endpoints by service name
+		endpoints, err := api.GetEndpoint(kubernetes.Service)
+		if err != nil {
+			return nil, errors.Wrap(err, "error getting endpoints")
+		}
+
+		// service not found
+		if endpoints == nil {
+			log.Warnf("service not found: %s", kubernetes.Service)
+
+			continue
+		}
+
+		for _, subset := range endpoints.Subsets {
+			for _, address := range subset.Addresses {
+				// get envoy endpoint
+				lbEndpoints[kubernetes.ClusterName] = append(lbEndpoints[kubernetes.ClusterName], cs.getEnvoyLocalityLbEndpoint(
+					*address.NodeName,
+					address.IP,
+					kubernetes,
+				))
+			}
+		}
+	}
+
+	return lbEndpoints, nil
+}
+
 // save endpoints.
 func (cs *ConfigStore) saveLastEndpoints() {
+	defer utils.TimeTrack("saveLastEndpoints", time.Now())
+
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
 	// copy map
 	for key, value := range cs.configEndpoints {
 		lbEndpoints[key] = value
 	}
 
-	pods, err := api.ListPods()
+	endpoints, err := cs.getLocalityLbEndpoints()
 	if err != nil {
 		log.WithError(err).Error(err)
+
+		return
 	}
 
-	for _, pod := range pods {
-		// if pod has no IP or node
-		if len(pod.Status.PodIP) == 0 || len(pod.Spec.NodeName) == 0 {
-			continue
-		}
-
-		// pod deleted
-		if pod.DeletionTimestamp != nil {
-			continue
-		}
-
-		podInfo, err := cs.podInfo(pod)
-		if err != nil {
-			log.WithError(err).Errorf("error getting pod %s", cs.getPodID(pod))
-
-			break
-		}
-
-		// if pod does not assign to cluster
-		if !podInfo.check {
-			continue
-		}
-
-		// if pod does not ready
-		if !podInfo.ready || len(podInfo.podIP) == 0 || len(podInfo.nodeZone) == 0 {
-			continue
-		}
-
-		nodeLocality := &core.Locality{
-			Zone: podInfo.nodeZone,
-		}
-
-		priority := uint32(0)
-
-		if podInfo.priority > 0 {
-			priority = podInfo.priority
-		}
-
-		healthCheckConfig := &endpoint.Endpoint_HealthCheckConfig{}
-
-		if podInfo.healthCheckPort > 0 {
-			healthCheckConfig.PortValue = podInfo.healthCheckPort
-		}
-		// add element to publishEpArray
-		lbEndpoints[podInfo.clusterName] = append(lbEndpoints[podInfo.clusterName], &endpoint.LocalityLbEndpoints{
-			Locality: nodeLocality,
-			Priority: priority,
-			LbEndpoints: []*endpoint.LbEndpoint{{
-				HostIdentifier: &endpoint.LbEndpoint_Endpoint{
-					Endpoint: &endpoint.Endpoint{
-						HealthCheckConfig: healthCheckConfig,
-						Address: &core.Address{
-							Address: &core.Address_SocketAddress{
-								SocketAddress: &core.SocketAddress{
-									Protocol: core.SocketAddress_TCP,
-									Address:  podInfo.podIP,
-									PortSpecifier: &core.SocketAddress_PortValue{
-										PortValue: podInfo.port,
-									},
-								},
-							},
-						},
-					},
-				},
-			}},
-		})
+	// append endpoints
+	for key, value := range endpoints {
+		lbEndpoints[key] = append(lbEndpoints[key], value...)
 	}
 
 	isInvalidIP := false
@@ -321,74 +419,6 @@ func (cs *ConfigStore) GetLastEndpoints() []string {
 	return cs.lastEndpointsArray
 }
 
-//nolint:maligned
-type CheckPodResult struct {
-	check           bool
-	clusterName     string
-	podIP           string
-	podName         string
-	podNamespace    string
-	port            uint32
-	ready           bool
-	nodeZone        string
-	priority        uint32
-	healthCheckPort uint32
-}
-
-func (cs *ConfigStore) podInfo(pod *v1.Pod) (CheckPodResult, error) {
-	for _, config := range cs.Config.Kubernetes {
-		if config.Namespace == pod.Namespace {
-			labelsFound := 0
-
-			for k2, v2 := range pod.Labels {
-				if config.Selector[k2] == v2 {
-					labelsFound++
-				}
-			}
-
-			if labelsFound == len(config.Selector) {
-				ready := false
-
-				if pod.Status.Phase == v1.PodRunning {
-					for _, v := range pod.Status.Conditions {
-						if v.Type == v1.PodReady && v.Status == "True" {
-							ready = true
-						}
-					}
-				}
-
-				result := CheckPodResult{
-					check:           true,
-					clusterName:     config.ClusterName,
-					podIP:           pod.Status.PodIP,
-					podName:         pod.Name,
-					podNamespace:    pod.Namespace,
-					ready:           ready,
-					healthCheckPort: config.HealthCheckPort,
-					port:            config.Port,
-					priority:        config.Priority,
-				}
-
-				nodeInfo, err := api.GetNode(pod.Spec.NodeName)
-				if err != nil {
-					return result, err
-				}
-
-				zone := nodeInfo.Labels[*appConfig.Get().NodeZoneLabel]
-				if len(zone) == 0 {
-					zone = "unknown"
-				}
-
-				result.nodeZone = zone
-
-				return result, nil
-			}
-		}
-	}
-
-	return CheckPodResult{check: false}, nil
-}
-
 func (cs *ConfigStore) Stop() {
 	cs.log.Info("stop")
 	cs.isStoped.Store(true)
@@ -421,8 +451,4 @@ func (cs *ConfigStore) Sync() {
 			go cs.saveLastEndpoints()
 		}
 	}
-}
-
-func (cs *ConfigStore) getPodID(pod *v1.Pod) string {
-	return fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)
 }
