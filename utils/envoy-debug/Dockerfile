@@ -1,4 +1,4 @@
-FROM envoyproxy/envoy-debug:v1.21.5
+FROM envoyproxy/envoy-debug:v1.21.6
 
 ADD https://raw.githubusercontent.com/envoyproxy/envoy/master/tools/stack_decode.py /stack_decode.py
 
