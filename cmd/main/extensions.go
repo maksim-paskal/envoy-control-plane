@@ -17,15 +17,19 @@ envoy type_config's must be loaded in control plane before use in envoy config.
 
 https://github.com/envoyproxy/go-control-plane/tree/master/envoy/extensions/
 */
+
 import (
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/aggregate/v3"
+	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/redis/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/header_to_metadata/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/health_check/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/redis_proxy/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
+	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/health_checkers/redis/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/priority/previous_priorities/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
