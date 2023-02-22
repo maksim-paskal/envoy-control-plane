@@ -16,3 +16,4 @@ linters:
   - wrapcheck
   - varnamelen
   - nosnakecase
+  - musttag
