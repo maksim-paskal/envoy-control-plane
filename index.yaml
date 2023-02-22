@@ -2,6 +2,18 @@ apiVersion: v1
 entries:
   envoy-control-plane:
   - apiVersion: v2
+    created: "2023-02-22T14:23:36.386492978Z"
+    description: Lightweight Envoy control plane
+    digest: 4e8cfd9d7472152ada9527d8ae9f285ea8eee108834cb3c89030669dbfae07fc
+    icon: https://helm.sh/img/helm.svg
+    maintainers:
+    - email: paskal.maksim@gmail.com
+      name: maksim-paskal
+    name: envoy-control-plane
+    urls:
+    - https://github.com/maksim-paskal/envoy-control-plane/releases/download/envoy-control-plane-0.1.3/envoy-control-plane-0.1.3.tgz
+    version: 0.1.3
+  - apiVersion: v2
     created: "2022-12-01T12:41:27.280956866Z"
     description: Lightweight Envoy control plane
     digest: 233f37b5b64026dc4ce0a806bd30d97b7a009e1d88862b792521a8c85ac032b9
