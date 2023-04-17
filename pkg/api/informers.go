@@ -65,7 +65,7 @@ func (c *client) RunKubeInformers() {
 	endpointsInformer = Client.KubeFactory().Core().V1().Endpoints().Informer()
 	endpointsLister = Client.KubeFactory().Core().V1().Endpoints().Lister()
 
-	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			metrics.EndpointstoreAddFunc.Inc()
 
@@ -107,7 +107,7 @@ func (c *client) RunKubeInformers() {
 		},
 	})
 
-	configInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = configInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			metrics.ConfigmapsstoreAddFunc.Inc()
 
@@ -163,7 +163,7 @@ func (c *client) RunKubeInformers() {
 		},
 	})
 
-	endpointsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = endpointsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			log.Debug("endpointsInformer.AddFunc")
 			endpoints, ok := obj.(*v1.Endpoints)
@@ -234,7 +234,7 @@ func (c *client) RunKubeInformers() {
 	}
 }
 
-func watchErrors(r *cache.Reflector, err error) {
+func watchErrors(_ *cache.Reflector, err error) {
 	log.WithError(err).Fatal()
 }
 

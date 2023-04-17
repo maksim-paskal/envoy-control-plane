@@ -13,6 +13,7 @@ limitations under the License.
 package internal
 
 import (
+	"context"
 	"time"
 
 	"github.com/maksim-paskal/envoy-control-plane/pkg/api"
@@ -77,16 +78,16 @@ func Init() {
 	}
 }
 
-func Start() {
+func Start(ctx context.Context) {
 	api.OnNewPod = func(pod *v1.Pod) {
 		configstore.StoreMap.Range(func(k, v interface{}) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
-				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+				log.WithError(errAssertion).Fatal("OnNewPod v.(*ConfigStore)")
 			}
 
-			cs.NewPod(pod)
+			cs.NewPod(ctx, pod)
 
 			return true
 		})
@@ -97,17 +98,17 @@ func Start() {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
-				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+				log.WithError(errAssertion).Fatal("OnDeletePod v.(*ConfigStore)")
 			}
 
-			cs.DeletePod(pod)
+			cs.DeletePod(ctx, pod)
 
 			return true
 		})
 	}
 
 	api.OnNewConfig = func(cm *v1.ConfigMap) {
-		if err := configmapsstore.NewConfigMap(cm); err != nil {
+		if err := configmapsstore.NewConfigMap(ctx, cm); err != nil {
 			log.WithError(err).Error()
 		}
 	}
@@ -121,10 +122,10 @@ func Start() {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
-				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+				log.WithError(errAssertion).Fatal("OnNewEndpoints v.(*ConfigStore)")
 			}
 
-			cs.NewEndpoint(endpoints)
+			cs.NewEndpoint(ctx, endpoints)
 
 			return true
 		})
@@ -133,7 +134,7 @@ func Start() {
 	api.Client.RunKubeInformers()
 
 	// shedule all jobs
-	schedule()
+	schedule(ctx)
 }
 
 func Stop() {
@@ -141,16 +142,16 @@ func Stop() {
 	hook.Stop()
 }
 
-func schedule() {
+func schedule(ctx context.Context) {
 	// rotate certificates
-	go rotateCertificates()
+	go rotateCertificates(ctx)
 
 	// sync all endpoints
-	go syncAll()
+	go syncAll(ctx)
 }
 
 // sync all endpoints in configs with endpointstore.
-func syncAll() {
+func syncAll(ctx context.Context) {
 	log.Infof("syncAll every %s", *config.Get().EndpointCheckPeriod)
 
 	for {
@@ -160,19 +161,19 @@ func syncAll() {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
-				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+				log.WithError(errAssertion).Fatal("syncAll v.(*ConfigStore)")
 
 				return true
 			}
 
-			cs.Sync()
+			cs.Sync(ctx)
 
 			return true
 		})
 	}
 }
 
-func rotateCertificates() {
+func rotateCertificates(ctx context.Context) {
 	log.Infof("syncAll every %s", *config.Get().SSLRotationPeriod)
 
 	for {
@@ -182,7 +183,7 @@ func rotateCertificates() {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
-				log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+				log.WithError(errAssertion).Fatal("rotateCertificates v.(*ConfigStore)")
 
 				return true
 			}
@@ -193,7 +194,7 @@ func rotateCertificates() {
 				return true
 			}
 
-			cs.Push("LoadNewSecrets")
+			cs.Push(ctx, "LoadNewSecrets")
 
 			return true
 		})

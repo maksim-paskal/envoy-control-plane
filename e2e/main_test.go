@@ -56,7 +56,7 @@ func TestConfigMapsStore(t *testing.T) {
 	internal.Init()
 	defer internal.Stop()
 
-	internal.Start()
+	internal.Start(ctx)
 
 	// initial wait
 	time.Sleep(initialWait)
@@ -94,11 +94,7 @@ func testConfigmapsstore() error {
 		}
 	}
 
-	if err := checkConfigDeletion(); err != nil {
-		return err
-	}
-
-	return nil
+	return checkConfigDeletion()
 }
 
 func scaleAll(count int) error {
@@ -106,11 +102,7 @@ func scaleAll(count int) error {
 		return err
 	}
 
-	if err := scaleDeploy("test-002", count); err != nil {
-		return err
-	}
-
-	return nil
+	return scaleDeploy("test-002", count)
 }
 
 func scaleDeploy(name string, count int) error {

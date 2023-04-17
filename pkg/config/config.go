@@ -28,14 +28,16 @@ const (
 	sslRotationPeriodDefault   = 1 * time.Hour
 	endpointCheckPeriodDefault = 60 * time.Second
 	configDrainPeriodDefault   = 5 * time.Second
+	defaultGracePeriod         = 5 * time.Second
 )
 
 type Type struct {
-	LogLevel              *string `yaml:"logLevel"`
-	LogPretty             *bool   `yaml:"logPretty"`
-	LogAccess             *bool   `yaml:"logAccess"`
-	LogPath               *string `yaml:"logPath"`
-	LogReportCaller       *bool   `yaml:"logReportCaller"`
+	GracePeriod           *time.Duration `yaml:"gracePeriod"`
+	LogLevel              *string        `yaml:"logLevel"`
+	LogPretty             *bool          `yaml:"logPretty"`
+	LogAccess             *bool          `yaml:"logAccess"`
+	LogPath               *string        `yaml:"logPath"`
+	LogReportCaller       *bool          `yaml:"logReportCaller"`
 	ConfigFile            *string
 	ConfigMapLabels       *string        `yaml:"configMapLabels"`
 	KubeConfigFile        *string        `yaml:"kubeConfigFile"`
@@ -60,6 +62,7 @@ type Type struct {
 }
 
 var config = Type{
+	GracePeriod:           flag.Duration("grace-period", defaultGracePeriod, "grace period"),
 	LogLevel:              flag.String("log.level", "INFO", "log level"),
 	LogPretty:             flag.Bool("log.pretty", false, "log in pretty format"),
 	LogAccess:             flag.Bool("log.access", false, "access log"),

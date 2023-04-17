@@ -13,6 +13,7 @@ limitations under the License.
 package configmapsstore
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -33,7 +34,7 @@ func checkConfigMapLabels(cm *v1.ConfigMap) bool {
 	return (cm.Labels[label[0]] == label[1])
 }
 
-func NewConfigMap(cm *v1.ConfigMap) error {
+func NewConfigMap(ctx context.Context, cm *v1.ConfigMap) error {
 	if !checkConfigMapLabels(cm) {
 		return nil
 	}
@@ -85,7 +86,7 @@ func NewConfigMap(cm *v1.ConfigMap) error {
 
 		log.Infof("Create configStore %s", config.ID)
 
-		newConfigStore, err := configstore.New(&config)
+		newConfigStore, err := configstore.New(ctx, &config)
 		if err != nil {
 			return err
 		}
@@ -101,7 +102,7 @@ func DeleteConfigMap(cm *v1.ConfigMap) {
 		cs, ok := value.(*configstore.ConfigStore)
 
 		if !ok {
-			log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+			log.WithError(errAssertion).Fatal("DeleteConfigMap v.(*ConfigStore)")
 		}
 
 		if cs.Config.ConfigMapName == cm.Name && cs.Config.ConfigMapNamespace == cm.Namespace {
