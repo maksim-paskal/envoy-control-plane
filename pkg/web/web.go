@@ -14,6 +14,7 @@ package web
 
 import (
 	"bytes"
+	"context"
 	"crypto/subtle"
 	"crypto/tls"
 	"encoding/json"
@@ -38,10 +39,14 @@ import (
 )
 
 const (
-	basicRealm            = config.AppName
-	adminPrefix           = "/api/admin"
-	httpReadHeaderTimeout = 10 * time.Second
+	basicRealm           = config.AppName
+	adminPrefix          = "/api/admin"
+	serverReadTimeout    = 5 * time.Second
+	serverRequestTimeout = 5 * time.Second
+	serverWriteTimeout   = 10 * time.Second
 )
+
+var timeoutMessage = fmt.Sprintf("Server timeout after %s", serverRequestTimeout)
 
 type Route struct {
 	path        string
@@ -131,14 +136,24 @@ func getRoutes() []Route {
 	return routes
 }
 
-func Start() {
+func Start(ctx context.Context) {
 	log.Info("http.address=", *config.Get().WebHTTPAddress)
 
 	server := &http.Server{
-		Addr:              *config.Get().WebHTTPAddress,
-		Handler:           auth(GetHandler(true)),
-		ReadHeaderTimeout: httpReadHeaderTimeout,
+		Addr:         *config.Get().WebHTTPAddress,
+		Handler:      http.TimeoutHandler(auth(GetHandler(true)), serverRequestTimeout, timeoutMessage),
+		ReadTimeout:  serverReadTimeout,
+		WriteTimeout: serverWriteTimeout,
 	}
+
+	go func() {
+		<-ctx.Done()
+
+		ctx, cancel := context.WithTimeout(context.Background(), *config.Get().GracePeriod)
+		defer cancel()
+
+		_ = server.Shutdown(ctx) //nolint:contextcheck
+	}()
 
 	// start http server
 	if err := server.ListenAndServe(); err != nil {
@@ -146,7 +161,7 @@ func Start() {
 	}
 }
 
-func StartTLS() {
+func StartTLS(ctx context.Context) {
 	log.Info("https.address=", *config.Get().WebHTTPSAddress)
 
 	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate([]string{config.AppName}, certs.CertValidityYear)
@@ -165,11 +180,21 @@ func StartTLS() {
 	}
 
 	server := http.Server{
-		Addr:              *config.Get().WebHTTPSAddress,
-		TLSConfig:         tlsConfig,
-		Handler:           auth(GetHandler(false)),
-		ReadHeaderTimeout: httpReadHeaderTimeout,
+		Addr:         *config.Get().WebHTTPSAddress,
+		TLSConfig:    tlsConfig,
+		Handler:      http.TimeoutHandler(auth(GetHandler(false)), serverRequestTimeout, timeoutMessage),
+		ReadTimeout:  serverReadTimeout,
+		WriteTimeout: serverWriteTimeout,
 	}
+
+	go func() {
+		<-ctx.Done()
+
+		ctx, cancel := context.WithTimeout(context.Background(), *config.Get().GracePeriod)
+		defer cancel()
+
+		_ = server.Shutdown(ctx) //nolint:contextcheck
+	}()
 
 	if err := server.ListenAndServeTLS("", ""); err != nil {
 		log.WithError(err).Fatal()
@@ -272,7 +297,7 @@ func handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 		cs, ok := v.(*configstore.ConfigStore)
 
 		if !ok {
-			log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+			log.WithError(errAssertion).Fatal("handlerConfigDump v.(*ConfigStore)")
 		}
 
 		if len(id) == 0 || cs.Config.ID == id {
@@ -318,7 +343,7 @@ func handlerConfigEndpoints(w http.ResponseWriter, r *http.Request) {
 		cs, ok := v.(*configstore.ConfigStore)
 
 		if !ok {
-			log.WithError(errAssertion).Fatal("v.(*ConfigStore)")
+			log.WithError(errAssertion).Fatal("handlerConfigEndpoints v.(*ConfigStore)")
 		}
 
 		endpoints := EndpointsResults{
@@ -356,7 +381,7 @@ func handlerStatus(w http.ResponseWriter, r *http.Request) {
 
 	type StatusResponce struct {
 		NodeID   string
-		Snapshot cache.Snapshot
+		Snapshot cache.ResourceSnapshot
 	}
 
 	statusKeys := controlplane.SnapshotCache.GetStatusKeys()

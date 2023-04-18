@@ -19,6 +19,7 @@ import (
 	"path"
 	"sync"
 
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
@@ -41,7 +42,7 @@ func (cb *callbacks) Report() {
 	}
 }
 
-func (cb *callbacks) OnStreamOpen(ctx context.Context, streamID int64, typ string) error {
+func (cb *callbacks) OnStreamOpen(_ context.Context, streamID int64, typ string) error {
 	metrics.GrpcOnStreamOpen.Inc()
 
 	if *config.Get().LogAccess {
@@ -51,15 +52,18 @@ func (cb *callbacks) OnStreamOpen(ctx context.Context, streamID int64, typ strin
 	return nil
 }
 
-func (cb *callbacks) OnStreamClosed(streamID int64) {
+func (cb *callbacks) OnStreamClosed(streamID int64, node *core.Node) {
 	metrics.GrpcOnStreamClosed.Inc()
 
 	if *config.Get().LogAccess {
-		log.WithField("streamID", streamID).Info("OnStreamClosed")
+		log.WithFields(log.Fields{
+			"streamID": streamID,
+			"nodeID":   node.Id,
+		}).Info("OnStreamClosed")
 	}
 }
 
-func (cb *callbacks) OnStreamRequest(streamID int64, r *discovery.DiscoveryRequest) error {
+func (cb *callbacks) OnStreamRequest(streamID int64, _ *discovery.DiscoveryRequest) error {
 	metrics.GrpcOnStreamRequest.Inc()
 
 	if *config.Get().LogAccess {
@@ -78,7 +82,7 @@ func (cb *callbacks) OnStreamRequest(streamID int64, r *discovery.DiscoveryReque
 	return nil
 }
 
-func (cb *callbacks) OnStreamResponse(ctx context.Context, streamID int64, r *discovery.DiscoveryRequest, w *discovery.DiscoveryResponse) { //nolint:lll
+func (cb *callbacks) OnStreamResponse(_ context.Context, _ int64, r *discovery.DiscoveryRequest, w *discovery.DiscoveryResponse) { //nolint:lll
 	metrics.GrpcOnStreamResponse.Inc()
 
 	if *config.Get().LogAccess {
@@ -118,7 +122,7 @@ func (cb *callbacks) OnStreamResponse(ctx context.Context, streamID int64, r *di
 	cb.Report()
 }
 
-func (cb *callbacks) OnFetchRequest(ctx context.Context, req *discovery.DiscoveryRequest) error {
+func (cb *callbacks) OnFetchRequest(_ context.Context, req *discovery.DiscoveryRequest) error {
 	metrics.GrpcOnFetchRequest.Inc()
 
 	if *config.Get().LogAccess {
@@ -191,7 +195,7 @@ func (cb *callbacks) OnStreamDeltaRequestOnStreamDeltaRequest(streamID int64, re
 	return nil
 }
 
-func (cb *callbacks) OnDeltaStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
+func (cb *callbacks) OnDeltaStreamOpen(_ context.Context, streamID int64, typeURL string) error {
 	metrics.GrpcOnDeltaStreamOpen.Inc()
 
 	if *config.Get().LogAccess {
@@ -203,12 +207,13 @@ func (cb *callbacks) OnDeltaStreamOpen(ctx context.Context, streamID int64, type
 	return nil
 }
 
-func (cb *callbacks) OnDeltaStreamClosed(streamID int64) {
+func (cb *callbacks) OnDeltaStreamClosed(streamID int64, node *core.Node) {
 	metrics.GrpcOnDeltaStreamClosed.Inc()
 
 	if *config.Get().LogAccess {
-		log := log.WithField("streamID", streamID)
-
-		log.Infof("OnDeltaStreamClosed")
+		log.WithFields(log.Fields{
+			"streamID": streamID,
+			"nodeID":   node.Id,
+		}).Info("OnDeltaStreamClosed")
 	}
 }

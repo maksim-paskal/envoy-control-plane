@@ -17,6 +17,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/maksim-paskal/envoy-control-plane/internal"
@@ -47,6 +49,32 @@ func main() {
 		os.Exit(0)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	signalChanInterrupt := make(chan os.Signal, 1)
+	signal.Notify(signalChanInterrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		log.RegisterExitHandler(func() {
+			log.Info("Got exit signal...")
+			cancel()
+
+			time.Sleep(*config.Get().GracePeriod)
+			os.Exit(1)
+		})
+
+		select {
+		case <-signalChanInterrupt:
+			log.Error("Got interruption signal...")
+			cancel()
+		case <-ctx.Done():
+			internal.Stop()
+		}
+		<-signalChanInterrupt
+		os.Exit(1)
+	}()
+
 	// application initialization
 	internal.Init()
 
@@ -54,39 +82,37 @@ func main() {
 	metrics.LeaderElectionIsMaster.Set(0)
 
 	// start metrics server
-	go web.Start()
+	go web.Start(ctx)
 
 	if *config.Get().LeaderElection {
 		// run leader election
-		RunLeaderElection()
+		RunLeaderElection(ctx)
 	} else {
 		// run as a single instance
-		ctx := context.Background()
-
-		start(context.Background())
-		defer stop()
-
-		<-ctx.Done()
+		start(ctx)
 	}
+
+	<-ctx.Done()
+
+	log.Info("Stoped...")
+
+	internal.Stop()
+
+	time.Sleep(*config.Get().GracePeriod)
 }
 
 func start(ctx context.Context) {
-	internal.Start()
+	internal.Start(ctx)
 
 	// start controlplane
 	controlplane.Init(ctx)
 
-	go controlplane.Start()
+	go controlplane.Start(ctx)
 
-	go web.StartTLS()
+	go web.StartTLS(ctx)
 }
 
-func stop() {
-	internal.Stop()
-	controlplane.Stop()
-}
-
-func RunLeaderElection() {
+func RunLeaderElection(ctx context.Context) {
 	if len(*config.Get().Namespace) == 0 {
 		log.Fatal("-namespace is not set")
 	}
@@ -97,7 +123,7 @@ func RunLeaderElection() {
 
 	lock := GetLeaseLock(*config.Get().Namespace, *config.Get().PodName)
 
-	leaderelection.RunOrDie(context.Background(), leaderelection.LeaderElectionConfig{
+	go leaderelection.RunOrDie(ctx, leaderelection.LeaderElectionConfig{
 		Lock:            lock,
 		ReleaseOnCancel: true,
 		LeaseDuration:   defaultLeaseDuration,
@@ -109,10 +135,7 @@ func RunLeaderElection() {
 				start(ctx)
 			},
 			OnStoppedLeading: func() {
-				log.Warn("leader election lost")
-				// close active connections and exit
-				stop()
-				os.Exit(1)
+				log.Fatal("leader election lost")
 			},
 		},
 	})

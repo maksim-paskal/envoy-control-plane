@@ -106,17 +106,19 @@ func createGrpcServer() {
 	grpcServer = grpc.NewServer(grpcOptions...)
 }
 
-func Stop() {
-	grpcServer.GracefulStop()
-}
-
-func Start() {
+func Start(ctx context.Context) {
 	log.Info("grpc.address=", *config.Get().GrpcAddress)
 
 	lis, err := net.Listen("tcp", *config.Get().GrpcAddress)
 	if err != nil {
 		log.WithError(err).Fatal()
 	}
+
+	go func() {
+		<-ctx.Done()
+
+		grpcServer.GracefulStop()
+	}()
 
 	if err := grpcServer.Serve(lis); err != nil {
 		log.WithError(err).Fatal()

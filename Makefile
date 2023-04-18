@@ -27,13 +27,15 @@ testChart:
 build-goreleaser:
 	git tag -d `git tag -l "envoy-*"`
 	git tag -d `git tag -l "helm-chart-*"`
-	go run github.com/goreleaser/goreleaser@latest build --rm-dist --snapshot
+	go run github.com/goreleaser/goreleaser@latest build --clean --snapshot
 	mv ./dist/envoy-control-plane_linux_amd64_v1/envoy-control-plane envoy-control-plane
 	mv ./dist/cli_linux_amd64_v1/cli cli
 build:
 	make build-goreleaser
 	docker build --pull --push --platform=linux/amd64 . -t paskalmaksim/envoy-control-plane:$(gitTag)
 	docker build --pull --push --platform=linux/amd64 . -t paskalmaksim/envoy-docker-image:$(gitTag) -f ./envoy/Dockerfile
+promote-to-beta:
+	make build gitTag=beta
 build-composer:
 	docker-compose build --pull --parallel
 security-scan:
@@ -156,8 +158,8 @@ e2e:
 	make clean
 scan:
 	@trivy image \
-	-ignore-unfixed --no-progress --severity HIGH,CRITICAL \
+	--ignore-unfixed --no-progress --severity HIGH,CRITICAL \
 	paskalmaksim/envoy-control-plane:$(gitTag)
 	@trivy image \
-	-ignore-unfixed --no-progress --severity HIGH,CRITICAL \
+	--ignore-unfixed --no-progress --severity HIGH,CRITICAL \
 	paskalmaksim/envoy-docker-image:$(gitTag)

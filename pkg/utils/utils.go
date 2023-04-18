@@ -35,33 +35,33 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints []types.Resource, commonSecrets []tls.Secret) (cache.Snapshot, error) { //nolint: lll
+func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints []types.Resource, commonSecrets []tls.Secret) (*cache.Snapshot, error) { //nolint: lll
 	clusters, err := YamlToResources(configType.Clusters, cluster.Cluster{})
 	if err != nil {
-		return cache.Snapshot{}, err
+		return nil, err
 	}
 
 	routes, err := YamlToResources(configType.Routes, route.RouteConfiguration{})
 	if err != nil {
-		return cache.Snapshot{}, err
+		return nil, err
 	}
 
 	listiners, err := YamlToResources(configType.Listeners, listener.Listener{})
 	if err != nil {
-		return cache.Snapshot{}, err
+		return nil, err
 	}
 
 	// remove all require_client_certificate from listiners
 	if *config.Get().SSLDoNotUseValidation {
 		err = filterCertificates(listiners)
 		if err != nil {
-			return cache.Snapshot{}, err
+			return nil, err
 		}
 	}
 
 	secrets, err := YamlToResources(configType.Secrets, tls.Secret{})
 	if err != nil {
-		return cache.Snapshot{}, err
+		return nil, err
 	}
 
 	for i := range commonSecrets {

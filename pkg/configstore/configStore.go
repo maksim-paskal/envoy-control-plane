@@ -39,8 +39,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var ctx = context.Background()
-
 var StoreMap = new(sync.Map)
 
 const defaultZone = "unknown"
@@ -57,7 +55,7 @@ type ConfigStore struct {
 	isStoped           *atomic.Bool
 }
 
-func New(config *appConfig.ConfigType) (*ConfigStore, error) {
+func New(ctx context.Context, config *appConfig.ConfigType) (*ConfigStore, error) {
 	cs := ConfigStore{
 		Config:   config,
 		isStoped: atomic.NewBool(false),
@@ -87,7 +85,7 @@ func New(config *appConfig.ConfigType) (*ConfigStore, error) {
 		return nil, errors.Wrap(err, "error in LoadNewSecrets")
 	}
 
-	cs.saveLastEndpoints()
+	cs.saveLastEndpoints(ctx)
 
 	return &cs, nil
 }
@@ -96,31 +94,31 @@ func (cs *ConfigStore) hasStoped() bool {
 	return cs.isStoped.Load()
 }
 
-func (cs *ConfigStore) NewPod(pod *corev1.Pod) {
+func (cs *ConfigStore) NewPod(ctx context.Context, _ *corev1.Pod) {
 	if cs.hasStoped() {
 		return
 	}
 
-	cs.saveLastEndpoints()
+	cs.saveLastEndpoints(ctx)
 }
 
-func (cs *ConfigStore) NewEndpoint(endpoint *corev1.Endpoints) {
+func (cs *ConfigStore) NewEndpoint(ctx context.Context, _ *corev1.Endpoints) {
 	if cs.hasStoped() {
 		return
 	}
 
-	cs.saveLastEndpoints()
+	cs.saveLastEndpoints(ctx)
 }
 
-func (cs *ConfigStore) DeletePod(pod *corev1.Pod) {
+func (cs *ConfigStore) DeletePod(ctx context.Context, _ *corev1.Pod) {
 	if cs.hasStoped() {
 		return
 	}
 
-	cs.saveLastEndpoints()
+	cs.saveLastEndpoints(ctx)
 }
 
-func (cs *ConfigStore) Push(reason string) {
+func (cs *ConfigStore) Push(ctx context.Context, reason string) {
 	cs.mutex.Lock()
 	defer cs.mutex.Unlock()
 
@@ -335,7 +333,7 @@ func (cs *ConfigStore) getLocalityLbEndpoints() (map[string][]*endpoint.Locality
 }
 
 // save endpoints.
-func (cs *ConfigStore) saveLastEndpoints() {
+func (cs *ConfigStore) saveLastEndpoints(ctx context.Context) {
 	defer utils.TimeTrack("saveLastEndpoints", time.Now())
 
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
@@ -408,7 +406,7 @@ func (cs *ConfigStore) saveLastEndpoints() {
 		cs.lastEndpointsArray = publishEpArray
 
 		// endpoints changes
-		go cs.Push("new endpoints")
+		go cs.Push(ctx, "new endpoints")
 	}
 }
 
@@ -424,12 +422,12 @@ func (cs *ConfigStore) Stop() {
 	cs.isStoped.Store(true)
 }
 
-func (cs *ConfigStore) Sync() {
+func (cs *ConfigStore) Sync(ctx context.Context) {
 	if cs.hasStoped() {
 		return
 	}
 
-	cs.saveLastEndpoints()
+	cs.saveLastEndpoints(ctx)
 
 	cs.mutex.Lock()
 	defer cs.mutex.Unlock()
@@ -448,7 +446,7 @@ func (cs *ConfigStore) Sync() {
 			cs.lastEndpoints = nil
 			cs.lastEndpointsArray = nil
 
-			go cs.saveLastEndpoints()
+			go cs.saveLastEndpoints(ctx)
 		}
 	}
 }
