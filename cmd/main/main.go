@@ -55,15 +55,15 @@ func main() {
 	signalChanInterrupt := make(chan os.Signal, 1)
 	signal.Notify(signalChanInterrupt, syscall.SIGINT, syscall.SIGTERM)
 
+	log.RegisterExitHandler(func() {
+		log.Info("Got exit signal...")
+		cancel()
+
+		time.Sleep(*config.Get().GracePeriod)
+		os.Exit(1)
+	})
+
 	go func() {
-		log.RegisterExitHandler(func() {
-			log.Info("Got exit signal...")
-			cancel()
-
-			time.Sleep(*config.Get().GracePeriod)
-			os.Exit(1)
-		})
-
 		select {
 		case <-signalChanInterrupt:
 			log.Error("Got interruption signal...")
