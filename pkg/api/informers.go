@@ -50,7 +50,7 @@ var (
 	OnNewEndpoints func(pod *v1.Endpoints)
 )
 
-func (c *client) RunKubeInformers() {
+func (c *client) RunKubeInformers(ctx context.Context) {
 	defer runtime.HandleCrash()
 
 	podInformer = Client.KubeFactory().Core().V1().Pods().Informer()
@@ -232,6 +232,12 @@ func (c *client) RunKubeInformers() {
 	if !cache.WaitForCacheSync(c.stopCh, endpointsInformer.HasSynced) {
 		log.WithError(errTimeout).Fatal()
 	}
+
+	go func() {
+		<-ctx.Done()
+
+		close(c.stopCh)
+	}()
 }
 
 func watchErrors(_ *cache.Reflector, err error) {
@@ -290,8 +296,4 @@ func GetZoneByPodName(ctx context.Context, namespace string, pod string) string 
 	}
 
 	return zone
-}
-
-func (c *client) Stop() {
-	close(c.stopCh)
 }

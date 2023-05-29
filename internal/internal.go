@@ -131,14 +131,13 @@ func Start(ctx context.Context) {
 		})
 	}
 
-	api.Client.RunKubeInformers()
+	api.Client.RunKubeInformers(ctx)
 
 	// shedule all jobs
 	schedule(ctx)
 }
 
 func Stop() {
-	api.Client.Stop()
 	hook.Stop()
 }
 
