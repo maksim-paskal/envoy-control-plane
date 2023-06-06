@@ -21,6 +21,7 @@ services:
     - -ssl.key=certs/CA.key
     - -web.adminUser=admin
     - -web.adminPassword=admin
+    - -leaderElection=false
     #- -ssl.no-validation
   statsd:
     image: prom/statsd-exporter:v0.18.0

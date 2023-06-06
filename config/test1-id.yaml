@@ -192,7 +192,9 @@ data:
                   string_match:
                     exact: "/healthz"
 
-            - name: envoy.filters.http.router
+            - name: 
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
     - name: tcpProxy
       address:
         socket_address:
@@ -231,6 +233,8 @@ data:
           num_retries: 1
           retry_host_predicate:
           - name: envoy.retry_host_predicates.previous_hosts
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
           host_selection_retry_max_attempts: 3
           retry_priority:
             name: envoy.retry_priorities.previous_priorities

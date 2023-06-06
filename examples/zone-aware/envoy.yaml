@@ -49,6 +49,8 @@ static_resources:
                   cluster: nginxdemo
           http_filters:
           - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
   # fake record
   - name: test-envoy-service
