@@ -39,6 +39,8 @@ data:
                         inline_string: "Hello World"
               http_filters:
               - name: envoy.filters.http.router
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -62,7 +64,7 @@ spec:
           name: test-pod-config
       containers:
       - name: test-001
-        image: paskalmaksim/envoy-docker-image:latest
+        image: paskalmaksim/envoy-docker-image:e2e-test
         imagePullPolicy: Always
         resources:
           limits:
@@ -111,7 +113,7 @@ spec:
           name: test-pod-config
       containers:
       - name: test-002
-        image: paskalmaksim/envoy-docker-image:latest
+        image: paskalmaksim/envoy-docker-image:e2e-test
         imagePullPolicy: Always
         resources:
           limits:

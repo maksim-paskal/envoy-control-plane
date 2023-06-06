@@ -51,6 +51,8 @@ static_resources:
               path: "/etc/envoy/rds.json"
           http_filters:
           - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 ```
 
 **cds.json**

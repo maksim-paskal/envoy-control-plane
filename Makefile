@@ -141,7 +141,7 @@ sslTestControlPlane:
 
 .PHONY: e2e
 e2e:
-	make clean k8sConfig
+	make build clean k8sConfig gitTag=e2e-test
 	kubectl scale deploy test-001 test-002 --replicas=${initialPodCount}
 	kubectl wait --for=condition=available deployment --all --timeout=600s
 	kubectl wait --for=condition=Ready pods --all --timeout=600s

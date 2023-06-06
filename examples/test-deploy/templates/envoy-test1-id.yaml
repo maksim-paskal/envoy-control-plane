@@ -71,6 +71,8 @@ data:
                       cluster_name: rate_limit_cluster
              {{- end }}
             - name: envoy.filters.http.router
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
     endpoints:
     - cluster_name: local_service1
       endpoints:
@@ -96,6 +98,8 @@ data:
           num_retries: 1
           retry_host_predicate:
           - name: "envoy.retry_host_predicates.previous_hosts"
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.retry.host.previous_hosts.v3.PreviousHostsPredicate
           host_selection_retry_max_attempts: 5
         routes:
         - match:
