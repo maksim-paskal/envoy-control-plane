@@ -1,0 +1,94 @@
+static_resources:
+  listeners:
+  - name: listener_0
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 8001
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          codec_type: AUTO
+          route_config:
+            name: test
+            virtual_hosts:
+            - name: test
+              domains:
+              - "*"
+              routes:
+              - match:
+                  prefix: "/"
+                route:
+                  cluster: meta
+          http_filters:
+          - name: envoy.filters.http.header_to_metadata
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.header_to_metadata.v3.Config
+              request_rules:
+              - cookie: CanaryUser
+                on_header_present:
+                  metadata_namespace: envoy.lb
+                  key: stage
+                  type: STRING
+                  regex_value_rewrite:
+                    pattern:
+                      regex: "^true$"
+                    substitution: "canary"
+                remove: false
+              - header: x-canary
+                on_header_present:
+                  metadata_namespace: envoy.lb
+                  key: stage
+                  type: STRING
+                  regex_value_rewrite:
+                    pattern:
+                      regex: "^(1|2|3)$"
+                    substitution: "canary"
+                remove: false
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+  - name: meta
+    connect_timeout: 0.25s
+    lb_policy: ROUND_ROBIN
+    type: STRICT_DNS
+    lb_subset_config:
+      fallback_policy: DEFAULT_SUBSET
+      default_subset:
+        canary: false
+      subset_selectors:
+      - keys:
+        - stage
+    load_assignment:
+      cluster_name: nginxdemo
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: nginxdemo
+                port_value: 80
+          metadata:
+            filter_metadata:
+              envoy.lb:
+                stage: main
+                canary: false
+        - endpoint:
+            address:
+              socket_address:
+                address: nginxdemo-canary
+                port_value: 80
+          metadata:
+            filter_metadata:
+              envoy.lb:
+                stage: canary
+                canary: true
+admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 8000

@@ -26,6 +26,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/certs"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/utils-go"
@@ -48,6 +49,11 @@ func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints 
 
 	listiners, err := YamlToResources(configType.Listeners, listener.Listener{})
 	if err != nil {
+		return nil, err
+	}
+
+	// update cluster weights
+	if err := mutateWeightedRoutes(configType, routes); err != nil {
 		return nil, err
 	}
 
@@ -284,4 +290,39 @@ func TimeTrack(name string, start time.Time) {
 	} else {
 		log.Debug(msg)
 	}
+}
+
+func mutateWeightedRoutes(configType *config.ConfigType, routes []types.Resource) error {
+	// if cluster config has no weights, skip
+	if !configType.HasClusterWeights() {
+		return nil
+	}
+
+	for _, item := range routes {
+		r, ok := item.(*route.RouteConfiguration)
+		if !ok {
+			return errUnknownClass
+		}
+
+		for _, v := range r.VirtualHosts {
+			for _, vr := range v.Routes {
+				if wc := vr.GetRoute().GetWeightedClusters(); wc != nil {
+					for _, c := range wc.Clusters {
+						weight, err := configType.GetClusterWeight(c.Name)
+						if err != nil {
+							return err
+						}
+
+						if weight != nil && c.Weight.Value != uint32(weight.Value) {
+							log.Debugf("mutateWeightedRoutes: %s, weight: %d -> %d", c.Name, c.Weight.Value, weight)
+
+							c.Weight = &wrappers.UInt32Value{Value: uint32(weight.Value)}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }

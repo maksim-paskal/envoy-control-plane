@@ -11,7 +11,7 @@ services:
     #- GODEBUG=http2debug=2
     - MY_POD_NAMESPACE=default
     ports:
-    - 18081:18081
+    - 127.0.0.1:18081:18081
     command:
     - /app/envoy-control-plane
     - -log.level=INFO
@@ -26,7 +26,7 @@ services:
   statsd:
     image: prom/statsd-exporter:v0.18.0
     ports:
-    - 9102:9102
+    - 127.0.0.1:9102:9102
   redis:
     image: redis:alpine
   ratelimit:
@@ -59,8 +59,8 @@ services:
       dockerfile: ./envoy/Dockerfile
       context: .
     ports:
-    - 8000:8000   # inbound
-    - 18000:18000 # admin
+    - 127.0.0.1:8000:8000   # inbound
+    - 127.0.0.1:18000:18000 # admin
     volumes:
     - ./envoy/envoy.defaults/envoy.yaml:/envoy/envoy.yaml:ro
     - ./certs/:/certs:ro
@@ -99,10 +99,10 @@ services:
     - ./envoy/envoy.defaults/envoy.yaml:/envoy/envoy.yaml:ro
     - ./certs/:/certs:ro
     ports:
-    - 8001:8001 # service
-    - 18001:18000 # admin
+    - 127.0.0.1:8001:8001 # service
+    - 127.0.0.1:18001:18000 # admin
   local-service-b:
-    hostname: local-service-a
+    hostname: local-service-b
     build:
       dockerfile: ./envoy/Dockerfile
       context: .
@@ -119,8 +119,8 @@ services:
     - ./envoy/envoy.defaults/envoy.yaml:/envoy/envoy.yaml:ro
     - ./certs/:/certs:ro
     ports:
-    - 8002:8001 # service
-    - 18002:18000 # admin
+    - 127.0.0.1:8002:8001 # service
+    - 127.0.0.1:18002:18000 # admin
   jaeger:
     image: jaegertracing/all-in-one:1.20
     command:
@@ -128,4 +128,4 @@ services:
     environment:
     - COLLECTOR_ZIPKIN_HTTP_PORT=9411
     ports:
-    - "16686:16686"
+    - 127.0.0.1:16686:16686

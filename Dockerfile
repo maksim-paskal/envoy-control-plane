@@ -10,4 +10,4 @@ RUN apk upgrade \
 
 USER 30001
 
-CMD /app/envoy-control-plane
+ENTRYPOINT [ "/app/envoy-control-plane" ]

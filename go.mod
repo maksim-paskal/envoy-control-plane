@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/envoyproxy/go-control-plane v0.11.1
+	github.com/golang/protobuf v1.5.3
 	github.com/google/uuid v1.3.0
 	github.com/maksim-paskal/logrus-hook-sentry v0.0.9
 	github.com/maksim-paskal/utils-go v0.0.6
@@ -36,7 +37,6 @@ require (
 	github.com/go-openapi/jsonreference v0.20.1 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect

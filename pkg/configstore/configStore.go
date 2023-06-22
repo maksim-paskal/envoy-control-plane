@@ -35,13 +35,21 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/atomic"
+	"google.golang.org/protobuf/types/known/structpb"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 )
 
 var StoreMap = new(sync.Map)
 
-const defaultZone = "unknown"
+const (
+	defaultZone         = "unknown"
+	envoyMetaPodName    = "k8s.pod.name"
+	envoyMetaPodLabels  = "k8s.pod.labels."
+	envoyMetaEndpointIP = "k8s.endpoint.ip"
+	envoyMetaNodeName   = "k8s.node.name"
+	podLabelIgnore      = "pod-template-hash"
+)
 
 type ConfigStore struct {
 	Version            string
@@ -103,19 +111,11 @@ func (cs *ConfigStore) NewPod(ctx context.Context, _ *corev1.Pod) {
 }
 
 func (cs *ConfigStore) NewEndpoint(ctx context.Context, _ *corev1.Endpoints) {
-	if cs.hasStoped() {
-		return
-	}
-
-	cs.saveLastEndpoints(ctx)
+	cs.NewPod(ctx, nil)
 }
 
 func (cs *ConfigStore) DeletePod(ctx context.Context, _ *corev1.Pod) {
-	if cs.hasStoped() {
-		return
-	}
-
-	cs.saveLastEndpoints(ctx)
+	cs.NewPod(ctx, nil)
 }
 
 func (cs *ConfigStore) Push(ctx context.Context, reason string) {
@@ -207,23 +207,67 @@ func (cs *ConfigStore) getEndpointLocality(node string) *core.Locality {
 	}
 }
 
-func (cs *ConfigStore) getEnvoyLocalityLbEndpoint(node string, address string, item appConfig.KubernetesType) *endpoint.LocalityLbEndpoints { //nolint:lll
+type envoyEndpoint struct {
+	IsCanary bool
+	Node     string
+	Address  string
+	Item     appConfig.KubernetesType
+	Metadata map[string]string
+}
+
+func (cs *ConfigStore) getEnvoyLocalityLbEndpoint(envoyEndpoint *envoyEndpoint) *endpoint.LocalityLbEndpoints { //nolint:lll
 	priority := uint32(0)
 
-	if item.Priority > 0 {
-		priority = item.Priority
+	if envoyEndpoint.Item.Priority > 0 {
+		priority = envoyEndpoint.Item.Priority
 	}
 
 	healthCheckConfig := &endpoint.Endpoint_HealthCheckConfig{}
 
-	if item.HealthCheckPort > 0 {
-		healthCheckConfig.PortValue = item.HealthCheckPort
+	if envoyEndpoint.Item.HealthCheckPort > 0 {
+		healthCheckConfig.PortValue = envoyEndpoint.Item.HealthCheckPort
+	}
+
+	endpointStage := "main"
+
+	if envoyEndpoint.IsCanary {
+		endpointStage = "canary"
+	}
+
+	metadataEnvoyLB := make(map[string]*structpb.Value)
+
+	metadataEnvoyLB["canary"] = &structpb.Value{
+		Kind: &structpb.Value_BoolValue{
+			BoolValue: envoyEndpoint.IsCanary,
+		},
+	}
+
+	metadataEnvoyLB["stage"] = &structpb.Value{
+		Kind: &structpb.Value_StringValue{
+			StringValue: endpointStage,
+		},
+	}
+
+	// add all metadata
+	for k, v := range envoyEndpoint.Metadata {
+		metadataEnvoyLB[k] = &structpb.Value{
+			Kind: &structpb.Value_StringValue{
+				StringValue: v,
+			},
+		}
 	}
 
 	return &endpoint.LocalityLbEndpoints{
-		Locality: cs.getEndpointLocality(node),
+		Locality: cs.getEndpointLocality(envoyEndpoint.Node),
 		Priority: priority,
 		LbEndpoints: []*endpoint.LbEndpoint{{
+			Metadata: &core.Metadata{
+				FilterMetadata: map[string]*structpb.Struct{
+					"envoy.lb": {
+						Fields: metadataEnvoyLB,
+					},
+				},
+			},
 			HostIdentifier: &endpoint.LbEndpoint_Endpoint{
 				Endpoint: &endpoint.Endpoint{
 					HealthCheckConfig: healthCheckConfig,
@@ -231,9 +275,9 @@ func (cs *ConfigStore) getEnvoyLocalityLbEndpoint(node string, address string, i
 						Address: &core.Address_SocketAddress{
 							SocketAddress: &core.SocketAddress{
 								Protocol: core.SocketAddress_TCP,
-								Address:  address,
+								Address:  envoyEndpoint.Address,
 								PortSpecifier: &core.SocketAddress_PortValue{
-									PortValue: item.Port,
+									PortValue: envoyEndpoint.Item.Port,
 								},
 							},
 						},
@@ -289,10 +333,13 @@ func (cs *ConfigStore) getLocalityLbEndpoints() (map[string][]*endpoint.Locality
 			}
 
 			// get envoy endpoint
-			lbEndpoints[kubernetes.ClusterName] = append(lbEndpoints[kubernetes.ClusterName], cs.getEnvoyLocalityLbEndpoint(
-				pod.Spec.NodeName,
-				pod.Status.PodIP,
-				kubernetes,
+			lbEndpoints[kubernetes.ClusterName] = append(lbEndpoints[kubernetes.ClusterName], cs.getEnvoyLocalityLbEndpoint(&envoyEndpoint{ //nolint:lll
+				IsCanary: false,
+				Node:     pod.Spec.NodeName,
+				Address:  pod.Status.PodIP,
+				Item:     kubernetes,
+				Metadata: cs.getEnvoyMetaFromPod(pod),
+			},
 			))
 		}
 	}
@@ -320,16 +367,90 @@ func (cs *ConfigStore) getLocalityLbEndpoints() (map[string][]*endpoint.Locality
 		for _, subset := range endpoints.Subsets {
 			for _, address := range subset.Addresses {
 				// get envoy endpoint
-				lbEndpoints[kubernetes.ClusterName] = append(lbEndpoints[kubernetes.ClusterName], cs.getEnvoyLocalityLbEndpoint(
-					*address.NodeName,
-					address.IP,
-					kubernetes,
+				lbEndpoints[kubernetes.ClusterName] = append(lbEndpoints[kubernetes.ClusterName], cs.getEnvoyLocalityLbEndpoint(&envoyEndpoint{ //nolint:lll
+					IsCanary: false,
+					Node:     *address.NodeName,
+					Address:  address.IP,
+					Item:     kubernetes,
+					Metadata: cs.getEnvoyMetaFromEndpoint(address),
+				},
+				))
+			}
+		}
+
+		// get canary endpoints by service name
+		endpointsCanary, err := api.GetEndpoint(kubernetes.Service + appConfig.CanarySuffix)
+		if err != nil {
+			return nil, errors.Wrap(err, "error getting endpoints")
+		}
+
+		// service not found
+		if endpointsCanary == nil {
+			log.Warnf("service not found: %s", kubernetes.Service)
+
+			continue
+		}
+
+		for _, subset := range endpointsCanary.Subsets {
+			for _, address := range subset.Addresses {
+				// get envoy endpoint
+				lbEndpoints[kubernetes.ClusterName] = append(lbEndpoints[kubernetes.ClusterName], cs.getEnvoyLocalityLbEndpoint(&envoyEndpoint{ //nolint:lll
+					IsCanary: true,
+					Node:     *address.NodeName,
+					Address:  address.IP,
+					Item:     kubernetes,
+					Metadata: cs.getEnvoyMetaFromEndpoint(address),
+				},
 				))
 			}
 		}
 	}
 
 	return lbEndpoints, nil
+}
+
+func (cs *ConfigStore) getEnvoyMetaFromPod(pod *corev1.Pod) map[string]string {
+	labels := make(map[string]string)
+
+	// add pod labels to envoy metadata
+	if pod.Labels != nil {
+		for k, v := range pod.Labels {
+			if k != podLabelIgnore {
+				labels[envoyMetaPodLabels+k] = v
+			}
+		}
+	}
+
+	labels[envoyMetaPodName] = pod.Name
+	labels[envoyMetaEndpointIP] = pod.Status.PodIP
+	labels[envoyMetaNodeName] = pod.Spec.NodeName
+
+	return labels
+}
+
+func (cs *ConfigStore) getEnvoyMetaFromEndpoint(address corev1.EndpointAddress) map[string]string {
+	labels := make(map[string]string)
+
+	if address.TargetRef.Kind == "Pod" {
+		// add pod labels to envoy metadata
+		pod, err := api.GetPod(address.TargetRef.Namespace, address.TargetRef.Name)
+		if err != nil {
+			log.WithError(err).Error("error getting pod")
+		} else if pod != nil && pod.Labels != nil {
+			for k, v := range pod.Labels {
+				if k != podLabelIgnore {
+					labels[envoyMetaPodLabels+k] = v
+				}
+			}
+		}
+
+		labels[envoyMetaPodName] = address.TargetRef.Name
+	}
+
+	labels[envoyMetaEndpointIP] = address.IP
+	labels[envoyMetaNodeName] = *address.NodeName
+
+	return labels
 }
 
 // save endpoints.

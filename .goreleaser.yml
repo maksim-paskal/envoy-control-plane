@@ -2,32 +2,32 @@ release:
   footer: |
     ## Docker Images
     - `paskalmaksim/envoy-control-plane:latest`
-    - `paskalmaksim/envoy-control-plane:{{ .Tag }}`
+    - `paskalmaksim/envoy-control-plane:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}`
     - `paskalmaksim/envoy-docker-image:latest`
-    - `paskalmaksim/envoy-docker-image:{{ .Tag }}`
+    - `paskalmaksim/envoy-docker-image:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}`
 docker_manifests:
 - name_template: paskalmaksim/envoy-control-plane:latest
   image_templates:
-  - paskalmaksim/envoy-control-plane:{{.Tag}}-amd64
-  - paskalmaksim/envoy-control-plane:{{.Tag}}-arm64
+  - paskalmaksim/envoy-control-plane:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-amd64
+  - paskalmaksim/envoy-control-plane:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-arm64
 - name_template: paskalmaksim/envoy-docker-image:latest
   image_templates:
-  - paskalmaksim/envoy-docker-image:{{.Tag}}-amd64
-  - paskalmaksim/envoy-docker-image:{{.Tag}}-arm64
-- name_template: paskalmaksim/envoy-control-plane:{{.Tag}}
+  - paskalmaksim/envoy-docker-image:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-amd64
+  - paskalmaksim/envoy-docker-image:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-arm64
+- name_template: paskalmaksim/envoy-control-plane:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}
   image_templates:
-  - paskalmaksim/envoy-control-plane:{{.Tag}}-amd64
-  - paskalmaksim/envoy-control-plane:{{.Tag}}-arm64
-- name_template: paskalmaksim/envoy-docker-image:{{.Tag}}
+  - paskalmaksim/envoy-control-plane:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-amd64
+  - paskalmaksim/envoy-control-plane:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-arm64
+- name_template: paskalmaksim/envoy-docker-image:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}
   image_templates:
-  - paskalmaksim/envoy-docker-image:{{.Tag}}-amd64
-  - paskalmaksim/envoy-docker-image:{{.Tag}}-arm64
+  - paskalmaksim/envoy-docker-image:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-amd64
+  - paskalmaksim/envoy-docker-image:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-arm64
 dockers:
 - use: buildx
   goos: linux
   goarch: amd64
   image_templates:
-  - paskalmaksim/envoy-control-plane:{{ .Tag }}-amd64
+  - paskalmaksim/envoy-control-plane:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-amd64
   build_flag_templates:
   - "--build-arg=APPVERSION={{.ShortCommit}}"
   - "--platform=linux/amd64"
@@ -38,7 +38,7 @@ dockers:
   goos: linux
   goarch: arm64
   image_templates:
-  - paskalmaksim/envoy-control-plane:{{ .Tag }}-arm64
+  - paskalmaksim/envoy-control-plane:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-arm64
   build_flag_templates:
   - "--build-arg=APPVERSION={{.ShortCommit}}"
   - "--platform=linux/arm64"
@@ -50,7 +50,7 @@ dockers:
   goos: linux
   goarch: amd64
   image_templates:
-  - paskalmaksim/envoy-docker-image:{{ .Tag }}-amd64
+  - paskalmaksim/envoy-docker-image:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-amd64
   extra_files:
   - envoy/
   build_flag_templates:
@@ -64,7 +64,7 @@ dockers:
   goos: linux
   goarch: arm64
   image_templates:
-  - paskalmaksim/envoy-docker-image:{{ .Tag }}-arm64
+  - paskalmaksim/envoy-docker-image:{{if .IsSnapshot}}{{.Version}}{{else}}{{.Tag}}{{end}}-arm64
   extra_files:
   - envoy/
   build_flag_templates:
@@ -92,7 +92,7 @@ builds:
   flags:
   - -trimpath
   ldflags:
-  - -X github.com/maksim-paskal/envoy-control-plane/pkg/config.gitVersion={{.Version}}-{{.ShortCommit}}-{{.Timestamp}}
+  - -s -w -X github.com/maksim-paskal/envoy-control-plane/pkg/config.gitVersion={{.Version}}-{{.ShortCommit}}-{{.Timestamp}}
   goos:
   - linux
   goarch:
@@ -101,7 +101,7 @@ builds:
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  name_template: "beta"
 changelog:
   sort: asc
   filters:

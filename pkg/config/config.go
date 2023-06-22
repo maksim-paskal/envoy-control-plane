@@ -24,11 +24,14 @@ import (
 )
 
 const (
-	AppName                    = "envoy-control-plane"
-	sslRotationPeriodDefault   = 1 * time.Hour
-	endpointCheckPeriodDefault = 60 * time.Second
-	configDrainPeriodDefault   = 5 * time.Second
-	defaultGracePeriod         = 5 * time.Second
+	AppName                      = "envoy-control-plane"
+	annotationRouteClusterWeight = AppName + "/routes.cluster.weight."
+	AnnotationCanaryEnabled      = AppName + "/canary.enabled"
+	CanarySuffix                 = "-canary"
+	sslRotationPeriodDefault     = 1 * time.Hour
+	endpointCheckPeriodDefault   = 60 * time.Second
+	configDrainPeriodDefault     = 5 * time.Second
+	defaultGracePeriod           = 5 * time.Second
 )
 
 type Type struct {
