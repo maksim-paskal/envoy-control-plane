@@ -9,9 +9,13 @@ metadata:
 data:
   test3-id: |-
     validation:
-      match_subject_alt_names:
-      - exact: "test1-id"
-      - exact: "test"
+      match_typed_subject_alt_names:
+      - san_type: DNS
+        matcher:
+          exact: "test1-id"
+      - san_type: DNS
+        matcher:
+          exact: "test"
     clusters:
     - name: some_service
       connect_timeout: 0.25s

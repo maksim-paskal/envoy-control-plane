@@ -1,0 +1,11 @@
+scrape_configs:
+- job_name: "envoy"
+  scrape_interval: 3s
+  scrape_timeout: 3s
+  metrics_path: /stats/prometheus
+  # metric_relabel_configs:
+  # - source_labels: [__name__]
+  #   regex: '^(envoy_cluster_upstream_rq|envoy_cluster_canary_upstream_rq)$'
+  #   action: keep
+  static_configs:
+  - targets: ["envoy:8000"]

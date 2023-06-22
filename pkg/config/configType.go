@@ -15,6 +15,8 @@ package config
 import (
 	"bytes"
 	"path"
+	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/maksim-paskal/utils-go"
@@ -46,7 +48,10 @@ type ConfigType struct { //nolint: golint,revive
 	ConfigMapName string
 	// source configmap namespace
 	ConfigMapNamespace string
-	Kubernetes         []KubernetesType `yaml:"kubernetes"`
+	// source configmap annotations
+	ConfigMapAnnotations map[string]string
+	// kubernetes endpoints
+	Kubernetes []KubernetesType `yaml:"kubernetes"`
 	// config.endpoint.v3.ClusterLoadAssignment
 	Endpoints []interface{} `yaml:"endpoints"`
 	// config.route.v3.RouteConfiguration
@@ -59,6 +64,34 @@ type ConfigType struct { //nolint: golint,revive
 	Secrets []interface{} `yaml:"secrets"`
 	// extensions.transport_sockets.tls.v3.CertificateValidationContext
 	Validation interface{} `yaml:"validation"`
+}
+
+func (c *ConfigType) HasClusterWeights() bool {
+	for k := range c.ConfigMapAnnotations {
+		if strings.HasPrefix(k, annotationRouteClusterWeight) {
+			return true
+		}
+	}
+
+	return false
+}
+
+type ClusterWeight struct {
+	Value int64
+}
+
+// get user defined weights, return nil if not found.
+func (c *ConfigType) GetClusterWeight(name string) (*ClusterWeight, error) {
+	if w, ok := c.ConfigMapAnnotations[annotationRouteClusterWeight+name]; ok {
+		i, err := strconv.ParseUint(w, 10, 64)
+		if err != nil {
+			return nil, errors.Wrap(err, "strconv.ParseUint")
+		}
+
+		return &ClusterWeight{Value: int64(i)}, nil
+	}
+
+	return nil, nil //nolint: nilnil
 }
 
 func ParseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, error) {

@@ -15,6 +15,7 @@ package api
 import (
 	"context"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
@@ -140,7 +141,8 @@ func (c *client) RunKubeInformers(ctx context.Context) {
 				log.WithError(errAssertion).Fatal("old.(*v1.ConfigMap)")
 			}
 
-			if reflect.DeepEqual(curConfig.Data, oldConfig.Data) {
+			// do not update config if there is no change in data or annotations
+			if reflect.DeepEqual(curConfig.Data, oldConfig.Data) && reflect.DeepEqual(curConfig.Annotations, oldConfig.Annotations) { //nolint:lll
 				return
 			}
 
@@ -244,6 +246,10 @@ func watchErrors(_ *cache.Reflector, err error) {
 	log.WithError(err).Fatal()
 }
 
+func GetPod(namespace, name string) (*v1.Pod, error) {
+	return podLister.Pods(namespace).Get(name)
+}
+
 func ListPods(selectorSet map[string]string) ([]*v1.Pod, error) {
 	selector := labels.Set(selectorSet).AsSelector()
 
@@ -265,6 +271,14 @@ func GetEndpoint(name string) (*v1.Endpoints, error) {
 	}
 
 	for _, endpoint := range endpoints {
+		// for canary services default behavior is to disable them
+		// unless annotation envoy-control-plane/canary.enabled=true is set
+		if strings.HasSuffix(name, config.CanarySuffix) {
+			if isEnabled, ok := endpoint.Annotations[config.AnnotationCanaryEnabled]; !(ok && isEnabled == "true") {
+				continue
+			}
+		}
+
 		if endpoint.Name == name {
 			return endpoint, nil
 		}

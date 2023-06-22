@@ -1,4 +1,4 @@
-KUBECONFIG=$(HOME)/.kube/dev
+KUBECONFIG=$(HOME)/.kube/kurento-stage
 initialPodCount=10
 gitTag=$(shell git rev-parse --abbrev-ref HEAD)
 
@@ -35,7 +35,24 @@ build:
 	docker build --pull --push --platform=linux/amd64 . -t paskalmaksim/envoy-control-plane:$(gitTag)
 	docker build --pull --push --platform=linux/amd64 . -t paskalmaksim/envoy-docker-image:$(gitTag) -f ./envoy/Dockerfile
 promote-to-beta:
-	make build gitTag=beta
+	git tag -d `git tag -l "envoy-*"`
+	git tag -d `git tag -l "helm-chart-*"`
+	go run github.com/goreleaser/goreleaser@latest release --clean --snapshot
+
+	docker push paskalmaksim/envoy-docker-image:beta-arm64
+	docker push paskalmaksim/envoy-docker-image:beta-amd64
+	docker push paskalmaksim/envoy-control-plane:beta-arm64
+	docker push paskalmaksim/envoy-control-plane:beta-amd64
+
+	docker manifest create --amend paskalmaksim/envoy-docker-image:beta \
+	paskalmaksim/envoy-docker-image:beta-arm64 \
+	paskalmaksim/envoy-docker-image:beta-amd64
+	docker manifest push --purge paskalmaksim/envoy-docker-image:beta
+
+	docker manifest create --amend paskalmaksim/envoy-control-plane:beta \
+	paskalmaksim/envoy-control-plane:beta-arm64 \
+	paskalmaksim/envoy-control-plane:beta-amd64
+	docker manifest push --purge paskalmaksim/envoy-control-plane:beta
 build-composer:
 	docker-compose build --pull --parallel
 security-scan:
@@ -59,13 +76,16 @@ runRaceDetection:
 	go run -v -race ./cmd/main \
 	-log.level=DEBUG \
 	-log.pretty \
-	-namespace=envoy-control-plane \
+	-namespace=default \
 	-kubeconfig.path=$(KUBECONFIG) \
 	-web.adminUser=admin \
 	-web.adminPassword=admin \
 	-ssl.crt=certs/CA.crt \
 	-ssl.key=certs/CA.key \
-	-leaderElection=false
+	-leaderElection=false \
+	-grpc.address=127.0.0.1:18080 \
+	-web.https.address=127.0.0.1:18081 \
+	-web.http.address=127.0.0.1:18082
 runCli:
 	go run ./cmd/cli -debug -namespace=1 -pod=2 \
 	-tls.CA=certs/CA.crt \

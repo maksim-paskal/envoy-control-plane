@@ -58,6 +58,7 @@ func NewConfigMap(ctx context.Context, cm *v1.ConfigMap) error {
 
 		config.ConfigMapName = cm.Name
 		config.ConfigMapNamespace = cm.Namespace
+		config.ConfigMapAnnotations = cm.Annotations
 
 		if config.UseVersionLabel && len(cm.Labels[config.VersionLabelKey]) > 0 {
 			log.Debug("update Id, using UseVersionLabel")

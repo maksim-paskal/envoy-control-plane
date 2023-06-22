@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  envoy:
+    image: paskalmaksim/envoy-docker-image:latest
+    ports:
+    - 127.0.0.1:8000:8000
+    - 127.0.0.1:8001:8001
+    volumes:
+    - ./envoy.yaml:/envoy/envoy.yaml:ro
+    command:
+    - /bin/sh
+    - -c
+    - |
+      /usr/local/bin/envoy \
+      --config-path /envoy/envoy.yaml \
+      --log-level warn \
+      --service-cluster test \
+      --service-node test1-id \
+      --service-zone a
+  nginxdemo:
+    hostname: nginxdemo
+    image: nginxdemos/hello:plain-text
+  nginxdemo-canary:
+    hostname: nginxdemo-canary
+    image: nginxdemos/hello:plain-text
+  prometheus:
+    image: prom/prometheus:v2.44.0
+    ports:
+    - 127.0.0.1:9090:9090
+    volumes:
+    - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro

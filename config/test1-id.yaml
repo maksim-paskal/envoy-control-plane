@@ -3,6 +3,9 @@ kind: ConfigMap
 metadata:
   name: test1-id
   namespace: default
+  annotations:
+    "envoy-control-plane/routes.cluster.weight.docker_service_a": "80"
+    "envoy-control-plane/routes.cluster.weight.docker_service_b": "20"
   labels:
     app: envoy-control-plane
     version: v1
@@ -128,36 +131,37 @@ data:
             - name: envoy.lua
               typed_config:
                 "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
-                inline_code: |
-                  function stringSplit(inputstr, sep)
-                    if sep == nil then
-                      sep = "%s"
+                default_source_code:
+                  inline_string: |
+                    function stringSplit(inputstr, sep)
+                      if sep == nil then
+                        sep = "%s"
+                      end
+                      local t={}
+                      for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+                        table.insert(t, str)
+                      end
+                      return t
                     end
-                    local t={}
-                    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-                      table.insert(t, str)
-                    end
-                    return t
-                  end
-                  function envoy_on_request(request_handle)
-                    -- cookies to save in metadata
-                    local cookiesArray = {"CID"}
-                    local cookie = request_handle:headers():get("cookie")
-                    local dynamicMetadata = request_handle:streamInfo():dynamicMetadata()
+                    function envoy_on_request(request_handle)
+                      -- cookies to save in metadata
+                      local cookiesArray = {"CID"}
+                      local cookie = request_handle:headers():get("cookie")
+                      local dynamicMetadata = request_handle:streamInfo():dynamicMetadata()
 
-                    if cookie ~= nil then
-                      local splitCookieString = stringSplit(cookie, ";")
-                      for i, cookieItem in ipairs(splitCookieString) do
-                        for y, cookiesItem in ipairs(cookiesArray) do
-                          if string.find(cookieItem, cookiesItem) ~= nil then
-                            local cookieKV = stringSplit(cookieItem, "=")
-                            local cookieName = string.gsub(cookieKV[1], "%s+", "")
-                            dynamicMetadata:set("envoy.filters.http.lua.cookie", cookieName, cookieKV[2])
+                      if cookie ~= nil then
+                        local splitCookieString = stringSplit(cookie, ";")
+                        for i, cookieItem in ipairs(splitCookieString) do
+                          for y, cookiesItem in ipairs(cookiesArray) do
+                            if string.find(cookieItem, cookiesItem) ~= nil then
+                              local cookieKV = stringSplit(cookieItem, "=")
+                              local cookieName = string.gsub(cookieKV[1], "%s+", "")
+                              dynamicMetadata:set("envoy.filters.http.lua.cookie", cookieName, cookieKV[2])
+                            end
                           end
                         end
                       end
                     end
-                  end
 
             # simple cookie extraction with header_to_metadata filter
             - name: envoy.filters.http.header_to_metadata
@@ -192,7 +196,7 @@ data:
                   string_match:
                     exact: "/healthz"
 
-            - name: 
+            - name: envoy.filters.http.router
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
     - name: tcpProxy
@@ -256,6 +260,15 @@ data:
               descriptor_key: cf-connecting-ip
         routes:
         - match:
+            prefix: "/docker"
+          route:
+            weighted_clusters:
+              clusters:
+              - name: docker_service_a
+                weight: 50
+              - name: docker_service_b
+                weight: 50
+        - match:
             prefix: "/1"
           route:
             cluster: local_service1
@@ -282,7 +295,6 @@ data:
             - name: "cookie"
               string_match:
                 safe_regex:
-                  google_re2: {}
                   regex: ".*?(CanaryUser=true).*?"
           route:
             cluster: local_service1
@@ -402,6 +414,62 @@ data:
                 socket_address:
                   address: 127.0.0.1
                   port_value: 18000
+    - name: docker_service_a
+      connect_timeout: 0.25s
+      lb_policy: ROUND_ROBIN
+      type: STRICT_DNS
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          common_tls_context:
+            tls_certificate_sds_secret_configs:
+            - name: envoy_control_plane_default
+              sds_config:
+                resource_api_version: V3
+                api_config_source:
+                  api_type: GRPC
+                  transport_api_version: V3
+                  grpc_services:
+                  - envoy_grpc:
+                      cluster_name: xds_cluster
+      load_assignment:
+        cluster_name: docker_service_a
+        endpoints:
+        - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: local-service-a
+                  port_value: 8001
+    - name: docker_service_b
+      connect_timeout: 0.25s
+      lb_policy: ROUND_ROBIN
+      type: STRICT_DNS
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+          common_tls_context:
+            tls_certificate_sds_secret_configs:
+            - name: envoy_control_plane_default
+              sds_config:
+                resource_api_version: V3
+                api_config_source:
+                  api_type: GRPC
+                  transport_api_version: V3
+                  grpc_services:
+                  - envoy_grpc:
+                      cluster_name: xds_cluster
+      load_assignment:
+        cluster_name: docker_service_b
+        endpoints:
+        - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: local-service-b
+                  port_value: 8001
     - name: tls-cluster-example
       connect_timeout: 1s
       type: STATIC

@@ -9,9 +9,13 @@ metadata:
 data:
   test2-id: |-
     validation:
-      match_subject_alt_names:
-      - exact: "test1-id"
-      - exact: "test"
+      match_typed_subject_alt_names:
+      - san_type: DNS
+        matcher:
+          exact: "test1-id"
+      - san_type: DNS
+        matcher:
+          exact: "test"
     clusters:
     - name: some_service
       connect_timeout: 0.25s
@@ -100,3 +104,5 @@ data:
                       inline_string: "Hello World2"
             http_filters:
             - name: envoy.filters.http.router
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
