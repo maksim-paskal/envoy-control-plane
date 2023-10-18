@@ -69,14 +69,13 @@ func main() {
 			log.Error("Got interruption signal...")
 			cancel()
 		case <-ctx.Done():
-			internal.Stop()
 		}
 		<-signalChanInterrupt
 		os.Exit(1)
 	}()
 
 	// application initialization
-	internal.Init()
+	internal.Init(ctx)
 
 	// initial master value
 	metrics.LeaderElectionIsMaster.Set(0)
@@ -95,8 +94,6 @@ func main() {
 	<-ctx.Done()
 
 	log.Info("Stoped...")
-
-	internal.Stop()
 
 	time.Sleep(*config.Get().GracePeriod)
 }

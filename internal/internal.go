@@ -28,7 +28,7 @@ import (
 
 var hook *logrushooksentry.Hook
 
-func Init() {
+func Init(ctx context.Context) {
 	var err error
 	if err = config.Load(); err != nil {
 		log.Fatal(err)
@@ -57,7 +57,7 @@ func Init() {
 		log.Fatal(err)
 	}
 
-	hook, err = logrushooksentry.NewHook(logrushooksentry.Options{
+	hook, err = logrushooksentry.NewHook(ctx, logrushooksentry.Options{
 		SentryDSN: *config.Get().SentryDSN,
 		Release:   config.GetVersion(),
 	})
@@ -135,10 +135,6 @@ func Start(ctx context.Context) {
 
 	// shedule all jobs
 	schedule(ctx)
-}
-
-func Stop() {
-	hook.Stop()
 }
 
 func schedule(ctx context.Context) {
