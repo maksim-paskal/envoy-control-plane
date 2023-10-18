@@ -215,6 +215,12 @@ type envoyEndpoint struct {
 	Metadata map[string]string
 }
 
+func (e *envoyEndpoint) SetNode(address corev1.EndpointAddress) {
+	if address.NodeName != nil {
+		e.Node = *address.NodeName
+	}
+}
+
 func (cs *ConfigStore) getEnvoyLocalityLbEndpoint(envoyEndpoint *envoyEndpoint) *endpoint.LocalityLbEndpoints { //nolint:lll
 	priority := uint32(0)
 
@@ -366,15 +372,20 @@ func (cs *ConfigStore) getLocalityLbEndpoints() (map[string][]*endpoint.Locality
 
 		for _, subset := range endpoints.Subsets {
 			for _, address := range subset.Addresses {
-				// get envoy endpoint
-				lbEndpoints[kubernetes.ClusterName] = append(lbEndpoints[kubernetes.ClusterName], cs.getEnvoyLocalityLbEndpoint(&envoyEndpoint{ //nolint:lll
+				newEp := &envoyEndpoint{
 					IsCanary: false,
-					Node:     *address.NodeName,
 					Address:  address.IP,
 					Item:     kubernetes,
 					Metadata: cs.getEnvoyMetaFromEndpoint(address),
-				},
-				))
+				}
+
+				newEp.SetNode(address)
+
+				// get envoy endpoint
+				lbEndpoints[kubernetes.ClusterName] = append(
+					lbEndpoints[kubernetes.ClusterName],
+					cs.getEnvoyLocalityLbEndpoint(newEp),
+				)
 			}
 		}
 
@@ -393,15 +404,20 @@ func (cs *ConfigStore) getLocalityLbEndpoints() (map[string][]*endpoint.Locality
 
 		for _, subset := range endpointsCanary.Subsets {
 			for _, address := range subset.Addresses {
-				// get envoy endpoint
-				lbEndpoints[kubernetes.ClusterName] = append(lbEndpoints[kubernetes.ClusterName], cs.getEnvoyLocalityLbEndpoint(&envoyEndpoint{ //nolint:lll
+				newEp := &envoyEndpoint{
 					IsCanary: true,
-					Node:     *address.NodeName,
 					Address:  address.IP,
 					Item:     kubernetes,
 					Metadata: cs.getEnvoyMetaFromEndpoint(address),
-				},
-				))
+				}
+
+				newEp.SetNode(address)
+
+				// get envoy endpoint
+				lbEndpoints[kubernetes.ClusterName] = append(
+					lbEndpoints[kubernetes.ClusterName],
+					cs.getEnvoyLocalityLbEndpoint(newEp),
+				)
 			}
 		}
 	}
@@ -431,7 +447,7 @@ func (cs *ConfigStore) getEnvoyMetaFromPod(pod *corev1.Pod) map[string]string {
 func (cs *ConfigStore) getEnvoyMetaFromEndpoint(address corev1.EndpointAddress) map[string]string {
 	labels := make(map[string]string)
 
-	if address.TargetRef.Kind == "Pod" {
+	if address.TargetRef != nil && address.TargetRef.Kind == "Pod" {
 		// add pod labels to envoy metadata
 		pod, err := api.GetPod(address.TargetRef.Namespace, address.TargetRef.Name)
 		if err != nil {
@@ -447,8 +463,11 @@ func (cs *ConfigStore) getEnvoyMetaFromEndpoint(address corev1.EndpointAddress) 
 		labels[envoyMetaPodName] = address.TargetRef.Name
 	}
 
+	if address.NodeName != nil {
+		labels[envoyMetaNodeName] = *address.NodeName
+	}
+
 	labels[envoyMetaEndpointIP] = address.IP
-	labels[envoyMetaNodeName] = *address.NodeName
 
 	return labels
 }
