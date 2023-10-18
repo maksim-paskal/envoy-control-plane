@@ -53,8 +53,7 @@ func TestConfigMapsStore(t *testing.T) {
 
 	flag.Parse()
 
-	internal.Init()
-	defer internal.Stop()
+	internal.Init(context.TODO())
 
 	internal.Start(ctx)
 
