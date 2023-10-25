@@ -136,6 +136,18 @@ var (
 		Name:      "endpointstore_delete_total",
 		Help:      "The total number of DeleteFunc events in endpointstore",
 	})
+
+	Operation = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "operation_total",
+		Help:      "The total number of web requests",
+	}, []string{"operation"})
+
+	OperationDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: namespace,
+		Name:      "operation_duration",
+		Help:      "The duration in ms of operations",
+	}, []string{"operation"})
 )
 
 func GetHandler() http.Handler {

@@ -19,8 +19,20 @@ import (
 	"strings"
 	"text/template"
 
+	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"github.com/golang/protobuf/ptypes/wrappers"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/resources"
 	"github.com/maksim-paskal/utils-go"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/types/known/anypb"
 	"gopkg.in/yaml.v3"
 )
 
@@ -64,6 +76,8 @@ type ConfigType struct { //nolint: golint,revive
 	Secrets []interface{} `yaml:"secrets"`
 	// extensions.transport_sockets.tls.v3.CertificateValidationContext
 	Validation interface{} `yaml:"validation"`
+	// internal resources
+	clusters, routes, listeners, secrets []types.Resource
 }
 
 func (c *ConfigType) HasClusterWeights() bool {
@@ -74,6 +88,22 @@ func (c *ConfigType) HasClusterWeights() bool {
 	}
 
 	return false
+}
+
+func (c *ConfigType) GetClusters() []types.Resource {
+	return c.clusters
+}
+
+func (c *ConfigType) GetRoutes() []types.Resource {
+	return c.routes
+}
+
+func (c *ConfigType) GetListeners() []types.Resource {
+	return c.listeners
+}
+
+func (c *ConfigType) GetSecrets() []types.Resource {
+	return c.secrets
 }
 
 type ClusterWeight struct {
@@ -94,7 +124,55 @@ func (c *ConfigType) GetClusterWeight(name string) (*ClusterWeight, error) {
 	return nil, nil //nolint: nilnil
 }
 
-func ParseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, error) {
+func (c *ConfigType) SaveResources() error {
+	clusters, err := resources.YamlToResources(c.Clusters, cluster.Cluster{})
+	if err != nil {
+		return errors.Wrap(err, "error parsing clusters")
+	}
+
+	routes, err := resources.YamlToResources(c.Routes, route.RouteConfiguration{})
+	if err != nil {
+		return errors.Wrap(err, "error parsing routes")
+	}
+
+	listeners, err := resources.YamlToResources(c.Listeners, listener.Listener{})
+	if err != nil {
+		return errors.Wrap(err, "error parsing listeners")
+	}
+
+	secrets, err := resources.YamlToResources(c.Secrets, tls.Secret{})
+	if err != nil {
+		return errors.Wrap(err, "error parsing secrets")
+	}
+
+	c.clusters = clusters
+	c.routes = routes
+	c.listeners = listeners
+	c.secrets = secrets
+
+	// update cluster weights
+	if c.HasClusterWeights() {
+		if err := mutateWeightedRoutesInListeners(c, c.listeners); err != nil {
+			return errors.Wrap(err, "errors in mutateWeightedRoutesInListeners")
+		}
+
+		if err := mutateWeightedRoutes(c, c.routes); err != nil {
+			return errors.Wrap(err, "errors in mutateWeightedRoutes")
+		}
+	}
+
+	// remove all require_client_certificate from listiners
+	if *Get().SSLDoNotUseValidation {
+		err = filterCertificates(c.listeners)
+		if err != nil {
+			return errors.Wrap(err, "errors in filterCertificates")
+		}
+	}
+
+	return nil
+}
+
+func ParseConfigYaml(nodeID string, text string, data interface{}) (*ConfigType, error) {
 	t := template.New(nodeID)
 	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).Parse(text))
 
@@ -102,7 +180,7 @@ func ParseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, 
 
 	err := templates.ExecuteTemplate(&tpl, path.Base(nodeID), data)
 	if err != nil {
-		return ConfigType{}, errors.Wrap(err, "templates.ExecuteTemplate")
+		return nil, errors.Wrap(err, "templates.ExecuteTemplate")
 	}
 
 	config := ConfigType{
@@ -111,8 +189,130 @@ func ParseConfigYaml(nodeID string, text string, data interface{}) (ConfigType, 
 
 	err = yaml.Unmarshal(tpl.Bytes(), &config)
 	if err != nil {
-		return ConfigType{}, errors.Wrap(err, "yaml.Unmarshal")
+		return nil, errors.Wrap(err, "yaml.Unmarshal")
 	}
 
-	return config, nil
+	return &config, nil
+}
+
+var errUnknownClass = errors.New("unknown class")
+
+// remove require_client_certificate from all listeners.
+func filterCertificates(listiners []types.Resource) error {
+	for _, listiner := range listiners {
+		c, ok := listiner.(*listener.Listener)
+		if !ok {
+			return errUnknownClass
+		}
+
+		for _, filterChain := range c.GetFilterChains() {
+			s := filterChain.GetTransportSocket()
+			if s != nil {
+				if s.GetName() == wellknown.TransportSocketTLS {
+					r := tls.DownstreamTlsContext{}
+
+					err := s.GetTypedConfig().UnmarshalTo(&r)
+					if err != nil {
+						return err
+					}
+
+					if r.GetRequireClientCertificate() != nil {
+						r.RequireClientCertificate.Value = false
+					}
+
+					pbst, err := anypb.New(&r)
+					if err != nil {
+						return err
+					}
+
+					s.ConfigType = &core.TransportSocket_TypedConfig{
+						TypedConfig: pbst,
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// routes can be stored in listener filters.
+func mutateWeightedRoutesInListeners(configType *ConfigType, listiners []types.Resource) error {
+	for _, listiner := range listiners {
+		l, ok := listiner.(*listener.Listener)
+		if !ok {
+			return errUnknownClass
+		}
+
+		for _, fc := range l.GetFilterChains() {
+			for _, f := range fc.GetFilters() {
+				if f.GetName() != wellknown.HTTPConnectionManager {
+					continue
+				}
+
+				m := hcm.HttpConnectionManager{}
+
+				if err := f.GetTypedConfig().UnmarshalTo(&m); err != nil {
+					return errors.Wrap(err, "error unmarshal to HttpConnectionManager")
+				}
+
+				if err := mutateWeightedRouteConfiguration(configType, m.GetRouteConfig()); err != nil {
+					return errors.Wrap(err, "error mutateWeightedRouteConfiguration")
+				}
+
+				pbst, err := anypb.New(&m)
+				if err != nil {
+					return errors.Wrap(err, "error anypb.New")
+				}
+
+				f.ConfigType = &listener.Filter_TypedConfig{
+					TypedConfig: pbst,
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func mutateWeightedRoutes(configType *ConfigType, routes []types.Resource) error {
+	for _, item := range routes {
+		r, ok := item.(*route.RouteConfiguration)
+		if !ok {
+			return errUnknownClass
+		}
+
+		if err := mutateWeightedRouteConfiguration(configType, r); err != nil {
+			return errors.Wrap(err, "error mutateWeightedRouteConfiguration")
+		}
+	}
+
+	return nil
+}
+
+func mutateWeightedRouteConfiguration(configType *ConfigType, r *route.RouteConfiguration) error {
+	if r == nil {
+		return nil
+	}
+
+	for _, v := range r.GetVirtualHosts() {
+		for _, vr := range v.GetRoutes() {
+			if wc := vr.GetRoute().GetWeightedClusters(); wc != nil {
+				for _, c := range wc.GetClusters() {
+					weight, err := configType.GetClusterWeight(c.GetName())
+					if err != nil {
+						return err
+					}
+
+					if weight != nil && c.GetWeight().GetValue() != uint32(weight.Value) {
+						log.Warnf("mutateWeightedRoutes: %s, weight: %d -> %d", c.GetName(), c.GetWeight().GetValue(), weight)
+
+						c.Weight = &wrappers.UInt32Value{Value: uint32(weight.Value)}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }

@@ -31,6 +31,7 @@ import (
 	appConfig "github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/controlplane"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/resources"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -152,7 +153,7 @@ func (cs *ConfigStore) Push(ctx context.Context, reason string) {
 }
 
 func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEndpoints, error) {
-	endpoints, err := utils.YamlToResources(cs.Config.Endpoints, endpoint.ClusterLoadAssignment{})
+	endpoints, err := resources.YamlToResources(cs.Config.Endpoints, endpoint.ClusterLoadAssignment{})
 	if err != nil {
 		return nil, err
 	}
@@ -365,7 +366,7 @@ func (cs *ConfigStore) getLocalityLbEndpoints() (map[string][]*endpoint.Locality
 
 		// service not found
 		if endpoints == nil {
-			log.Warnf("service not found: %s", kubernetes.Service)
+			log.Debugf("service not found: %s", kubernetes.Service)
 
 			continue
 		}
@@ -397,7 +398,7 @@ func (cs *ConfigStore) getLocalityLbEndpoints() (map[string][]*endpoint.Locality
 
 		// service not found
 		if endpointsCanary == nil {
-			log.Warnf("service not found: %s", kubernetes.Service)
+			log.Debugf("canary service not found: %s", kubernetes.Service)
 
 			continue
 		}

@@ -149,9 +149,7 @@ func schedule(ctx context.Context) {
 func syncAll(ctx context.Context) {
 	log.Infof("syncAll every %s", *config.Get().EndpointCheckPeriod)
 
-	for {
-		time.Sleep(*config.Get().EndpointCheckPeriod)
-
+	for ctx.Err() == nil {
 		configstore.StoreMap.Range(func(k, v interface{}) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
@@ -165,15 +163,19 @@ func syncAll(ctx context.Context) {
 
 			return true
 		})
+
+		select {
+		case <-time.After(*config.Get().EndpointCheckPeriod):
+		case <-ctx.Done():
+			break
+		}
 	}
 }
 
 func rotateCertificates(ctx context.Context) {
 	log.Infof("syncAll every %s", *config.Get().SSLRotationPeriod)
 
-	for {
-		time.Sleep(*config.Get().SSLRotationPeriod)
-
+	for ctx.Err() == nil {
 		configstore.StoreMap.Range(func(k, v interface{}) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
@@ -193,5 +195,11 @@ func rotateCertificates(ctx context.Context) {
 
 			return true
 		})
+
+		select {
+		case <-time.After(*config.Get().SSLRotationPeriod):
+		case <-ctx.Done():
+			break
+		}
 	}
 }
