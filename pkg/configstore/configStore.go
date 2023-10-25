@@ -500,15 +500,15 @@ func (cs *ConfigStore) saveLastEndpoints(ctx context.Context) {
 
 	for clusterName, ep := range lbEndpoints {
 		for _, value1 := range ep {
-			for _, value2 := range value1.LbEndpoints {
-				address := value2.GetEndpoint().GetAddress().GetSocketAddress().Address
+			for _, value2 := range value1.GetLbEndpoints() {
+				address := value2.GetEndpoint().GetAddress().GetSocketAddress().GetAddress()
 
 				publishEpArray = append(publishEpArray, fmt.Sprintf(
 					"%s|%s|%d|%s|%d|%d",
 					clusterName,
-					value1.Locality.GetZone(),
-					value1.Priority,
-					value2.GetEndpoint().GetAddress().GetSocketAddress().Address,
+					value1.GetLocality().GetZone(),
+					value1.GetPriority(),
+					value2.GetEndpoint().GetAddress().GetSocketAddress().GetAddress(),
 					value2.GetEndpoint().GetAddress().GetSocketAddress().GetPortValue(),
 					value2.GetEndpoint().GetHealthCheckConfig().GetPortValue(),
 				))
