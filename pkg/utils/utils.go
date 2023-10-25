@@ -221,7 +221,7 @@ func NewSecrets(dnsName string, validation interface{}) ([]tls.Secret, error) {
 			return nil, errors.Wrap(err, "protojson.Unmarshal(jsonObj)")
 		}
 
-		if validationContext.TrustedCa == nil {
+		if validationContext.GetTrustedCa() == nil {
 			validationContext.TrustedCa = &core.DataSource{
 				Specifier: &core.DataSource_InlineBytes{InlineBytes: certs.GetLoadedRootCertBytes()},
 			}
@@ -246,10 +246,10 @@ func filterCertificates(listiners []types.Resource) error {
 			return errUnknownClass
 		}
 
-		for _, filterChain := range c.FilterChains {
-			s := filterChain.TransportSocket
+		for _, filterChain := range c.GetFilterChains() {
+			s := filterChain.GetTransportSocket()
 			if s != nil {
-				if s.Name == "envoy.transport_sockets.tls" {
+				if s.GetName() == "envoy.transport_sockets.tls" {
 					r := tls.DownstreamTlsContext{}
 
 					err := s.GetTypedConfig().UnmarshalTo(&r)
@@ -257,7 +257,7 @@ func filterCertificates(listiners []types.Resource) error {
 						return err
 					}
 
-					if r.RequireClientCertificate != nil {
+					if r.GetRequireClientCertificate() != nil {
 						r.RequireClientCertificate.Value = false
 					}
 
@@ -304,17 +304,17 @@ func mutateWeightedRoutes(configType *config.ConfigType, routes []types.Resource
 			return errUnknownClass
 		}
 
-		for _, v := range r.VirtualHosts {
-			for _, vr := range v.Routes {
+		for _, v := range r.GetVirtualHosts() {
+			for _, vr := range v.GetRoutes() {
 				if wc := vr.GetRoute().GetWeightedClusters(); wc != nil {
-					for _, c := range wc.Clusters {
-						weight, err := configType.GetClusterWeight(c.Name)
+					for _, c := range wc.GetClusters() {
+						weight, err := configType.GetClusterWeight(c.GetName())
 						if err != nil {
 							return err
 						}
 
-						if weight != nil && c.Weight.Value != uint32(weight.Value) {
-							log.Debugf("mutateWeightedRoutes: %s, weight: %d -> %d", c.Name, c.Weight.Value, weight)
+						if weight != nil && c.GetWeight().GetValue() != uint32(weight.Value) {
+							log.Debugf("mutateWeightedRoutes: %s, weight: %d -> %d", c.GetName(), c.GetWeight().GetValue(), weight)
 
 							c.Weight = &wrappers.UInt32Value{Value: uint32(weight.Value)}
 						}

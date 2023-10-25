@@ -58,7 +58,7 @@ func (cb *callbacks) OnStreamClosed(streamID int64, node *core.Node) {
 	if *config.Get().LogAccess {
 		log.WithFields(log.Fields{
 			"streamID": streamID,
-			"nodeID":   node.Id,
+			"nodeID":   node.GetId(),
 		}).Info("OnStreamClosed")
 	}
 }
@@ -89,7 +89,7 @@ func (cb *callbacks) OnStreamResponse(_ context.Context, _ int64, r *discovery.D
 		discoveryRequest, _ := protojson.Marshal(r)
 		discoveryResponse, _ := protojson.Marshal(w)
 
-		fileNameResponce := path.Join(*config.Get().LogPath, fmt.Sprintf("OnStreamResponse.%s.log", r.Node.Id))
+		fileNameResponce := path.Join(*config.Get().LogPath, fmt.Sprintf("OnStreamResponse.%s.log", r.GetNode().GetId()))
 
 		fResponce, err := os.OpenFile(fileNameResponce, os.O_APPEND|os.O_CREATE|os.O_WRONLY, filePerm)
 		if err != nil {
@@ -98,7 +98,7 @@ func (cb *callbacks) OnStreamResponse(_ context.Context, _ int64, r *discovery.D
 
 		defer fResponce.Close()
 
-		fileNameRequest := path.Join(*config.Get().LogPath, fmt.Sprintf("OnStreamRequest.%s.log", r.Node.Id))
+		fileNameRequest := path.Join(*config.Get().LogPath, fmt.Sprintf("OnStreamRequest.%s.log", r.GetNode().GetId()))
 
 		fRequest, err := os.OpenFile(fileNameRequest, os.O_APPEND|os.O_CREATE|os.O_WRONLY, filePerm)
 		if err != nil {
@@ -126,7 +126,7 @@ func (cb *callbacks) OnFetchRequest(_ context.Context, req *discovery.DiscoveryR
 	metrics.GrpcOnFetchRequest.Inc()
 
 	if *config.Get().LogAccess {
-		log := log.WithField("node", req.Node.Id)
+		log := log.WithField("node", req.GetNode().GetId())
 
 		log.Info("OnFetchRequest")
 	}
@@ -147,7 +147,7 @@ func (cb *callbacks) OnFetchResponse(r *discovery.DiscoveryRequest, w *discovery
 	metrics.GrpcOnFetchResponse.Inc()
 
 	if *config.Get().LogAccess {
-		log := log.WithField("node", r.Node.Id)
+		log := log.WithField("node", r.GetNode().GetId())
 
 		discoveryRequest, _ := protojson.Marshal(r)
 		discoveryResponse, _ := protojson.Marshal(w)
@@ -213,7 +213,7 @@ func (cb *callbacks) OnDeltaStreamClosed(streamID int64, node *core.Node) {
 	if *config.Get().LogAccess {
 		log.WithFields(log.Fields{
 			"streamID": streamID,
-			"nodeID":   node.Id,
+			"nodeID":   node.GetId(),
 		}).Info("OnDeltaStreamClosed")
 	}
 }
