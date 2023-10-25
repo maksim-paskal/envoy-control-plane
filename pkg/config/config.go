@@ -43,6 +43,7 @@ type Type struct {
 	LogReportCaller       *bool          `yaml:"logReportCaller"`
 	ConfigFile            *string
 	ConfigMapLabels       *string        `yaml:"configMapLabels"`
+	ConfigMapNames        *string        `yaml:"configMapNames"`
 	KubeConfigFile        *string        `yaml:"kubeConfigFile"`
 	WatchNamespaced       *bool          `yaml:"watchNamespaced"`
 	LeaderElection        *bool          `yaml:"leaderElection"`
@@ -73,6 +74,7 @@ var config = Type{
 	LogReportCaller:       flag.Bool("log.reportCaller", true, "log file name and line number"),
 	ConfigFile:            flag.String("config", getEnvDefault("CONFIG", "config.yaml"), "load config from file"),
 	ConfigMapLabels:       flag.String("configmap.labels", "app=envoy-control-plane", "config directory"),
+	ConfigMapNames:        flag.String("configmap.names", "", "name of configmap to import, comma separated"),
 	KubeConfigFile:        flag.String("kubeconfig.path", "", "kubeconfig path"),
 	WatchNamespaced:       flag.Bool("namespaced", true, "watch pod in one namespace"),
 	LeaderElection:        flag.Bool("leaderElection", true, "leader election"),

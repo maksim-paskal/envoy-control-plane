@@ -17,164 +17,35 @@ import (
 	"fmt"
 	"time"
 
-	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
-	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/certs"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
+	"github.com/maksim-paskal/envoy-control-plane/pkg/metrics"
 	"github.com/maksim-paskal/utils-go"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints []types.Resource, commonSecrets []tls.Secret) (*cache.Snapshot, error) { //nolint: lll
-	clusters, err := YamlToResources(configType.Clusters, cluster.Cluster{})
-	if err != nil {
-		return nil, err
-	}
-
-	routes, err := YamlToResources(configType.Routes, route.RouteConfiguration{})
-	if err != nil {
-		return nil, err
-	}
-
-	listiners, err := YamlToResources(configType.Listeners, listener.Listener{})
-	if err != nil {
-		return nil, err
-	}
-
-	// update cluster weights
-	if err := mutateWeightedRoutes(configType, routes); err != nil {
-		return nil, err
-	}
-
-	// remove all require_client_certificate from listiners
-	if *config.Get().SSLDoNotUseValidation {
-		err = filterCertificates(listiners)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	secrets, err := YamlToResources(configType.Secrets, tls.Secret{})
-	if err != nil {
-		return nil, err
-	}
-
+	secrets := configType.GetSecrets()
 	for i := range commonSecrets {
 		secrets = append(secrets, &commonSecrets[i])
 	}
 
 	resources := make(map[string][]types.Resource)
 
-	resources[resource.ClusterType] = clusters
-	resources[resource.RouteType] = routes
-	resources[resource.ListenerType] = listiners
+	resources[resource.ClusterType] = configType.GetClusters()
+	resources[resource.RouteType] = configType.GetRoutes()
+	resources[resource.ListenerType] = configType.GetListeners()
 	resources[resource.SecretType] = secrets
 	resources[resource.EndpointType] = endpoints
 
 	return cache.NewSnapshot(version, resources)
-}
-
-func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resource, error) {
-	if len(yamlObj) == 0 {
-		return nil, nil
-	}
-
-	yamlObjJSON := utils.ConvertYAMLtoJSON(yamlObj)
-
-	jsonObj, err := json.Marshal(yamlObjJSON)
-	if err != nil {
-		return nil, errors.Wrap(err, "json.Marshal(yamlObjJSON)")
-	}
-
-	var resources []interface{}
-	err = json.Unmarshal(jsonObj, &resources)
-
-	if err != nil {
-		return nil, errors.Wrap(err, "json.Unmarshal(jsonObj, &resources)")
-	}
-
-	results := make([]types.Resource, len(resources))
-
-	for k, v := range resources {
-		resourcesJSON, err := utils.GetJSONfromYAML(v)
-		if err != nil {
-			return nil, errors.Wrap(err, "utils.GetJSONfromYAML(v)")
-		}
-
-		switch outType.(type) {
-		case cluster.Cluster:
-			resource := cluster.Cluster{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
-
-			if err != nil {
-				log.WithError(err).Errorf("json=%s", string(resourcesJSON))
-
-				return nil, errors.Wrap(err, "cluster.Cluster")
-			}
-
-			results[k] = &resource
-
-		case route.RouteConfiguration:
-			resource := route.RouteConfiguration{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
-
-			if err != nil {
-				log.WithError(err).Errorf("json=\n%s", string(resourcesJSON))
-
-				return nil, errors.Wrap(err, "route.RouteConfiguration")
-			}
-
-			results[k] = &resource
-		case endpoint.ClusterLoadAssignment:
-			resource := endpoint.ClusterLoadAssignment{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
-
-			if err != nil {
-				log.WithError(err).Errorf("json=\n%s", string(resourcesJSON))
-
-				return nil, errors.Wrap(err, "endpoint.ClusterLoadAssignment")
-			}
-
-			results[k] = &resource
-		case listener.Listener:
-			resource := listener.Listener{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
-
-			if err != nil {
-				log.WithError(err).Errorf("json=\n%s", string(resourcesJSON))
-
-				return nil, errors.Wrap(err, "listener.Listener")
-			}
-
-			results[k] = &resource
-		case tls.Secret:
-			resource := tls.Secret{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
-
-			if err != nil {
-				log.WithError(err).Errorf("json=%s", string(resourcesJSON))
-
-				return nil, errors.Wrap(err, "tls.Secret")
-			}
-
-			results[k] = &resource
-		default:
-			return nil, errUnknownClass
-		}
-	}
-
-	return results, nil
 }
 
 func NewSecrets(dnsName string, validation interface{}) ([]tls.Secret, error) {
@@ -238,50 +109,14 @@ func NewSecrets(dnsName string, validation interface{}) ([]tls.Secret, error) {
 	return commonSecrets, nil
 }
 
-// remove require_client_certificate from all listeners.
-func filterCertificates(listiners []types.Resource) error {
-	for _, listiner := range listiners {
-		c, ok := listiner.(*listener.Listener)
-		if !ok {
-			return errUnknownClass
-		}
-
-		for _, filterChain := range c.GetFilterChains() {
-			s := filterChain.GetTransportSocket()
-			if s != nil {
-				if s.GetName() == "envoy.transport_sockets.tls" {
-					r := tls.DownstreamTlsContext{}
-
-					err := s.GetTypedConfig().UnmarshalTo(&r)
-					if err != nil {
-						return err
-					}
-
-					if r.GetRequireClientCertificate() != nil {
-						r.RequireClientCertificate.Value = false
-					}
-
-					pbst, err := anypb.New(&r)
-					if err != nil {
-						return err
-					}
-
-					s.ConfigType = &core.TransportSocket_TypedConfig{
-						TypedConfig: pbst,
-					}
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
 const timeTrackWarning = 100 * time.Millisecond
 
 // defer utils.TimeTrack("func-name",time.Now()).
 func TimeTrack(name string, start time.Time) {
 	elapsed := time.Since(start)
+
+	metrics.Operation.WithLabelValues(name).Inc()
+	metrics.OperationDuration.WithLabelValues(name).Observe(float64(elapsed.Milliseconds()))
 
 	msg := fmt.Sprintf("func: %s, took: %s", name, elapsed)
 
@@ -290,39 +125,4 @@ func TimeTrack(name string, start time.Time) {
 	} else {
 		log.Debug(msg)
 	}
-}
-
-func mutateWeightedRoutes(configType *config.ConfigType, routes []types.Resource) error {
-	// if cluster config has no weights, skip
-	if !configType.HasClusterWeights() {
-		return nil
-	}
-
-	for _, item := range routes {
-		r, ok := item.(*route.RouteConfiguration)
-		if !ok {
-			return errUnknownClass
-		}
-
-		for _, v := range r.GetVirtualHosts() {
-			for _, vr := range v.GetRoutes() {
-				if wc := vr.GetRoute().GetWeightedClusters(); wc != nil {
-					for _, c := range wc.GetClusters() {
-						weight, err := configType.GetClusterWeight(c.GetName())
-						if err != nil {
-							return err
-						}
-
-						if weight != nil && c.GetWeight().GetValue() != uint32(weight.Value) {
-							log.Debugf("mutateWeightedRoutes: %s, weight: %d -> %d", c.GetName(), c.GetWeight().GetValue(), weight)
-
-							c.Weight = &wrappers.UInt32Value{Value: uint32(weight.Value)}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return nil
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/maksim-paskal/envoy-control-plane/pkg/config"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/configstore"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/controlplane"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 )
@@ -29,6 +30,17 @@ import (
 var mutex sync.Mutex
 
 func checkConfigMapLabels(cm *v1.ConfigMap) bool {
+	// if config has exact names, it only loads them
+	if len(*config.Get().ConfigMapNames) != 0 {
+		for _, name := range strings.Split(*config.Get().ConfigMapNames, ",") {
+			if cm.Name == name {
+				return true
+			}
+		}
+
+		return false
+	}
+
 	label := strings.Split(*config.Get().ConfigMapLabels, "=")
 
 	return (cm.Labels[label[0]] == label[1])
@@ -85,9 +97,13 @@ func NewConfigMap(ctx context.Context, cm *v1.ConfigMap) error {
 			cs.Stop()
 		}
 
+		if err := config.SaveResources(); err != nil {
+			return errors.Wrap(err, "error in config.SaveResources")
+		}
+
 		log.Infof("Create configStore %s", config.ID)
 
-		newConfigStore, err := configstore.New(ctx, &config)
+		newConfigStore, err := configstore.New(ctx, config)
 		if err != nil {
 			return err
 		}

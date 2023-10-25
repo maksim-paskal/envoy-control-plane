@@ -86,6 +86,10 @@ runRaceDetection:
 	-grpc.address=127.0.0.1:18080 \
 	-web.https.address=127.0.0.1:18081 \
 	-web.http.address=127.0.0.1:18082
+
+	# to load some specific configmap
+	# -namespace=namespace \
+	# -configmap.names=configmap \
 runCli:
 	go run ./cmd/cli -debug -namespace=1 -pod=2 \
 	-tls.CA=certs/CA.crt \
