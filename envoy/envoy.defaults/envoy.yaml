@@ -76,6 +76,23 @@ static_resources:
           grpc_services:
           - envoy_grpc:
               cluster_name: xds_cluster
+  - name: opentelemetry_collector
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    typed_extension_protocol_options:
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+        explicit_http_config:
+          http2_protocol_options: {}
+    load_assignment:
+      cluster_name: opentelemetry_collector
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: {{ env "OTLP_COLLECTOR_HOST" }}
+                port_value: {{ env "OTLP_COLLECTOR_PORT" }}
   - name: xds_cluster
     connect_timeout: 1s
     type: {{ env "XDS_CLUSTER_TYPE" }}
@@ -145,21 +162,11 @@ admin:
 
 tracing:
   http:
-    name: envoy.tracers.dynamic_ot
+    name: envoy.tracers.opentelemetry
     typed_config:
-      "@type": type.googleapis.com/envoy.config.trace.v3.DynamicOtConfig
-      library: /usr/local/lib/libjaegertracing_plugin.so
-      config:
-        service_name: {{ env "ENVOY_SERVICE_NAME" }}
-        sampler:
-          type: const
-          param: 1
-        reporter:
-          localAgentHostPort: {{ env "JAEGER_AGENT_HOST" }}:6831
-        headers:
-          jaegerDebugHeader: jaeger-debug-id
-          jaegerBaggageHeader: jaeger-baggage
-          traceBaggageHeaderPrefix: uberctx-
-        baggage_restrictions:
-          denyBaggageOnInitializationFailure: false
-          hostPort: ""
+      "@type": type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
+      grpc_service:
+        envoy_grpc:
+          cluster_name: opentelemetry_collector
+        timeout: 0.250s
+      service_name: {{ env "ENVOY_SERVICE_NAME" }}

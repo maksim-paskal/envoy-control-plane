@@ -90,7 +90,7 @@ containers:
         apiVersion: v1
         fieldPath: metadata.namespace
   # this will be send all traces to jaeger agent (daemonset)
-  - name: JAEGER_AGENT_HOST
+  - name: OTLP_COLLECTOR_HOST
     valueFrom:
       fieldRef:
         apiVersion: v1
