@@ -69,7 +69,7 @@ spec:
         env:
         - name: ENVOY_SERVICE_NAME
           value: "test-envoy-service"
-        - name: JAEGER_AGENT_HOST
+        - name: OTLP_COLLECTOR_HOST
           valueFrom:
             fieldRef:
               apiVersion: v1

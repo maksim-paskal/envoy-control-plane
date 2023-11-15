@@ -65,7 +65,7 @@ services:
     - ./certs/:/certs:ro
     environment:
     - ENVOY_SERVICE_NAME=test1-id
-    - JAEGER_AGENT_HOST=jaeger
+    - OTLP_COLLECTOR_HOST=jaeger
     command:
     - /bin/sh
     - -c
@@ -87,7 +87,7 @@ services:
       context: .
     environment:
     - ENVOY_SERVICE_NAME=test2-id
-    - JAEGER_AGENT_HOST=jaeger
+    - OTLP_COLLECTOR_HOST=jaeger
     command:
     - /usr/local/bin/envoy
     - --config-path /etc/envoy/envoy.yaml
@@ -107,7 +107,7 @@ services:
       context: .
     environment:
     - ENVOY_SERVICE_NAME=test2-id
-    - JAEGER_AGENT_HOST=jaeger
+    - OTLP_COLLECTOR_HOST=jaeger
     command:
     - /usr/local/bin/envoy
     - --config-path /etc/envoy/envoy.yaml
