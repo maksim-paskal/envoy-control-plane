@@ -53,6 +53,12 @@ iptables -t nat -A PROXY_OUTBOUND -d 127.0.0.1/32 -j RETURN
 # Skip traffic to kubernetes API
 iptables -t nat -A PROXY_OUTBOUND -d $KUBERNETES_SERVICE_HOST/32 -j RETURN
 
+# Skip traffic to DNS service through tcp
+iptables -t nat -A PROXY_OUTBOUND -p tcp --dport 53 -j RETURN
+
+# Skip traffic to OpenTelemetry Collector
+iptables -t nat -A PROXY_OUTBOUND -p tcp --dport 4317 -j RETURN
+
 # Redirect remaining outbound traffic to Envoy
 iptables -t nat -A PROXY_OUTBOUND -j PROXY_OUT_REDIRECT
 
