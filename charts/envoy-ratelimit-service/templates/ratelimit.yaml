@@ -59,6 +59,9 @@ spec:
           value: "ratelimit"
         - name: "RUNTIME_IGNOREDOTFILES"
           value: "true"
+{{ if .Values.env }}
+{{ toYaml .Values.env | indent 8 }}
+{{ end }}
         readinessProbe:
           httpGet:
             path: /healthcheck
