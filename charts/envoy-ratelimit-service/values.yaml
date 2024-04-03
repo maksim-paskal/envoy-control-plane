@@ -25,6 +25,8 @@ tolerations: []
 
 nodeSelector: {}
 
+env: []
+
 affinity:
   podAntiAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:

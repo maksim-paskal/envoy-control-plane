@@ -1,9 +1,9 @@
 dependencies:
 - name: redis
   repository: https://charts.bitnami.com/bitnami
-  version: 16.8.4
+  version: 19.0.2
 - name: prometheus-statsd-exporter
   repository: https://prometheus-community.github.io/helm-charts
   version: 0.5.0
-digest: sha256:e790fe30c91921b39b6b2a039f8177ff098a6786f0ac81fcc4e7b4ebad22e374
-generated: "2022-08-10T10:06:05.715799+03:00"
+digest: sha256:4100a0b2af4659a37b0d7c2faf54413d5d2bf02c605ca0c070ffb486a704c896
+generated: "2024-04-03T16:56:41.331554+01:00"
