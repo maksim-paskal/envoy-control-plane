@@ -80,7 +80,7 @@ func (c *client) RunKubeInformers(ctx context.Context) {
 				OnNewPod(pod)
 			}
 		},
-		UpdateFunc: func(oldObj interface{}, newObj interface{}) {
+		UpdateFunc: func(_ interface{}, newObj interface{}) {
 			metrics.EndpointstoreUpdateFunc.Inc()
 
 			log.Debug("podInformer.UpdateFunc")
@@ -177,7 +177,7 @@ func (c *client) RunKubeInformers(ctx context.Context) {
 				OnNewEndpoints(endpoints)
 			}
 		},
-		UpdateFunc: func(old, cur interface{}) {
+		UpdateFunc: func(_, cur interface{}) {
 			log.Debug("endpointsInformer.UpdateFunc")
 			endpoints, ok := cur.(*v1.Endpoints)
 			if !ok {

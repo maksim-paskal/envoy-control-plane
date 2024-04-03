@@ -15,7 +15,6 @@ package web_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -33,7 +32,7 @@ var (
 func TestReady(t *testing.T) {
 	t.Parallel()
 
-	url := fmt.Sprintf("%s/api/ready", ts.URL)
+	url := ts.URL + "/api/ready"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -61,7 +60,7 @@ func TestReady(t *testing.T) {
 func TestHealthz(t *testing.T) {
 	t.Parallel()
 
-	url := fmt.Sprintf("%s/api/healthz", ts.URL)
+	url := ts.URL + "/api/healthz"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -89,7 +88,7 @@ func TestHealthz(t *testing.T) {
 func TestVersion(t *testing.T) {
 	t.Parallel()
 
-	url := fmt.Sprintf("%s/api/version", ts.URL)
+	url := ts.URL + "/api/version"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

@@ -293,7 +293,7 @@ func handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 
 	id := r.Form.Get("id")
 
-	configstore.StoreMap.Range(func(k, v interface{}) bool {
+	configstore.StoreMap.Range(func(_, v interface{}) bool {
 		cs, ok := v.(*configstore.ConfigStore)
 
 		if !ok {
@@ -339,7 +339,7 @@ func handlerConfigEndpoints(w http.ResponseWriter, r *http.Request) {
 
 	results := []EndpointsResults{}
 
-	configstore.StoreMap.Range(func(k, v interface{}) bool {
+	configstore.StoreMap.Range(func(_, v interface{}) bool {
 		cs, ok := v.(*configstore.ConfigStore)
 
 		if !ok {
@@ -470,7 +470,6 @@ func handlerVersion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = w.Write(resultJSON)
-
 	if err != nil {
 		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}

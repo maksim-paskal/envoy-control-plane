@@ -84,8 +84,8 @@ func New(ctx context.Context, config *appConfig.ConfigType) (*ConfigStore, error
 	}
 
 	var err error
-	cs.configEndpoints, err = cs.getConfigEndpoints()
 
+	cs.configEndpoints, err = cs.getConfigEndpoints()
 	if err != nil {
 		cs.log.WithError(err).Error()
 	}
@@ -142,7 +142,6 @@ func (cs *ConfigStore) Push(ctx context.Context, reason string) {
 	}
 
 	err = controlplane.SnapshotCache.SetSnapshot(ctx, cs.Config.ID, snap)
-
 	if err != nil {
 		cs.log.WithError(err).Error()
 

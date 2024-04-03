@@ -42,8 +42,8 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 	}
 
 	var resources []interface{}
-	err = json.Unmarshal(jsonObj, &resources)
 
+	err = json.Unmarshal(jsonObj, &resources)
 	if err != nil {
 		return nil, errors.Wrap(err, "json.Unmarshal(jsonObj, &resources)")
 	}
@@ -59,8 +59,8 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 		switch outType.(type) {
 		case cluster.Cluster:
 			resource := cluster.Cluster{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
 
+			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.WithError(err).Errorf("json=%s", string(resourcesJSON))
 
@@ -71,8 +71,8 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 
 		case route.RouteConfiguration:
 			resource := route.RouteConfiguration{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
 
+			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.WithError(err).Errorf("json=\n%s", string(resourcesJSON))
 
@@ -82,8 +82,8 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			results[k] = &resource
 		case endpoint.ClusterLoadAssignment:
 			resource := endpoint.ClusterLoadAssignment{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
 
+			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.WithError(err).Errorf("json=\n%s", string(resourcesJSON))
 
@@ -93,8 +93,8 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			results[k] = &resource
 		case listener.Listener:
 			resource := listener.Listener{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
 
+			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.WithError(err).Errorf("json=\n%s", string(resourcesJSON))
 
@@ -104,8 +104,8 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 			results[k] = &resource
 		case tls.Secret:
 			resource := tls.Secret{}
-			err = protojson.Unmarshal(resourcesJSON, &resource)
 
+			err = protojson.Unmarshal(resourcesJSON, &resource)
 			if err != nil {
 				log.WithError(err).Errorf("json=%s", string(resourcesJSON))
 

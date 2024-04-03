@@ -66,6 +66,7 @@ func newClient() (*client, error) {
 		}
 	} else {
 		log.Info("No kubeconfig file use incluster")
+
 		client.restconfig, err = rest.InClusterConfig()
 		if err != nil {
 			return nil, err
