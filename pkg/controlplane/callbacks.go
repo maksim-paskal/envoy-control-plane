@@ -72,6 +72,7 @@ func (cb *callbacks) OnStreamRequest(streamID int64, _ *discovery.DiscoveryReque
 
 	cb.mutex.Lock()
 	defer cb.mutex.Unlock()
+
 	cb.requests++
 
 	if cb.signal != nil {
@@ -133,6 +134,7 @@ func (cb *callbacks) OnFetchRequest(_ context.Context, req *discovery.DiscoveryR
 
 	cb.mutex.Lock()
 	defer cb.mutex.Unlock()
+
 	cb.fetches++
 
 	if cb.signal != nil {

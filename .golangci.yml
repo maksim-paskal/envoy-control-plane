@@ -18,3 +18,14 @@ linters:
   - nosnakecase
   - musttag
   - depguard
+  # deprecated
+  - deadcode
+  - copyloopvar
+  - golint
+  - ifshort
+  - interfacer
+  - intrange
+  - maligned
+  - scopelint
+  - structcheck
+  - varcheck

@@ -46,7 +46,7 @@ type KubernetesType struct {
 	Service         string            `yaml:"service"`
 }
 
-type ConfigType struct { //nolint: golint,revive
+type ConfigType struct { //nolint: revive
 	ID string `yaml:"id"`
 	// used in certificate section common name
 	Name string `yaml:"name"`

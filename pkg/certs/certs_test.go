@@ -25,7 +25,7 @@ import (
 func TestCertCA(t *testing.T) {
 	t.Parallel()
 
-	_, _, _, _, err := certs.GenCARoot() //nolint:dogsled,ifshort
+	_, _, _, _, err := certs.GenCARoot() //nolint:dogsled
 	if err != nil {
 		t.Fatal(err)
 	}

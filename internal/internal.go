@@ -80,7 +80,7 @@ func Init(ctx context.Context) {
 
 func Start(ctx context.Context) {
 	api.OnNewPod = func(pod *v1.Pod) {
-		configstore.StoreMap.Range(func(k, v interface{}) bool {
+		configstore.StoreMap.Range(func(_, v interface{}) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
@@ -94,7 +94,7 @@ func Start(ctx context.Context) {
 	}
 
 	api.OnDeletePod = func(pod *v1.Pod) {
-		configstore.StoreMap.Range(func(k, v interface{}) bool {
+		configstore.StoreMap.Range(func(_, v interface{}) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
@@ -118,7 +118,7 @@ func Start(ctx context.Context) {
 	}
 
 	api.OnNewEndpoints = func(endpoints *v1.Endpoints) {
-		configstore.StoreMap.Range(func(k, v interface{}) bool {
+		configstore.StoreMap.Range(func(_, v interface{}) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
@@ -150,7 +150,7 @@ func syncAll(ctx context.Context) {
 	log.Infof("syncAll every %s", *config.Get().EndpointCheckPeriod)
 
 	for ctx.Err() == nil {
-		configstore.StoreMap.Range(func(k, v interface{}) bool {
+		configstore.StoreMap.Range(func(_, v interface{}) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
@@ -176,7 +176,7 @@ func rotateCertificates(ctx context.Context) {
 	log.Infof("syncAll every %s", *config.Get().SSLRotationPeriod)
 
 	for ctx.Err() == nil {
-		configstore.StoreMap.Range(func(k, v interface{}) bool {
+		configstore.StoreMap.Range(func(_, v interface{}) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {

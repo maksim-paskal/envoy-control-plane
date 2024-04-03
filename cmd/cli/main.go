@@ -151,7 +151,7 @@ func main() {
 	}
 
 	if len(*envoyLogLevel) > 0 {
-		requestEnvoyAdmin(fmt.Sprintf("/logging?level=%s", *envoyLogLevel))
+		requestEnvoyAdmin("/logging?level=" + *envoyLogLevel)
 
 		return
 	}
