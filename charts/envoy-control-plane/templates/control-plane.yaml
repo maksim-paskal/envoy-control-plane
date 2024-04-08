@@ -26,7 +26,7 @@ spec:
       - name: certs
         configMap:
           name: envoy-control-plane-certs
-      {{ include "pod.extraSpecs" . | nindent 6 }}
+      {{ include "envoy-control-plane.pod.extraSpecs" . | nindent 6 }}
       containers:
       - name: envoy-control-plane
         image: {{ printf "%s/%s:%s" (default .Values.image.registry .Values.global.imageRegistry) .Values.image.repository .Values.image.tag }}

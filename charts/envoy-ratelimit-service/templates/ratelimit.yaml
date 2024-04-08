@@ -20,7 +20,7 @@ spec:
       - name: config
         configMap:
           name: envoy-ratelimit
-      {{ include "pod.extraSpecs" . | nindent 6 }}
+      {{ include "envoy-ratelimit-service.pod.extraSpecs" . | nindent 6 }}
       containers:
       - name: ratelimit
         image: {{ printf "%s/%s:%s" (default .Values.image.registry .Values.global.imageRegistry) .Values.image.repository .Values.image.tag }}

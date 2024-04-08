@@ -1,4 +1,4 @@
-{{- define "pod.extraSpecs" -}}
+{{- define "envoy-control-plane.pod.extraSpecs" -}}
 {{- if .Values.priorityClassName }}
 priorityClassName: {{ .Values.priorityClassName }}
 {{- end }}

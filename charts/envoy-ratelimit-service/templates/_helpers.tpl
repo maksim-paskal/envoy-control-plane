@@ -1,4 +1,4 @@
-{{- define "pod.extraSpecs" -}}
+{{- define "envoy-ratelimit-service.pod.extraSpecs" -}}
 {{- if .Values.priorityClassName }}
 priorityClassName: {{ .Values.priorityClassName }}
 {{- end }}
