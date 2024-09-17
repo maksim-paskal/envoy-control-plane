@@ -77,7 +77,7 @@ func waitForAPI() {
 			defer resp.Body.Close()
 		}
 
-		if resp != nil && resp.StatusCode == 200 {
+		if resp != nil && resp.StatusCode == http.StatusOK {
 			return
 		}
 

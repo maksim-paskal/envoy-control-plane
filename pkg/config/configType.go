@@ -118,7 +118,7 @@ func (c *ConfigType) GetClusterWeight(name string) (*ClusterWeight, error) {
 			return nil, errors.Wrap(err, "strconv.ParseUint")
 		}
 
-		return &ClusterWeight{Value: int64(i)}, nil
+		return &ClusterWeight{Value: int64(i)}, nil //nolint: gosec
 	}
 
 	return nil, nil //nolint: nilnil
@@ -304,10 +304,10 @@ func mutateWeightedRouteConfiguration(configType *ConfigType, r *route.RouteConf
 						return err
 					}
 
-					if weight != nil && c.GetWeight().GetValue() != uint32(weight.Value) {
+					if weight != nil && c.GetWeight().GetValue() != uint32(weight.Value) { //nolint: gosec
 						log.Warnf("mutateWeightedRoutes: %s, weight: %d -> %d", c.GetName(), c.GetWeight().GetValue(), weight)
 
-						c.Weight = &wrappers.UInt32Value{Value: uint32(weight.Value)}
+						c.Weight = &wrappers.UInt32Value{Value: uint32(weight.Value)} //nolint: gosec
 					}
 				}
 			}
