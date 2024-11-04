@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   envoy-control-plane:
     hostname: envoy-control-plane

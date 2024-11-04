@@ -13,7 +13,6 @@ limitations under the License.
 package controlplane
 
 import (
-	"fmt"
 	"time"
 
 	alf "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
@@ -59,9 +58,9 @@ func (svc *AccessLogService) StreamAccessLogs(stream accessloggrpc.AccessLogServ
 						resp = &alf.HTTPResponseProperties{}
 					}
 
-					log.Infof(fmt.Sprintf("[%s%s] %s %s %s %d %s %s",
+					log.Infof("[%s%s] %s %s %s %d %s %s",
 						logName, time.Now().Format(time.RFC3339), req.GetAuthority(), req.GetPath(), req.GetScheme(),
-						resp.GetResponseCode().GetValue(), req.GetRequestId(), common.GetUpstreamCluster()))
+						resp.GetResponseCode().GetValue(), req.GetRequestId(), common.GetUpstreamCluster())
 				}
 			}
 		case *accessloggrpc.StreamAccessLogsMessage_TcpLogs:
@@ -72,8 +71,8 @@ func (svc *AccessLogService) StreamAccessLogs(stream accessloggrpc.AccessLogServ
 						common = &alf.AccessLogCommon{}
 					}
 
-					log.Infof(fmt.Sprintf("[%s%s] tcp %s %s",
-						logName, time.Now().Format(time.RFC3339), common.GetUpstreamLocalAddress(), common.GetUpstreamCluster()))
+					log.Infof("[%s%s] tcp %s %s",
+						logName, time.Now().Format(time.RFC3339), common.GetUpstreamLocalAddress(), common.GetUpstreamCluster())
 				}
 			}
 		}

@@ -110,7 +110,7 @@ func scaleDeploy(name string, count int) error {
 		return err
 	}
 
-	replicas := int32(count)
+	replicas := int32(count) //nolint: gosec
 
 	deploy.Spec.Replicas = &replicas
 
