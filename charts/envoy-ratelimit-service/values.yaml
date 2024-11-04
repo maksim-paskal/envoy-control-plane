@@ -6,7 +6,7 @@ replicas: 1
 image:
   registry: docker.io
   repository: envoyproxy/ratelimit
-  tag: 6f5de117
+  tag: 28b1629a
   pullPolicy: IfNotPresent
 
 pdb:
