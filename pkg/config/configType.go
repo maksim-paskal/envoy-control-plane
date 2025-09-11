@@ -27,12 +27,12 @@ import (
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/maksim-paskal/envoy-control-plane/pkg/resources"
 	"github.com/maksim-paskal/utils-go"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/yaml.v3"
 )
 
@@ -307,7 +307,7 @@ func mutateWeightedRouteConfiguration(configType *ConfigType, r *route.RouteConf
 					if weight != nil && c.GetWeight().GetValue() != uint32(weight.Value) { //nolint: gosec
 						log.Warnf("mutateWeightedRoutes: %s, weight: %d -> %d", c.GetName(), c.GetWeight().GetValue(), weight)
 
-						c.Weight = &wrappers.UInt32Value{Value: uint32(weight.Value)} //nolint: gosec
+						c.Weight = &wrapperspb.UInt32Value{Value: uint32(weight.Value)} //nolint: gosec
 					}
 				}
 			}

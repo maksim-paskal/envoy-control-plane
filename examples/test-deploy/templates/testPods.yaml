@@ -58,6 +58,9 @@ spec:
       labels:
         app: test-001
     spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
       volumes:
       - name: config
         configMap:
@@ -107,6 +110,9 @@ spec:
       labels:
         app: test-002
     spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
       volumes:
       - name: config
         configMap:
