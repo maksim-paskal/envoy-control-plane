@@ -33,7 +33,10 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 )
 
-var version = flag.Bool("version", false, "version")
+var (
+	version  = flag.Bool("version", false, "version")
+	validate = flag.String("validate", "", "path to config file to validate")
+)
 
 const (
 	defaultLeaseDuration = 15 * time.Second
@@ -46,6 +49,16 @@ func main() {
 
 	if *version {
 		fmt.Println(config.GetVersion()) //nolint:forbidigo
+		os.Exit(0)
+	}
+
+	if *validate != "" {
+		// validate config file
+		if err := config.ValidateConfig(*validate); err != nil {
+			log.Fatal(err)
+		}
+
+		log.Infof("%s OK", *validate)
 		os.Exit(0)
 	}
 

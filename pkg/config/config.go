@@ -167,3 +167,21 @@ func getEnvDefault(name string, defaultValue string) string {
 
 	return r
 }
+
+func ValidateConfig(path string) error {
+	configBytes, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	config := ConfigType{}
+	if err := yaml.Unmarshal(configBytes, &config); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := config.SaveResources(); err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
+}
