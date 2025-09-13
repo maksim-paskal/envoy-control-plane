@@ -1,4 +1,4 @@
-KUBECONFIG=$(HOME)/.kube/kurento-stage
+export KUBECONFIG=$(HOME)/.kube/kurento-stage
 initialPodCount=10
 gitTag=$(shell git rev-parse --abbrev-ref HEAD)
 
