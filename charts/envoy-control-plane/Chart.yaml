@@ -1,7 +1,7 @@
 apiVersion: v2
 icon: https://helm.sh/img/helm.svg
 name: envoy-control-plane
-version: 0.1.11
+version: 0.1.12
 description: Lightweight Envoy control plane
 maintainers:
 - name: maksim-paskal  # Maksim Paskal
