@@ -1,6 +1,13 @@
 cluster_manager:
   local_cluster_name: {{ env "ENVOY_SERVICE_NAME" }}
 
+overload_manager:
+  resource_monitors:
+  - name: "envoy.resource_monitors.global_downstream_max_connections"
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
+      max_active_downstream_connections: 50000
+
 layered_runtime:
   layers:
   - name: static_layer_0
@@ -8,8 +15,6 @@ layered_runtime:
       envoy.deprecated_features:envoy.config.bootstrap.v3.Bootstrap.tracing: true
       re2.max_program_size.error_level: 1000
       re2.max_program_size.warn_level: 1000
-      overload:
-        global_downstream_max_connections: 50000
       upstream:
         zone_routing:
           min_cluster_size: 1
