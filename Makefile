@@ -7,7 +7,7 @@ test:
 	go fmt ./cmd/... ./pkg/...
 	go vet ./cmd/... ./pkg/...
 	go mod tidy
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run -v
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest run -v --fix=false
 	./scripts/test-pkg.sh
 coverage:
 	go tool cover -html=coverage.out
