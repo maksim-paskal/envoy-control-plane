@@ -1,6 +1,6 @@
-export KUBECONFIG=$(HOME)/.kube/kurento-stage
+export KUBECONFIG=$(HOME)/.kube/config
 initialPodCount=10
-gitTag=$(shell git rev-parse --abbrev-ref HEAD)
+gitTag=$(shell git rev-parse --short HEAD)
 
 test:
 	./scripts/validate-license.sh
