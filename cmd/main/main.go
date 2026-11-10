@@ -10,6 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package main is the control plane entry point.
 package main
 
 import (
@@ -54,7 +56,8 @@ func main() {
 
 	if *validate != "" {
 		// validate config file
-		if err := config.ValidateConfig(*validate); err != nil {
+		err := config.ValidateConfig(*validate)
+		if err != nil {
 			log.Fatal(err)
 		}
 
@@ -83,6 +86,7 @@ func main() {
 			cancel()
 		case <-ctx.Done():
 		}
+
 		<-signalChanInterrupt
 		os.Exit(1)
 	}()

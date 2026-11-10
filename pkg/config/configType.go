@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package config
 
 import (
@@ -65,17 +66,17 @@ type ConfigType struct { //nolint: revive
 	// kubernetes endpoints
 	Kubernetes []KubernetesType `yaml:"kubernetes"`
 	// config.endpoint.v3.ClusterLoadAssignment
-	Endpoints []interface{} `yaml:"endpoints"`
+	Endpoints []any `yaml:"endpoints"`
 	// config.route.v3.RouteConfiguration
-	Routes []interface{} `yaml:"routes"`
+	Routes []any `yaml:"routes"`
 	// config.cluster.v3.Cluster
-	Clusters []interface{} `yaml:"clusters"`
+	Clusters []any `yaml:"clusters"`
 	// config.listener.v3.Listener
-	Listeners []interface{} `yaml:"listeners"`
+	Listeners []any `yaml:"listeners"`
 	// extensions.transport_sockets.tls.v3.Secret
-	Secrets []interface{} `yaml:"secrets"`
+	Secrets []any `yaml:"secrets"`
 	// extensions.transport_sockets.tls.v3.CertificateValidationContext
-	Validation interface{} `yaml:"validation"`
+	Validation any `yaml:"validation"`
 	// internal resources
 	clusters, routes, listeners, secrets []types.Resource
 }
@@ -110,7 +111,7 @@ type ClusterWeight struct {
 	Value int64
 }
 
-// get user defined weights, return nil if not found.
+// GetClusterWeight returns user defined weights, or nil if not found.
 func (c *ConfigType) GetClusterWeight(name string) (*ClusterWeight, error) {
 	if w, ok := c.ConfigMapAnnotations[annotationRouteClusterWeight+name]; ok {
 		i, err := strconv.ParseUint(w, 10, 64)
@@ -152,11 +153,13 @@ func (c *ConfigType) SaveResources() error {
 
 	// update cluster weights
 	if c.HasClusterWeights() {
-		if err := mutateWeightedRoutesInListeners(c, c.listeners); err != nil {
+		err := mutateWeightedRoutesInListeners(c, c.listeners)
+		if err != nil {
 			return errors.Wrap(err, "errors in mutateWeightedRoutesInListeners")
 		}
 
-		if err := mutateWeightedRoutes(c, c.routes); err != nil {
+		err = mutateWeightedRoutes(c, c.routes)
+		if err != nil {
 			return errors.Wrap(err, "errors in mutateWeightedRoutes")
 		}
 	}
@@ -172,7 +175,7 @@ func (c *ConfigType) SaveResources() error {
 	return nil
 }
 
-func ParseConfigYaml(nodeID string, text string, data interface{}) (*ConfigType, error) {
+func ParseConfigYaml(nodeID string, text string, data any) (*ConfigType, error) {
 	t := template.New(nodeID)
 	templates := template.Must(t.Funcs(utils.GoTemplateFunc(t)).Parse(text))
 
@@ -252,11 +255,13 @@ func mutateWeightedRoutesInListeners(configType *ConfigType, listiners []types.R
 
 				m := hcm.HttpConnectionManager{}
 
-				if err := f.GetTypedConfig().UnmarshalTo(&m); err != nil {
+				err := f.GetTypedConfig().UnmarshalTo(&m)
+				if err != nil {
 					return errors.Wrap(err, "error unmarshal to HttpConnectionManager")
 				}
 
-				if err := mutateWeightedRouteConfiguration(configType, m.GetRouteConfig()); err != nil {
+				err = mutateWeightedRouteConfiguration(configType, m.GetRouteConfig())
+				if err != nil {
 					return errors.Wrap(err, "error mutateWeightedRouteConfiguration")
 				}
 
@@ -282,7 +287,8 @@ func mutateWeightedRoutes(configType *ConfigType, routes []types.Resource) error
 			return errUnknownClass
 		}
 
-		if err := mutateWeightedRouteConfiguration(configType, r); err != nil {
+		err := mutateWeightedRouteConfiguration(configType, r)
+		if err != nil {
 			return errors.Wrap(err, "error mutateWeightedRouteConfiguration")
 		}
 	}

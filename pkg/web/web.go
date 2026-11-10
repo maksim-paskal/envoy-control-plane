@@ -10,6 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package web serves the HTTP API and web UI.
 package web
 
 import (
@@ -19,6 +21,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -57,7 +60,7 @@ type Route struct {
 }
 
 func getRoutes() []Route {
-	routes := make([]Route, 0)
+	routes := make([]Route, 0) //nolint:prealloc // route list is short and built by appends for readability
 
 	routes = append(routes, Route{
 		path:        "/api/help",
@@ -149,14 +152,15 @@ func Start(ctx context.Context) {
 	go func() {
 		<-ctx.Done()
 
-		ctx, cancel := context.WithTimeout(context.Background(), *config.Get().GracePeriod)
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), *config.Get().GracePeriod)
 		defer cancel()
 
-		_ = server.Shutdown(ctx) //nolint:contextcheck
+		_ = server.Shutdown(ctx)
 	}()
 
 	// start http server
-	if err := server.ListenAndServe(); err != nil {
+	err := server.ListenAndServe()
+	if err != nil {
 		log.WithError(err).Fatal()
 	}
 }
@@ -190,13 +194,14 @@ func StartTLS(ctx context.Context) {
 	go func() {
 		<-ctx.Done()
 
-		ctx, cancel := context.WithTimeout(context.Background(), *config.Get().GracePeriod)
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), *config.Get().GracePeriod)
 		defer cancel()
 
-		_ = server.Shutdown(ctx) //nolint:contextcheck
+		_ = server.Shutdown(ctx)
 	}()
 
-	if err := server.ListenAndServeTLS("", ""); err != nil {
+	err = server.ListenAndServeTLS("", "")
+	if err != nil {
 		log.WithError(err).Fatal()
 	}
 }
@@ -260,13 +265,14 @@ func handlerHelp(w http.ResponseWriter, r *http.Request) {
 
 	for _, route := range getRoutes() {
 		if len(route.description) > 0 {
-			result.WriteString(fmt.Sprintf(linkFormat, route.description, route.path, route.path))
+			fmt.Fprintf(&result, linkFormat, route.description, route.path, route.path)
 		}
 	}
 
 	result.WriteString("</table>")
 
-	if _, err := w.Write(result.Bytes()); err != nil {
+	_, err := w.Write(result.Bytes())
+	if err != nil {
 		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
@@ -279,7 +285,8 @@ func handlerReady(w http.ResponseWriter, r *http.Request) {
 }
 
 func handlerHealthz(w http.ResponseWriter, r *http.Request) {
-	if _, err := w.Write([]byte("LIVE")); err != nil {
+	_, err := w.Write([]byte("LIVE"))
+	if err != nil {
 		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 }
@@ -293,7 +300,7 @@ func handlerConfigDump(w http.ResponseWriter, r *http.Request) {
 
 	id := r.Form.Get("id")
 
-	configstore.StoreMap.Range(func(_, v interface{}) bool {
+	configstore.StoreMap.Range(func(_, v any) bool {
 		cs, ok := v.(*configstore.ConfigStore)
 
 		if !ok {
@@ -339,7 +346,7 @@ func handlerConfigEndpoints(w http.ResponseWriter, r *http.Request) {
 
 	results := []EndpointsResults{}
 
-	configstore.StoreMap.Range(func(_, v interface{}) bool {
+	configstore.StoreMap.Range(func(_, v any) bool {
 		cs, ok := v.(*configstore.ConfigStore)
 
 		if !ok {
@@ -437,7 +444,7 @@ func handlerZone(w http.ResponseWriter, r *http.Request) {
 
 	zone := api.GetZoneByPodName(r.Context(), namespace, pod)
 
-	_, err = w.Write([]byte(zone))
+	_, err = w.Write([]byte(html.EscapeString(zone)))
 	if err != nil {
 		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
@@ -478,7 +485,8 @@ func handlerVersion(w http.ResponseWriter, r *http.Request) {
 func handlerCerts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 
-	if err := r.ParseForm(); err != nil {
+	err := r.ParseForm()
+	if err != nil {
 		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
@@ -515,6 +523,6 @@ func handlerCerts(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
-	_, _ = w.Write(crtBytes)
-	_, _ = w.Write(keyBytes)
+	_, _ = w.Write(crtBytes) //nolint:gosec // G705: text/plain PEM from certs, not HTML
+	_, _ = w.Write(keyBytes) //nolint:gosec // G705: text/plain PEM from certs, not HTML
 }

@@ -27,7 +27,7 @@ func TestGetConfigSnapshot(t *testing.T) {
 	t.Parallel()
 
 	c := config.ConfigType{}
-	r := []types.Resource{}
+	r := []types.Resource{} //nolint:prealloc // only a few resources are appended, capacity does not matter
 	s := []tls.Secret{}
 
 	e := endpoint.ClusterLoadAssignment{

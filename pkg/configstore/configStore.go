@@ -10,11 +10,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package configstore builds Envoy configuration snapshots from Kubernetes resources.
 package configstore
 
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net"
 	"reflect"
 	"sort"
@@ -90,17 +93,14 @@ func New(ctx context.Context, config *appConfig.ConfigType) (*ConfigStore, error
 		cs.log.WithError(err).Error()
 	}
 
-	if err = cs.LoadNewSecrets(); err != nil {
+	err = cs.LoadNewSecrets()
+	if err != nil {
 		return nil, errors.Wrap(err, "error in LoadNewSecrets")
 	}
 
 	cs.saveLastEndpoints(ctx)
 
 	return &cs, nil
-}
-
-func (cs *ConfigStore) hasStoped() bool {
-	return cs.isStoped.Load()
 }
 
 func (cs *ConfigStore) NewPod(ctx context.Context, _ *corev1.Pod) {
@@ -151,6 +151,80 @@ func (cs *ConfigStore) Push(ctx context.Context, reason string) {
 	cs.log.WithField("version", cs.Version).Infof("pushed, reason=%s", reason)
 }
 
+// LoadNewSecrets creates new secrets.
+func (cs *ConfigStore) LoadNewSecrets() error {
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
+
+	secrets, err := utils.NewSecrets(cs.Config.Name, cs.Config.Validation)
+	if err != nil {
+		return errors.Wrap(err, "can not create secrets")
+	}
+
+	cs.secrets = secrets
+
+	return nil
+}
+
+type envoyEndpoint struct {
+	IsCanary bool
+	Node     string
+	Address  string
+	Item     appConfig.KubernetesType
+	Metadata map[string]string
+}
+
+func (e *envoyEndpoint) SetNode(address corev1.EndpointAddress) {
+	if address.NodeName != nil {
+		e.Node = *address.NodeName
+	}
+}
+
+func (cs *ConfigStore) GetLastEndpoints() []string {
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
+
+	return cs.lastEndpointsArray
+}
+
+func (cs *ConfigStore) Stop() {
+	cs.log.Info("stop")
+	cs.isStoped.Store(true)
+}
+
+func (cs *ConfigStore) Sync(ctx context.Context) {
+	if cs.hasStoped() {
+		return
+	}
+
+	cs.saveLastEndpoints(ctx)
+
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
+
+	if cs.lastEndpoints != nil {
+		snap, err := controlplane.SnapshotCache.GetSnapshot(cs.Config.ID)
+		if err != nil {
+			log.WithError(err).Warn()
+		}
+
+		snapVersion := snap.GetVersion(resource.EndpointType)
+
+		if len(snapVersion) > 0 && snapVersion != cs.Version {
+			log.Warnf("nodeID=%s,version not match %s,%s", cs.Config.ID, snapVersion, cs.Version)
+
+			cs.lastEndpoints = nil
+			cs.lastEndpointsArray = nil
+
+			go cs.saveLastEndpoints(ctx)
+		}
+	}
+}
+
+func (cs *ConfigStore) hasStoped() bool {
+	return cs.isStoped.Load()
+}
+
 func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEndpoints, error) {
 	endpoints, err := resources.YamlToResources(cs.Config.Endpoints, endpoint.ClusterLoadAssignment{})
 	if err != nil {
@@ -171,21 +245,6 @@ func (cs *ConfigStore) getConfigEndpoints() (map[string][]*endpoint.LocalityLbEn
 	return lbEndpoints, nil
 }
 
-// create new secrets.
-func (cs *ConfigStore) LoadNewSecrets() error {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
-
-	secrets, err := utils.NewSecrets(cs.Config.Name, cs.Config.Validation)
-	if err != nil {
-		return errors.Wrap(err, "can not create secrets")
-	}
-
-	cs.secrets = secrets
-
-	return nil
-}
-
 func (cs *ConfigStore) getEndpointLocality(node string) *core.Locality {
 	nodeInfo, err := api.GetNode(node)
 	if err != nil {
@@ -204,20 +263,6 @@ func (cs *ConfigStore) getEndpointLocality(node string) *core.Locality {
 
 	return &core.Locality{
 		Zone: zone,
-	}
-}
-
-type envoyEndpoint struct {
-	IsCanary bool
-	Node     string
-	Address  string
-	Item     appConfig.KubernetesType
-	Metadata map[string]string
-}
-
-func (e *envoyEndpoint) SetNode(address corev1.EndpointAddress) {
-	if address.NodeName != nil {
-		e.Node = *address.NodeName
 	}
 }
 
@@ -478,9 +523,7 @@ func (cs *ConfigStore) saveLastEndpoints(ctx context.Context) {
 
 	lbEndpoints := make(map[string][]*endpoint.LocalityLbEndpoints)
 	// copy map
-	for key, value := range cs.configEndpoints {
-		lbEndpoints[key] = value
-	}
+	maps.Copy(lbEndpoints, cs.configEndpoints)
 
 	endpoints, err := cs.getLocalityLbEndpoints()
 	if err != nil {
@@ -547,46 +590,5 @@ func (cs *ConfigStore) saveLastEndpoints(ctx context.Context) {
 
 		// endpoints changes
 		go cs.Push(ctx, "new endpoints")
-	}
-}
-
-func (cs *ConfigStore) GetLastEndpoints() []string {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
-
-	return cs.lastEndpointsArray
-}
-
-func (cs *ConfigStore) Stop() {
-	cs.log.Info("stop")
-	cs.isStoped.Store(true)
-}
-
-func (cs *ConfigStore) Sync(ctx context.Context) {
-	if cs.hasStoped() {
-		return
-	}
-
-	cs.saveLastEndpoints(ctx)
-
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
-
-	if cs.lastEndpoints != nil {
-		snap, err := controlplane.SnapshotCache.GetSnapshot(cs.Config.ID)
-		if err != nil {
-			log.WithError(err).Warn()
-		}
-
-		snapVersion := snap.GetVersion(resource.EndpointType)
-
-		if len(snapVersion) > 0 && snapVersion != cs.Version {
-			log.Warnf("nodeID=%s,version not match %s,%s", cs.Config.ID, snapVersion, cs.Version)
-
-			cs.lastEndpoints = nil
-			cs.lastEndpointsArray = nil
-
-			go cs.saveLastEndpoints(ctx)
-		}
 	}
 }

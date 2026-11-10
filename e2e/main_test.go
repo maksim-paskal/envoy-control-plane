@@ -10,6 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package main_test contains end-to-end tests.
 package main_test
 
 import (
@@ -62,7 +64,8 @@ func TestConfigMapsStore(t *testing.T) {
 
 	namespace = *config.Get().Namespace
 
-	if err := testConfigmapsstore(); err != nil {
+	err := testConfigmapsstore()
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -88,7 +91,8 @@ func testConfigmapsstore() error {
 	}
 
 	for podsCount := *initialPodCount; podsCount >= 0; podsCount-- {
-		if err := checkPods(cs, podsCount); err != nil {
+		err := checkPods(cs, podsCount)
+		if err != nil {
 			return err
 		}
 	}
@@ -97,7 +101,8 @@ func testConfigmapsstore() error {
 }
 
 func scaleAll(count int) error {
-	if err := scaleDeploy("test-001", count); err != nil {
+	err := scaleDeploy("test-001", count)
+	if err != nil {
 		return err
 	}
 
@@ -125,7 +130,8 @@ func scaleDeploy(name string, count int) error {
 func checkPods(cs *configstore.ConfigStore, podCount int) error {
 	log.Infof("podCount=%d", podCount)
 
-	if err := scaleAll(podCount); err != nil {
+	err := scaleAll(podCount)
+	if err != nil {
 		return err
 	}
 

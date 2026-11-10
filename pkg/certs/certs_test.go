@@ -61,7 +61,8 @@ func verifyLow(root, child *x509.Certificate) error {
 		Intermediates: inter,
 	}
 
-	if _, err := child.Verify(opts); err != nil {
+	_, err := child.Verify(opts)
+	if err != nil {
 		return errors.Wrap(err, "failed to verify certificate")
 	}
 
@@ -72,16 +73,19 @@ func TestLoadCert(t *testing.T) {
 	t.Parallel()
 
 	// generate new cert
-	if err := certs.Init(); err != nil {
+	err := certs.Init()
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := config.Load(); err != nil {
+	err = config.Load()
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	// load from files
-	if err := certs.Init(); err != nil {
+	err = certs.Init()
+	if err != nil {
 		t.Fatal(err)
 	}
 
