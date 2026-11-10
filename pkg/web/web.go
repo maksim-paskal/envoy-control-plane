@@ -59,11 +59,8 @@ type Route struct {
 	httpShema   bool
 }
 
-// routesCount is the expected number of routes, used to preallocate the slice.
-const routesCount = 15
-
 func getRoutes() []Route {
-	routes := make([]Route, 0, routesCount)
+	routes := make([]Route, 0) //nolint:prealloc // route list is short and built by appends for readability
 
 	routes = append(routes, Route{
 		path:        "/api/help",
@@ -526,6 +523,6 @@ func handlerCerts(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(logrushooksentry.AddRequest(r)).WithError(err).Error()
 	}
 
-	_, _ = w.Write([]byte(html.EscapeString(string(crtBytes))))
-	_, _ = w.Write([]byte(html.EscapeString(string(keyBytes))))
+	_, _ = w.Write(crtBytes) //nolint:gosec // G705: text/plain PEM from certs, not HTML
+	_, _ = w.Write(keyBytes) //nolint:gosec // G705: text/plain PEM from certs, not HTML
 }
