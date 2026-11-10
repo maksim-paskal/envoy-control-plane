@@ -13,8 +13,10 @@ COPY ./envoy/entrypoint.sh /entrypoint.sh
 COPY ./envoy/envoy.defaults /envoy.defaults/
 COPY ./envoy/certs /certs/
 
-RUN apt update \
-&& apt full-upgrade -y \
+# use HTTPS for apt sources
+RUN sed -i 's|http://|https://|g' /etc/apt/sources.list
+
+RUN apt update; apt install -y iptables \
 && touch /tmp/checksum.amd64 \
 && echo "65d6b1e296dafb062c785c5a14135beeca953b11c577a70da74e5071793a4120 /usr/local/bin/go-template" >> /tmp/checksum.amd64 \
 && touch /tmp/checksum.arm64 \
@@ -23,7 +25,6 @@ RUN apt update \
 && rm -rf /tmp/checksum* \
 && chmod +x /usr/local/bin/go-template /entrypoint.sh /usr/local/bin/cli /scripts/* \
 && chown -R 101:101 /etc/envoy \
-&& apt update; apt install -y iptables \
 && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
 && rm -rf /var/lib/apt/lists/*
 
