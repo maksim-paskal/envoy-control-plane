@@ -1,3 +1,5 @@
+version: 2
+
 release:
   footer: |
     ## Docker Images
@@ -101,7 +103,7 @@ builds:
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "beta"
+  version_template: "beta"
 changelog:
   sort: asc
   filters:

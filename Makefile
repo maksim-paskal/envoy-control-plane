@@ -27,7 +27,7 @@ testChart:
 build-goreleaser:
 	git tag -d `git tag -l "envoy-*"`
 	git tag -d `git tag -l "helm-chart-*"`
-	go run github.com/goreleaser/goreleaser@latest build --clean --snapshot
+	go run github.com/goreleaser/goreleaser/v2@latest build --clean --snapshot
 	mv ./dist/envoy-control-plane_linux_amd64_v1/envoy-control-plane envoy-control-plane
 	mv ./dist/cli_linux_amd64_v1/cli cli
 build:
@@ -37,7 +37,7 @@ build:
 promote-to-beta:
 	git tag -d `git tag -l "envoy-*"`
 	git tag -d `git tag -l "helm-chart-*"`
-	go run github.com/goreleaser/goreleaser@latest release --clean --snapshot
+	go run github.com/goreleaser/goreleaser/v2@latest release --clean --snapshot
 
 	docker push paskalmaksim/envoy-docker-image:beta-arm64
 	docker push paskalmaksim/envoy-docker-image:beta-amd64
