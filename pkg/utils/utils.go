@@ -10,6 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package utils contains shared helper functions.
 package utils
 
 import (
@@ -48,7 +50,7 @@ func GetConfigSnapshot(version string, configType *config.ConfigType, endpoints 
 	return cache.NewSnapshot(version, resources)
 }
 
-func NewSecrets(dnsName string, validation interface{}) ([]tls.Secret, error) {
+func NewSecrets(dnsName string, validation any) ([]tls.Secret, error) {
 	_, serverCertBytes, _, serverKeyBytes, err := certs.NewCertificate([]string{dnsName}, certs.CertValidity)
 	if err != nil {
 		return nil, err
@@ -111,7 +113,7 @@ func NewSecrets(dnsName string, validation interface{}) ([]tls.Secret, error) {
 
 const timeTrackWarning = 100 * time.Millisecond
 
-// defer utils.TimeTrack("func-name",time.Now()).
+// TimeTrack logs the duration of a function, use it as: defer TimeTrack("func-name", time.Now()).
 func TimeTrack(name string, start time.Time) {
 	elapsed := time.Since(start)
 

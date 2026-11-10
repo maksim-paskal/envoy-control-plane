@@ -10,6 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package controlplane runs the Envoy xDS control plane server.
 package controlplane
 
 import (
@@ -89,8 +91,7 @@ func createGrpcServer() {
 		RootCAs:    certPool,
 	}
 
-	grpcOptions := []grpc.ServerOption{}
-	grpcOptions = append(grpcOptions,
+	grpcOptions := []grpc.ServerOption{
 		grpc.Creds(credentials.NewTLS(grpcCred)),
 		grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
@@ -101,7 +102,7 @@ func createGrpcServer() {
 			MinTime:             grpcKeepaliveMinTime,
 			PermitWithoutStream: true,
 		}),
-	)
+	}
 
 	grpcServer = grpc.NewServer(grpcOptions...)
 }
@@ -109,7 +110,9 @@ func createGrpcServer() {
 func Start(ctx context.Context) {
 	log.Info("grpc.address=", *config.Get().GrpcAddress)
 
-	lis, err := net.Listen("tcp", *config.Get().GrpcAddress)
+	var lc net.ListenConfig
+
+	lis, err := lc.Listen(ctx, "tcp", *config.Get().GrpcAddress)
 	if err != nil {
 		log.WithError(err).Fatal()
 	}
@@ -120,7 +123,8 @@ func Start(ctx context.Context) {
 		grpcServer.GracefulStop()
 	}()
 
-	if err := grpcServer.Serve(lis); err != nil {
+	err = grpcServer.Serve(lis)
+	if err != nil {
 		log.WithError(err).Fatal()
 	}
 }

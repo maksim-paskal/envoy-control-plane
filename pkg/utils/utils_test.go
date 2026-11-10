@@ -27,7 +27,7 @@ func TestGetConfigSnapshot(t *testing.T) {
 	t.Parallel()
 
 	c := config.ConfigType{}
-	r := []types.Resource{}
+	r := make([]types.Resource, 0, 1)
 	s := []tls.Secret{}
 
 	e := endpoint.ClusterLoadAssignment{

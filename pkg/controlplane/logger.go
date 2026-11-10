@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package controlplane
 
 import (
@@ -19,25 +20,25 @@ import (
 
 type Logger struct{}
 
-func (s *Logger) Infof(format string, args ...interface{}) {
+func (s *Logger) Infof(format string, args ...any) {
 	if *config.Get().LogAccess {
 		log.Infof(format, args...)
 	}
 }
 
-func (s *Logger) Debugf(format string, args ...interface{}) {
+func (s *Logger) Debugf(format string, args ...any) {
 	if *config.Get().LogAccess {
 		log.Debugf(format, args...)
 	}
 }
 
-func (s *Logger) Warnf(format string, args ...interface{}) {
+func (s *Logger) Warnf(format string, args ...any) {
 	if *config.Get().LogAccess {
 		log.Warnf(format, args...)
 	}
 }
 
-func (s *Logger) Errorf(format string, args ...interface{}) {
+func (s *Logger) Errorf(format string, args ...any) {
 	if *config.Get().LogAccess {
 		log.Errorf(format, args...)
 	}

@@ -10,6 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package internal contains application initialization and wiring.
 package internal
 
 import (
@@ -29,8 +31,8 @@ import (
 var hook *logrushooksentry.Hook
 
 func Init(ctx context.Context) {
-	var err error
-	if err = config.Load(); err != nil {
+	err := config.Load()
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -53,7 +55,8 @@ func Init(ctx context.Context) {
 		log.SetReportCaller(true)
 	}
 
-	if err = config.CheckConfig(); err != nil {
+	err = config.CheckConfig()
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -69,18 +72,20 @@ func Init(ctx context.Context) {
 
 	log.Infof("Starting %s...", config.GetVersion())
 
-	if err = api.Init(); err != nil {
+	err = api.Init()
+	if err != nil {
 		log.WithError(err).Fatal()
 	}
 
-	if err = certs.Init(); err != nil {
+	err = certs.Init()
+	if err != nil {
 		log.WithError(err).Fatal()
 	}
 }
 
 func Start(ctx context.Context) {
 	api.OnNewPod = func(pod *v1.Pod) {
-		configstore.StoreMap.Range(func(_, v interface{}) bool {
+		configstore.StoreMap.Range(func(_, v any) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
@@ -94,7 +99,7 @@ func Start(ctx context.Context) {
 	}
 
 	api.OnDeletePod = func(pod *v1.Pod) {
-		configstore.StoreMap.Range(func(_, v interface{}) bool {
+		configstore.StoreMap.Range(func(_, v any) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
@@ -108,7 +113,8 @@ func Start(ctx context.Context) {
 	}
 
 	api.OnNewConfig = func(cm *v1.ConfigMap) {
-		if err := configmapsstore.NewConfigMap(ctx, cm); err != nil {
+		err := configmapsstore.NewConfigMap(ctx, cm)
+		if err != nil {
 			log.WithError(err).Error()
 		}
 	}
@@ -118,7 +124,7 @@ func Start(ctx context.Context) {
 	}
 
 	api.OnNewEndpoints = func(endpoints *v1.Endpoints) {
-		configstore.StoreMap.Range(func(_, v interface{}) bool {
+		configstore.StoreMap.Range(func(_, v any) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
@@ -150,7 +156,7 @@ func syncAll(ctx context.Context) {
 	log.Infof("syncAll every %s", *config.Get().EndpointCheckPeriod)
 
 	for ctx.Err() == nil {
-		configstore.StoreMap.Range(func(_, v interface{}) bool {
+		configstore.StoreMap.Range(func(_, v any) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
@@ -176,7 +182,7 @@ func rotateCertificates(ctx context.Context) {
 	log.Infof("syncAll every %s", *config.Get().SSLRotationPeriod)
 
 	for ctx.Err() == nil {
-		configstore.StoreMap.Range(func(_, v interface{}) bool {
+		configstore.StoreMap.Range(func(_, v any) bool {
 			cs, ok := v.(*configstore.ConfigStore)
 
 			if !ok {
@@ -185,7 +191,8 @@ func rotateCertificates(ctx context.Context) {
 				return true
 			}
 
-			if err := cs.LoadNewSecrets(); err != nil {
+			err := cs.LoadNewSecrets()
+			if err != nil {
 				log.WithError(err).Error("error in LoadNewSecrets")
 
 				return true

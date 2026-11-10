@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package api
 
 import (
@@ -67,10 +68,11 @@ func (c *client) RunKubeInformers(ctx context.Context) {
 	endpointsLister = Client.KubeFactory().Core().V1().Endpoints().Lister()
 
 	_, _ = podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			metrics.EndpointstoreAddFunc.Inc()
 
 			log.Debug("podInformer.AddFunc")
+
 			pod, ok := obj.(*v1.Pod)
 			if !ok {
 				log.WithError(errAssertion).Fatal("obj.(*v1.Pod)")
@@ -80,10 +82,11 @@ func (c *client) RunKubeInformers(ctx context.Context) {
 				OnNewPod(pod)
 			}
 		},
-		UpdateFunc: func(_ interface{}, newObj interface{}) {
+		UpdateFunc: func(_ any, newObj any) {
 			metrics.EndpointstoreUpdateFunc.Inc()
 
 			log.Debug("podInformer.UpdateFunc")
+
 			pod, ok := newObj.(*v1.Pod)
 			if !ok {
 				log.WithError(errAssertion).Fatal("obj.(*v1.Pod)")
@@ -93,10 +96,11 @@ func (c *client) RunKubeInformers(ctx context.Context) {
 				OnNewPod(pod)
 			}
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			metrics.EndpointstoreDeleteFunc.Inc()
 
 			log.Debug("podInformer.DeleteFunc")
+
 			pod, ok := obj.(*v1.Pod)
 			if !ok {
 				log.WithError(errAssertion).Fatal("obj.(*v1.Pod)")
@@ -109,10 +113,11 @@ func (c *client) RunKubeInformers(ctx context.Context) {
 	})
 
 	_, _ = configInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			metrics.ConfigmapsstoreAddFunc.Inc()
 
 			log.Debug("configInformer.AddFunc")
+
 			cm, ok := obj.(*v1.ConfigMap)
 			if !ok {
 				log.WithError(errAssertion).Fatal("obj.(*v1.ConfigMap)")
@@ -122,10 +127,11 @@ func (c *client) RunKubeInformers(ctx context.Context) {
 				OnNewConfig(cm)
 			}
 		},
-		UpdateFunc: func(old, cur interface{}) {
+		UpdateFunc: func(old, cur any) {
 			metrics.ConfigmapsstoreUpdateFunc.Inc()
 
 			log.Debug("configInformer.UpdateFunc")
+
 			cm, ok := cur.(*v1.ConfigMap)
 			if !ok {
 				log.WithError(errAssertion).Fatal("cur.(*v1.ConfigMap)")
@@ -150,10 +156,11 @@ func (c *client) RunKubeInformers(ctx context.Context) {
 				OnNewConfig(cm)
 			}
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			metrics.ConfigmapsstoreDeleteFunc.Inc()
 
 			log.Debug("configInformer.DeleteFunc")
+
 			cm, ok := obj.(*v1.ConfigMap)
 			if !ok {
 				log.WithError(errAssertion).Fatal("obj.(*v1.ConfigMap)")
@@ -166,8 +173,9 @@ func (c *client) RunKubeInformers(ctx context.Context) {
 	})
 
 	_, _ = endpointsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
+		AddFunc: func(obj any) {
 			log.Debug("endpointsInformer.AddFunc")
+
 			endpoints, ok := obj.(*v1.Endpoints)
 			if !ok {
 				log.WithError(errAssertion).Fatal("obj.(*v1.Endpoints)")
@@ -177,8 +185,9 @@ func (c *client) RunKubeInformers(ctx context.Context) {
 				OnNewEndpoints(endpoints)
 			}
 		},
-		UpdateFunc: func(_, cur interface{}) {
+		UpdateFunc: func(_, cur any) {
 			log.Debug("endpointsInformer.UpdateFunc")
+
 			endpoints, ok := cur.(*v1.Endpoints)
 			if !ok {
 				log.WithError(errAssertion).Fatal("cur.(*v1.Endpoints)")
@@ -274,7 +283,7 @@ func GetEndpoint(name string) (*v1.Endpoints, error) {
 		// for canary services default behavior is to disable them
 		// unless annotation envoy-control-plane/canary.enabled=true is set
 		if strings.HasSuffix(name, config.CanarySuffix) {
-			if isEnabled, ok := endpoint.Annotations[config.AnnotationCanaryEnabled]; !(ok && isEnabled == "true") {
+			if isEnabled, ok := endpoint.Annotations[config.AnnotationCanaryEnabled]; !ok || isEnabled != "true" {
 				continue
 			}
 		}

@@ -32,7 +32,8 @@ func main() {
 
 	files := make(map[string][]byte)
 
-	if err := certs.Init(); err != nil {
+	err := certs.Init()
+	if err != nil {
 		log.WithError(err).Fatal()
 	}
 
@@ -74,7 +75,8 @@ func main() {
 
 		log.Infof("saving file %s", filePath)
 
-		if err = os.WriteFile(filePath, fileContent, fileMode); err != nil {
+		err = os.WriteFile(filePath, fileContent, fileMode)
+		if err != nil {
 			log.Fatal(err)
 		}
 	}

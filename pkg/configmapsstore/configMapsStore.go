@@ -10,11 +10,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package configmapsstore loads configuration from Kubernetes ConfigMaps.
 package configmapsstore
 
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -32,13 +35,7 @@ var mutex sync.Mutex
 func checkConfigMapLabels(cm *v1.ConfigMap) bool {
 	// if config has exact names, it only loads them
 	if len(*config.Get().ConfigMapNames) != 0 {
-		for _, name := range strings.Split(*config.Get().ConfigMapNames, ",") {
-			if cm.Name == name {
-				return true
-			}
-		}
-
-		return false
+		return slices.Contains(strings.Split(*config.Get().ConfigMapNames, ","), cm.Name)
 	}
 
 	label := strings.Split(*config.Get().ConfigMapLabels, "=")
@@ -97,7 +94,8 @@ func NewConfigMap(ctx context.Context, cm *v1.ConfigMap) error {
 			cs.Stop()
 		}
 
-		if err := config.SaveResources(); err != nil {
+		err = config.SaveResources()
+		if err != nil {
 			return errors.Wrap(err, "error in config.SaveResources")
 		}
 
@@ -115,7 +113,7 @@ func NewConfigMap(ctx context.Context, cm *v1.ConfigMap) error {
 }
 
 func DeleteConfigMap(cm *v1.ConfigMap) {
-	configstore.StoreMap.Range(func(key interface{}, value interface{}) bool {
+	configstore.StoreMap.Range(func(key any, value any) bool {
 		cs, ok := value.(*configstore.ConfigStore)
 
 		if !ok {

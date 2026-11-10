@@ -1,31 +1,42 @@
-run:
-  timeout: 5m
+version: "2"
+linters:
+  default: all
+  disable:
+    - copyloopvar
+    - cyclop
+    - depguard
+    - exhaustruct
+    - exhaustruct_v5
+    - funlen
+    - gochecknoglobals
+    - gocognit
+    - intrange
+    - musttag
+    - nestif
+    - varnamelen
+    - wrapcheck
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   fix: true
-linters:
-  enable-all: true
-  disable:
-  - nestif
-  - gochecknoglobals
-  - funlen
-  - gocognit
-  - exhaustivestruct
-  - exhaustruct
-  - cyclop
-  # https://github.com/tomarrell/wrapcheck/issues/8
-  - wrapcheck
-  - varnamelen
-  - nosnakecase
-  - musttag
-  - depguard
-  # deprecated
-  - deadcode
-  - copyloopvar
-  - golint
-  - ifshort
-  - interfacer
-  - intrange
-  - maligned
-  - scopelint
-  - structcheck
-  - varcheck
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

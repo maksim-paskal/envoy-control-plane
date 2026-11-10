@@ -10,6 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package resources converts YAML configuration into Envoy resources.
 package resources
 
 import (
@@ -29,7 +31,7 @@ import (
 
 var errUnknownClass = errors.New("unknown class")
 
-func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resource, error) {
+func YamlToResources(yamlObj []any, outType any) ([]types.Resource, error) {
 	if len(yamlObj) == 0 {
 		return nil, nil
 	}
@@ -41,7 +43,7 @@ func YamlToResources(yamlObj []interface{}, outType interface{}) ([]types.Resour
 		return nil, errors.Wrap(err, "json.Marshal(yamlObjJSON)")
 	}
 
-	var resources []interface{}
+	var resources []any
 
 	err = json.Unmarshal(jsonObj, &resources)
 	if err != nil {

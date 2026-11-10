@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package controlplane
 
 import (
@@ -111,11 +112,13 @@ func (cb *callbacks) OnStreamResponse(_ context.Context, _ int64, r *discovery.D
 		discoveryRequestText := fmt.Sprintf("\nDiscoveryRequest=>\n\n%s\n\n", string(discoveryRequest))
 		discoveryResponseText := fmt.Sprintf("\nDiscoveryResponse=>\n\n%s\n\n", string(discoveryResponse))
 
-		if _, err := fRequest.WriteString(discoveryRequestText); err != nil {
+		_, err = fRequest.WriteString(discoveryRequestText)
+		if err != nil {
 			log.Println(err)
 		}
 
-		if _, err := fResponce.WriteString(discoveryResponseText); err != nil {
+		_, err = fResponce.WriteString(discoveryResponseText)
+		if err != nil {
 			log.Println(err)
 		}
 	}

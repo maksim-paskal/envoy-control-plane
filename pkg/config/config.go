@@ -10,6 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package config loads and validates the application configuration.
 package config
 
 import (
@@ -133,13 +135,15 @@ func CheckConfig() error {
 	}
 
 	if len(*config.SSLCrt) > 0 {
-		if _, err := os.Stat(*config.SSLCrt); os.IsNotExist(err) {
+		_, err := os.Stat(*config.SSLCrt)
+		if os.IsNotExist(err) {
 			return errors.Wrap(err, "ssl certificate error")
 		}
 	}
 
 	if len(*config.SSLKey) > 0 {
-		if _, err := os.Stat(*config.SSLKey); os.IsNotExist(err) {
+		_, err := os.Stat(*config.SSLKey)
+		if os.IsNotExist(err) {
 			return errors.Wrap(err, "ssl key error")
 		}
 	}
@@ -175,11 +179,14 @@ func ValidateConfig(path string) error {
 	}
 
 	config := ConfigType{}
-	if err := yaml.Unmarshal(configBytes, &config); err != nil {
+
+	err = yaml.Unmarshal(configBytes, &config)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := config.SaveResources(); err != nil {
+	err = config.SaveResources()
+	if err != nil {
 		log.Fatal(err)
 	}
 
